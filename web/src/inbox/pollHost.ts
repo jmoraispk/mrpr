@@ -140,11 +140,12 @@ export async function pollHost(input: PollHostInput): Promise<HostInbox> {
     }
     const before = previous.mrs[id]
     const known = before && live(before) ? before : undefined
+    // Absent for a merge request found only through the user's own comments.
+    const base = next[id] as TrackedMergeRequest | undefined
     const tracked: TrackedMergeRequest = {
-      roles: ['commenter'] as Role[],
-      maxSeenNoteId: 0,
-      trackedUntil: until,
-      ...next[id],
+      roles: base?.roles ?? ['commenter'],
+      maxSeenNoteId: base?.maxSeenNoteId ?? 0,
+      trackedUntil: base ? base.trackedUntil : until,
       id: mr.id,
       iid: mr.iid,
       project: mr.project,
