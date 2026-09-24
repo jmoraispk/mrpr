@@ -159,3 +159,23 @@ those there is nothing to click and the checks are *not applicable*, not failed.
     check 23 there. `browser.runtime.reload()` exists in Firefox, but whether
     it closes the tab, blanks it, or leaves it working is unknown. If Firefox
     misbehaves, gate the button to Chrome and say so in its title.
+
+25. **Inbox fills and counts.** With a host added, open the hub. It lands on
+    Inbox and says "Checking GitLab for activity…", then shows the last three
+    days of replies, mentions and comments on your merge requests, grouped by
+    merge request. The toolbar badge and the Inbox link show the same unread
+    count, and the tab title starts with it.
+
+26. **A new reply arrives on its own.** Have someone reply in a thread you
+    commented in, on a merge request you do not own. Within about two minutes,
+    without touching the hub, the badge count rises. With the hub open, the row
+    appears without a reload.
+
+27. **Idle means quiet.** Lock the machine for more than five minutes and check
+    the worker's network log (`chrome://extensions` → service worker →
+    Network): no GraphQL requests while locked. Unlock: one poll runs at once.
+
+28. **Opening an item lands on the thread.** Click an inline reply. The review
+    opens with inline comments on, scrolled to the file, and the thread
+    outlined briefly. Click a general comment: the MR discussions panel opens
+    at it. Back in the inbox, both rows are dimmed and the counts dropped.

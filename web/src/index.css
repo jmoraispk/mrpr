@@ -2011,3 +2011,14 @@ button.primary-action {
   color: var(--muted);
   font-size: 12px;
 }
+
+.hub-row strong .unread-dot {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.hub-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

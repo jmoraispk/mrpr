@@ -10,7 +10,7 @@ import { Inbox } from './Inbox'
 import { Lists } from './Lists'
 import { parseRoute, type Route } from './route'
 import { Settings } from './Settings'
-import { useInbox, useUnreadTitle } from './useInbox'
+import { unreadMergeRequests, useInbox, useUnreadTitle } from './useInbox'
 
 function useRoute(): Route {
   const [route, setRoute] = useState<Route>(() =>
@@ -82,7 +82,7 @@ export function Hub() {
           {route.name === 'settings' ? (
             <Settings />
           ) : route.name === 'mergeRequests' ? (
-            <Lists />
+            <Lists unread={unreadMergeRequests(inbox.data)} />
           ) : (
             <Inbox inbox={inbox} />
           )}

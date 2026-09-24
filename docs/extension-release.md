@@ -117,7 +117,7 @@ Paste it into `web/src/extension/manifest.base.json` as `key`:
   "version": "0.1.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A…IDAQAB",
   "action": { "default_title": "Delta Review" },
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "alarms", "idle"],
   "optional_host_permissions": ["https://*/*"]
 }
 ```

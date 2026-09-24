@@ -13,6 +13,7 @@ import { parseMergeRequestUrl } from './mrUrl'
 import { describeHostError } from './hostErrors'
 import { buildReviewHash } from './route'
 import { SetupCard } from './SetupCard'
+import { mergeRequestKey } from './useInbox'
 
 /**
  * Where the hub remembers which repository groups the user folded away.
@@ -134,9 +135,11 @@ function groupByRepository(items: MergeRequestSummary[]): RepositoryGroup[] {
 function MergeRequestRow({
   hostId,
   item,
+  unread,
 }: {
   hostId: string
   item: MergeRequestSummary
+  unread: boolean
 }) {
   const target = {
     hostId,
@@ -146,7 +149,12 @@ function MergeRequestRow({
   return (
     <li className="hub-row">
       <a href={buildReviewHash(target)}>
-        <strong>{item.title}</strong>
+        <strong>
+          {unread ? (
+            <span className="unread-dot" aria-label="Unread activity" />
+          ) : null}
+          {item.title}
+        </strong>
         <span className="hub-row-meta">
           {item.references.full} · {item.author.name}
         </span>
@@ -170,11 +178,13 @@ function Group({
   hostId,
   group,
   collapsed,
+  unread,
   onToggle,
 }: {
   hostId: string
   group: RepositoryGroup
   collapsed: boolean
+  unread: Set<string>
   onToggle: () => void
 }) {
   const count = group.items.length
@@ -198,7 +208,14 @@ function Group({
       {collapsed ? null : (
         <ul className="hub-list">
           {group.items.map((item) => (
-            <MergeRequestRow key={item.id} hostId={hostId} item={item} />
+            <MergeRequestRow
+              key={item.id}
+              hostId={hostId}
+              item={item}
+              unread={unread.has(
+                mergeRequestKey(hostId, repositoryOf(item), item.iid),
+              )}
+            />
           ))}
         </ul>
       )}
@@ -211,12 +228,14 @@ function Section({
   hostId,
   page,
   collapsed,
+  unread,
   onToggle,
 }: {
   title: string
   hostId: string
   page: MergeRequestPage
   collapsed: CollapsedGroups
+  unread: Set<string>
   onToggle: (hostId: string, repository: string) => void
 }) {
   const groups = groupByRepository(page.items)
@@ -232,6 +251,7 @@ function Section({
             hostId={hostId}
             group={group}
             collapsed={isGroupCollapsed(collapsed, hostId, group.repository)}
+            unread={unread}
             onToggle={() => onToggle(hostId, group.repository)}
           />
         ))
@@ -287,7 +307,9 @@ function OpenByUrl({ hosts }: { hosts: HostConfig[] }) {
   )
 }
 
-export function Lists() {
+export function Lists({
+  unread = new Set<string>(),
+}: { unread?: Set<string> } = {}) {
   const queryClient = useQueryClient()
   const hosts = useQuery({
     queryKey: ['hosts'],
@@ -383,6 +405,7 @@ export function Lists() {
                 hostId={summary.hostId}
                 page={summary.reviewing!}
                 collapsed={groups.collapsed}
+                unread={unread}
                 onToggle={groups.toggle}
               />
               <Section
@@ -390,6 +413,7 @@ export function Lists() {
                 hostId={summary.hostId}
                 page={summary.authored!}
                 collapsed={groups.collapsed}
+                unread={unread}
                 onToggle={groups.toggle}
               />
             </>
