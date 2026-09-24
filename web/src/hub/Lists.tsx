@@ -10,32 +10,9 @@ import type {
 } from '../gitlab/mergeRequests'
 import { hubRequest, type HostSummary } from './api'
 import { parseMergeRequestUrl } from './mrUrl'
+import { describeHostError } from './hostErrors'
 import { buildReviewHash } from './route'
-
-/**
- * Human sentences for the codes the worker attaches to a single host, so the
- * page never shows a user a bare `gitlab_authentication_failed`. Wording
- * tracks `review/ErrorState.tsx`, which explains the same conditions once the
- * user is inside a review. `permission_missing` is absent on purpose — it has
- * its own branch below, with a button.
- */
-const HOST_ERRORS: Record<string, string> = {
-  host_not_configured:
-    'Delta has no token stored for this host. Add it again in settings.',
-  gitlab_authentication_failed:
-    'GitLab rejected the credentials Delta holds for this host. Renew them in settings.',
-  gitlab_access_denied:
-    'This GitLab account is not allowed to list merge requests on this host.',
-  gitlab_not_found:
-    'GitLab did not recognise this host’s API address. Check the hostname in settings.',
-  gitlab_rate_limited: 'GitLab is rate limiting Delta. Wait briefly, then retry.',
-  gitlab_timeout: 'GitLab did not answer in time. Retry when it is responsive.',
-  gitlab_unavailable: 'GitLab is unavailable. Retry when it recovers.',
-}
-
-function describeHostError(code: string): string {
-  return HOST_ERRORS[code] ?? 'Delta could not load merge requests from this host.'
-}
+import { SetupCard } from './SetupCard'
 
 /**
  * Where the hub remembers which repository groups the user folded away.
@@ -352,16 +329,7 @@ export function Lists() {
     )
   }
   if (!hosts.data?.length) {
-    return (
-      <div className="state-screen">
-        <h1>Add a GitLab host to get started</h1>
-        <p>
-          Delta needs a personal access token with the <code>api</code> scope
-          for each GitLab instance you review on.
-        </p>
-        <a href="#/settings">Open settings</a>
-      </div>
-    )
+    return <SetupCard />
   }
 
   return (

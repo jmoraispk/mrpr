@@ -10,6 +10,8 @@ const fake = createFakeBrowser() as ReturnType<typeof createFakeBrowser> & {
 }
 let hosts: unknown[] = []
 let summaries: unknown[] = []
+const EMPTY_INBOX = { hosts: [], items: [], unread: 0 }
+let inbox: unknown = EMPTY_INBOX
 /** Overridable so a test can make `listMergeRequests` fail or hang. */
 let replyToListMergeRequests = async (): Promise<unknown> => ({
   ok: true,
@@ -22,6 +24,7 @@ fake.runtime = {
     const { op } = message as { op: string }
     if (op === 'listHosts') return replyToListHosts()
     if (op === 'listMergeRequests') return replyToListMergeRequests()
+    if (op === 'listInbox') return { ok: true, data: inbox }
     return { ok: true, data: null }
   },
 }
@@ -44,8 +47,11 @@ beforeEach(() => {
   // What a release build sees, restored per test so the one development-build
   // test below cannot leak its flag into the others.
   vi.stubGlobal('__DELTA_DEV__', false)
-  window.location.hash = ''
+  // The existing tests exercise the merge request lists, which moved off the
+  // landing page when the inbox arrived.
+  window.location.hash = '#/merge-requests'
   hosts = []
+  inbox = EMPTY_INBOX
   summaries = []
   replyToListMergeRequests = async () => ({ ok: true, data: summaries })
   replyToListHosts = async () => ({ ok: true, data: hosts })
@@ -71,8 +77,8 @@ test('a development build carries the reload button in the header', async () => 
   const reload = within(meta as HTMLElement).getByRole('button', {
     name: /reload extension/i,
   })
-  // It leads the meta slot, ahead of the Settings link.
-  expect(reload.nextElementSibling).toHaveTextContent('Settings')
+  // It leads the meta slot, ahead of the Inbox link.
+  expect(reload.nextElementSibling).toHaveTextContent('Inbox')
 })
 
 test('a release build leaves the header alone', async () => {

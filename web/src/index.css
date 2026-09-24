@@ -1891,3 +1891,123 @@ button.primary-action {
   color: var(--muted);
   font-size: 13px;
 }
+
+.topbar-meta a[aria-current='page'] {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.nav-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.unread-dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.inbox-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.inbox-toolbar h2 {
+  margin: 0 auto 0 0;
+}
+
+.inbox-group + .inbox-group {
+  margin-top: 16px;
+}
+
+.inbox-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.inbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Written with `.hub` for the same reason as `.hub .hub-group-toggle`. */
+.hub .inbox-open {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hub .inbox-open:hover {
+  background: var(--accent-bg);
+}
+
+.inbox-open .unread-dot {
+  margin-top: 8px;
+}
+
+.inbox-row.is-read .inbox-open {
+  padding-left: 26px;
+  opacity: 0.6;
+}
+
+.inbox-avatar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.inbox-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.inbox-row:not(.is-read) .inbox-line {
+  font-weight: 600;
+}
+
+.inbox-excerpt {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-open time,
+.inbox-gitlab {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
