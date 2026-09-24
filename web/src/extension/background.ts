@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
 
+import { installInboxPolling, startInboxPolling } from '../inbox/schedule'
 import { forgetHubTab, openHub } from './action'
 import type { DeltaMessage } from './messages'
 import { handleMessage } from './router'
@@ -24,11 +25,15 @@ browser.action.onClicked.addListener((tab) => {
   void openHub(tab.url).catch(report)
 })
 
+installInboxPolling(report)
+
 // A remembered tab id only means anything within the session that issued it.
 // Both events start a session whose ids bear no relation to the stored one.
 browser.runtime.onStartup.addListener(() => {
   void forgetHubTab().catch(report)
+  void startInboxPolling().catch(report)
 })
 browser.runtime.onInstalled.addListener(() => {
   void forgetHubTab().catch(report)
+  void startInboxPolling().catch(report)
 })

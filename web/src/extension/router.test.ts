@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import { createFakeBrowser } from '../test/fakeBrowser'
+import { createFakeGitLab, fakeMergeRequest, fakeNote } from '../test/fakeGitLab'
 import { server } from '../test/server'
 
 const fake = createFakeBrowser()
@@ -160,4 +161,96 @@ test('an unknown op is rejected', async () => {
       target: TARGET,
     }),
   ).resolves.toMatchObject({ ok: false, error: { code: 'unknown_op' } })
+})
+
+function inboxItem(n: number, read = false) {
+  return {
+    id: `gitlab.example.com:${n}`,
+    kind: 'comment',
+    hostId: 'gitlab.example.com',
+    mrId: 1,
+    project: 'p',
+    iid: 1,
+    mrTitle: 'x',
+    discussionId: 'd',
+    noteId: n,
+    author: null,
+    excerpt: '',
+    createdAt: new Date(Date.UTC(2026, 8, 24, 12, n)).toISOString(),
+    webUrl: '',
+    read,
+  }
+}
+
+function storeInbox(items: ReturnType<typeof inboxItem>[]) {
+  fake.data.inbox = {
+    hosts: {
+      'gitlab.example.com': {
+        lastPollAt: '2026-09-24T12:00:00.000Z',
+        lastEventsAt: null,
+        mrs: {},
+        items,
+        error: null,
+      },
+    },
+  }
+}
+
+test('listInbox answers from storage and never carries a token', async () => {
+  storeInbox([inboxItem(2), inboxItem(1, true)])
+
+  const response = await handleMessage({ kind: 'delta/hub', op: 'listInbox' })
+
+  expect(response).toMatchObject({
+    ok: true,
+    data: { unread: 1, items: [{ noteId: 2 }, { noteId: 1 }] },
+  })
+  expect(JSON.stringify(response)).not.toContain('secret-token')
+})
+
+test('markRead marks the named items and updates the badge', async () => {
+  storeInbox([inboxItem(2), inboxItem(1)])
+
+  await expect(
+    handleMessage({
+      kind: 'delta/hub',
+      op: 'markRead',
+      payload: { ids: ['gitlab.example.com:2'] },
+    }),
+  ).resolves.toEqual({ ok: true, data: null })
+
+  expect(fake.badge.text).toBe('1')
+})
+
+test('markAllRead clears the badge', async () => {
+  storeInbox([inboxItem(2), inboxItem(1)])
+  // What the badge showed before; an untouched badge must not pass.
+  fake.badge.text = '2'
+
+  await handleMessage({ kind: 'delta/hub', op: 'markAllRead' })
+
+  expect(fake.badge.text).toBe('')
+})
+
+test('pollNow polls and returns the fresh inbox', async () => {
+  fake.granted.add('https://gitlab.example.com/*')
+  const gitlab = createFakeGitLab()
+  gitlab.add(
+    fakeMergeRequest(1, {
+      discussions: [
+        {
+          id: 'd1',
+          notes: [fakeNote(11, 'ana', 'Why?', new Date().toISOString())],
+        },
+      ],
+    }),
+  )
+  gitlab.lists.authored.push(1)
+
+  const response = await handleMessage({ kind: 'delta/hub', op: 'pollNow' })
+
+  expect(response).toMatchObject({
+    ok: true,
+    data: { unread: 1, items: [{ id: 'gitlab.example.com:11' }] },
+  })
 })

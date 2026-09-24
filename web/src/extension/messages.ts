@@ -9,7 +9,15 @@ export type ReviewOp =
   | 'replyToDiscussion'
   | 'setResolved'
 
-export type HubOp = 'listHosts' | 'addHost' | 'removeHost' | 'listMergeRequests'
+export type HubOp =
+  | 'listHosts'
+  | 'addHost'
+  | 'removeHost'
+  | 'listMergeRequests'
+  | 'listInbox'
+  | 'markRead'
+  | 'markAllRead'
+  | 'pollNow'
 
 export type DeltaMessage =
   | {
