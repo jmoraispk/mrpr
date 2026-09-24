@@ -10,10 +10,13 @@ export interface RequestOptions {
 
 export class GitLabClient {
   private readonly apiBase: string
+  private readonly graphqlUrl: string
   private readonly token: string
 
   constructor(apiBase: string, token: string) {
     this.apiBase = apiBase.replace(/\/+$/, '')
+    // REST lives at /api/v4 and GraphQL beside it at /api/graphql.
+    this.graphqlUrl = this.apiBase.replace(/\/v4$/, '/graphql')
     this.token = token
   }
 
@@ -27,7 +30,7 @@ export class GitLabClient {
 
   private async send(
     method: string,
-    path: string,
+    url: string,
     options: RequestOptions = {},
   ): Promise<Response> {
     const headers: Record<string, string> = {
@@ -41,7 +44,7 @@ export class GitLabClient {
       ? AbortSignal.any([options.signal, timeout])
       : timeout
     try {
-      return await fetch(this.url(path, options.params), {
+      return await fetch(url, {
         method,
         headers,
         body:
@@ -84,7 +87,11 @@ export class GitLabClient {
     path: string,
     options: RequestOptions = {},
   ): Promise<T> {
-    const response = await this.send(method, path, options)
+    const response = await this.send(
+      method,
+      this.url(path, options.params),
+      options,
+    )
     await GitLabClient.raiseForError(response)
     return (await response.json()) as T
   }
@@ -93,15 +100,52 @@ export class GitLabClient {
     const results: T[] = []
     let page = 1
     for (;;) {
-      const response = await this.send('GET', path, {
-        params: { page: String(page), per_page: '100' },
-        signal,
-      })
+      const response = await this.send(
+        'GET',
+        this.url(path, { page: String(page), per_page: '100' }),
+        { signal },
+      )
       await GitLabClient.raiseForError(response)
       results.push(...((await response.json()) as T[]))
       const next = response.headers.get('x-next-page')
       if (!next) return results
       page = Number(next)
     }
+  }
+
+  /**
+   * One GraphQL request. GitLab answers a failed query with 200 and an
+   * `errors` array, so a query error is raised here rather than surfacing as
+   * missing data somewhere further down.
+   */
+  async graphql<T>(
+    query: string,
+    variables: Record<string, unknown> = {},
+    signal?: AbortSignal,
+  ): Promise<T> {
+    const response = await this.send('POST', this.graphqlUrl, {
+      json: { query, variables },
+      signal,
+    })
+    await GitLabClient.raiseForError(response)
+    const payload = (await response.json()) as {
+      data?: T
+      errors?: { message: string }[]
+    }
+    if (payload.errors?.length) {
+      throw new GitLabError(
+        502,
+        payload.errors.map((error) => error.message).join('; '),
+        'gitlab_graphql_error',
+      )
+    }
+    if (payload.data === undefined) {
+      throw new GitLabError(
+        502,
+        'GitLab returned no GraphQL data',
+        'gitlab_graphql_error',
+      )
+    }
+    return payload.data
   }
 }

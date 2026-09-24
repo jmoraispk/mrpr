@@ -83,3 +83,60 @@ test('GitLabError is thrown, not a plain object', async () => {
     GitLabError,
   )
 })
+
+test('graphql posts to the endpoint beside the REST base', async () => {
+  const seen: { url: string; token: string | null; body: unknown }[] = []
+  server.use(
+    http.post('https://gitlab.example.com/api/graphql', async ({ request }) => {
+      seen.push({
+        url: request.url,
+        token: request.headers.get('PRIVATE-TOKEN'),
+        body: await request.json(),
+      })
+      return HttpResponse.json({ data: { currentUser: { username: 'joao' } } })
+    }),
+  )
+  const client = new GitLabClient('https://gitlab.example.com/api/v4/', 'secret')
+
+  await expect(
+    client.graphql('query { currentUser { username } }', { a: 1 }),
+  ).resolves.toEqual({ currentUser: { username: 'joao' } })
+  expect(seen).toEqual([
+    {
+      url: 'https://gitlab.example.com/api/graphql',
+      token: 'secret',
+      body: { query: 'query { currentUser { username } }', variables: { a: 1 } },
+    },
+  ])
+})
+
+test('a GraphQL error array is raised, not returned as data', async () => {
+  server.use(
+    http.post('https://gitlab.example.com/api/graphql', () =>
+      HttpResponse.json({
+        errors: [{ message: 'Field x does not exist' }, { message: 'and y' }],
+      }),
+    ),
+  )
+  const client = new GitLabClient('https://gitlab.example.com/api/v4', 'secret')
+
+  await expect(client.graphql('query { x }')).rejects.toMatchObject({
+    status: 502,
+    code: 'gitlab_graphql_error',
+    message: 'Field x does not exist; and y',
+  })
+})
+
+test('an HTTP failure on GraphQL keeps the REST error codes', async () => {
+  server.use(
+    http.post('https://gitlab.example.com/api/graphql', () =>
+      HttpResponse.json({ message: '401 Unauthorized' }, { status: 401 }),
+    ),
+  )
+  const client = new GitLabClient('https://gitlab.example.com/api/v4', 'secret')
+
+  await expect(client.graphql('query { x }')).rejects.toMatchObject({
+    status: 401,
+    code: 'gitlab_authentication_failed',
+  })
+})
