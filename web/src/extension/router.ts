@@ -24,11 +24,9 @@ import {
   type HostConfig,
 } from './hosts'
 import type { DeltaMessage, DeltaResponse } from './messages'
+import { scrubToken } from './scrub'
 
-export function scrubToken(message: string, token: string | null): string {
-  if (!token) return message
-  return message.split(token).join('[redacted]')
-}
+export { scrubToken }
 
 class RouterError extends Error {
   readonly status: number
