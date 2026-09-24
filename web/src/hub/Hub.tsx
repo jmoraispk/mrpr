@@ -29,7 +29,7 @@ export function Hub() {
         key={`${route.target.hostId}/${route.target.project}/${route.target.iid}`}
         transport={createRuntimeTransport(route.target)}
       >
-        <App />
+        <App focusNoteId={route.noteId} />
       </TransportProvider>
     )
   }

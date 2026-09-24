@@ -23,6 +23,9 @@ import {
 /** Files on each side of the window whose diffs are built ahead of time. */
 const PREFETCH_SECTIONS = 4
 
+/** Room left above a thread the stream scrolls to, so its code shows too. */
+const THREAD_MARGIN_PX = 96
+
 /**
  * An explicit request to scroll to a file. The nonce distinguishes two
  * requests for the same file, and using a request rather than reacting to the
@@ -31,6 +34,8 @@ const PREFETCH_SECTIONS = 4
 export interface ScrollRequest {
   index: number
   nonce: number
+  /** Land on this thread inside the file rather than on the file's header. */
+  discussionId?: string
 }
 
 export interface DiffStreamProps {
@@ -132,7 +137,10 @@ export function DiffStream({
     // they mount, so converge on a time budget rather than a frame count.
     let frame = 0
     let elapsed = 0
-    const BUDGET_MS = 1_500
+    // A thread target keeps going until its thread exists: the section mounts
+    // before its diff is built, and stopping at the header would leave the
+    // thread below the fold.
+    const BUDGET_MS = scrollRequest.discussionId ? 4_000 : 1_500
     const correct = () => {
       elapsed += 16
       const scroller = scrollRef.current
@@ -140,10 +148,20 @@ export function DiffStream({
         `[data-stream-index="${scrollRequest.index}"]`,
       )
       if (scroller && section) {
+        const thread = scrollRequest.discussionId
+          ? Array.from(
+              section.querySelectorAll<HTMLElement>('[data-discussion-id]'),
+            ).find(
+              (element) =>
+                element.dataset.discussionId === scrollRequest.discussionId,
+            )
+          : undefined
+        const anchor = thread ?? section
         const gap =
-          section.getBoundingClientRect().top -
-          scroller.getBoundingClientRect().top
-        if (Math.abs(gap) <= 1) return
+          anchor.getBoundingClientRect().top -
+          scroller.getBoundingClientRect().top -
+          (thread ? THREAD_MARGIN_PX : 0)
+        if (Math.abs(gap) <= 1 && (thread || !scrollRequest.discussionId)) return
         scroller.scrollTop += gap
       } else {
         scroll()
