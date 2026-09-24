@@ -18,6 +18,13 @@ export const TRACK_AFTER_LEAVING_MS = 14 * DAY_MS
 /** The user's own comments change slowly; read them at most this often. */
 export const EVENTS_INTERVAL_MS = 15 * 60 * 1000
 export const ITEM_CAP = 500
+/**
+ * Slack on the cut for a merge request that just joined. GitLab raises a
+ * mention todo in a background job, a moment after the note, and the local
+ * clock may run ahead of GitLab's. Item ids are stable, so reading a little
+ * too far back can never duplicate an item.
+ */
+export const JOIN_MARGIN_MS = 10 * 60 * 1000
 
 export interface PollHostInput {
   client: GitLabClient
@@ -127,9 +134,15 @@ export async function pollHost(input: PollHostInput): Promise<HostInbox> {
     changed.size > 0
       ? await fetchActivity(client, [...changed], signal)
       : new Map()
+  // A merge request found through the user's own comments is found up to
+  // one events interval late, so read it from the last events check, not the
+  // last poll: a reply in that gap is still unseen.
   const since = firstPoll
     ? at - FIRST_RUN_WINDOW_MS
-    : Date.parse(previous.lastPollAt as string)
+    : Math.min(
+        Date.parse(previous.lastPollAt as string),
+        previous.lastEventsAt ? Date.parse(previous.lastEventsAt) : Infinity,
+      ) - JOIN_MARGIN_MS
   const items: InboxItem[] = []
 
   for (const id of changed) {
@@ -154,8 +167,9 @@ export async function pollHost(input: PollHostInput): Promise<HostInbox> {
       updatedAt: mr.updatedAt,
     }
     // A merge request seen before is read from the last note seen. One that
-    // just joined is read from the last poll, so a mention that arrived with
-    // it is not lost and its history is not replayed.
+    // just joined is read from shortly before the last poll (see `since`), so
+    // a mention that arrived with it is not lost and its history is not
+    // replayed.
     const isNew = known
       ? (note: ActivityNote) => note.id > known.maxSeenNoteId
       : (note: ActivityNote) => Date.parse(note.createdAt) > since

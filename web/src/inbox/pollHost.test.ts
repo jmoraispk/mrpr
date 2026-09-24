@@ -287,3 +287,44 @@ test('the inbox keeps the newest 500 items', () => {
   expect(merged[0].noteId).toBe(599)
   expect(merged.at(-1)?.noteId).toBe(100)
 })
+
+test('a reply that beats the next events check is still caught', async () => {
+  // The user comments on a merge request they have no other link to, and a
+  // reply lands before the 15-minute events check discovers that merge
+  // request. The reply predates the last poll, but it is still unseen.
+  const gitlab = createFakeGitLab()
+  let state = await poll(null)
+  const thread = { id: 'd9', notes: [fakeNote(91, 'joao', 'Why this?', after(1).toISOString())] }
+  const mr = gitlab.add(
+    fakeMergeRequest(9, { updatedAt: after(3).toISOString(), discussions: [thread] }),
+  )
+  gitlab.events.push({ noteableId: 9, createdAt: after(1).toISOString() })
+  thread.notes.push(fakeNote(92, 'ana', 'Because of X', after(3).toISOString()))
+  mr.updatedAt = after(3).toISOString()
+
+  for (let minute = 2; minute <= 16; minute += 2) {
+    state = await poll(state, after(minute))
+  }
+
+  expect(kinds(state)).toEqual([['reply', 92]])
+})
+
+test('a mention whose todo lands after the next poll is still caught', async () => {
+  // GitLab raises the todo in a background job, a moment after the note.
+  const gitlab = createFakeGitLab()
+  const first = await poll(null)
+  const second = await poll(first, after(16))
+  gitlab.add(
+    fakeMergeRequest(10, {
+      updatedAt: after(15.5).toISOString(),
+      discussions: [
+        { id: 'd10', notes: [fakeNote(100, 'ana', '@joao look', after(15.5).toISOString())] },
+      ],
+    }),
+  )
+  gitlab.lists.todos.push(10)
+
+  const third = await poll(second, after(18))
+
+  expect(kinds(third)).toEqual([['mention', 100]])
+})

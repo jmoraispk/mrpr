@@ -9,8 +9,9 @@ export type NoteLocation =
  * Where the review view shows a note, by the same rules the views use. A
  * discussion with no positioned note is in the MR discussions panel (see
  * `generalDiscussions` in `App.tsx`). One with a position shows inline in the
- * file `discussionRange` places it in. A positioned discussion that no file
- * places renders nowhere, so it counts as not found.
+ * file `discussionRange` places it in, unless that file's diff is not shown
+ * (collapsed or too large). A positioned discussion that no shown file places
+ * renders nowhere, so it counts as not found.
  */
 export function locateNote(
   discussions: Discussion[],
@@ -25,7 +26,10 @@ export function locateNote(
     return { kind: 'general', discussionId: discussion.id }
   }
   const fileIndex = files.findIndex(
-    (file) => discussionRange(discussion, file) !== null,
+    (file) =>
+      !file.collapsed &&
+      !file.too_large &&
+      discussionRange(discussion, file) !== null,
   )
   return fileIndex < 0
     ? null
@@ -41,11 +45,12 @@ const RETRY_MS = 50
 /**
  * Focuses a thread as soon as it is in the document, and marks it briefly so
  * the eye finds it. `scroll` is off for inline threads, whose scrolling the
- * diff stream owns.
+ * diff stream owns. `onMissing` runs once if the thread never appears, e.g. a
+ * comment on a line outside every hunk of the current diff.
  */
 export function focusThread(
   discussionId: string,
-  { scroll }: { scroll: boolean },
+  { scroll, onMissing }: { scroll: boolean; onMissing?: () => void },
 ): () => void {
   let cancelled = false
   let timer = 0
@@ -58,6 +63,8 @@ export function focusThread(
     if (!thread) {
       if (Date.now() - started < WAIT_MS) {
         timer = window.setTimeout(attempt, RETRY_MS)
+      } else {
+        onMissing?.()
       }
       return
     }

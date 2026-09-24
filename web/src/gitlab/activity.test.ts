@@ -61,14 +61,16 @@ test('extra merge requests ride along in the same request', async () => {
   })
 })
 
-test('activity is fetched ten merge requests per request', async () => {
+test('activity is fetched five merge requests per request', async () => {
   const gitlab = createFakeGitLab()
   const ids = Array.from({ length: 25 }, (_, index) => index + 1)
   for (const id of ids) gitlab.add(fakeMergeRequest(id))
 
   const activity = await fetchActivity(client(), ids)
 
-  expect(gitlab.calls).toEqual(['Activity', 'Activity', 'Activity'])
+  // Ten measured 273 against GitLab's query complexity budget, and GitLab's
+  // documented default for a signed-in request is 250.
+  expect(gitlab.calls).toEqual(Array(5).fill('Activity'))
   expect([...activity.keys()]).toEqual(ids)
 })
 
@@ -158,4 +160,27 @@ test('own comments are mapped to the merge requests they were left on', async ()
   expect(gitlab.eventQueries).toEqual([
     { action: 'commented', target_type: 'note', after: '2026-09-21', per_page: '100' },
   ])
+})
+
+test('many watched merge requests are split so no query outgrows GitLab’s complexity budget', async () => {
+  const gitlab = createFakeGitLab()
+  const ids = Array.from({ length: 100 }, (_, index) => index + 1)
+  for (const id of ids) gitlab.add(fakeMergeRequest(id))
+
+  const involved = await fetchInvolved(client(), ids)
+
+  expect(gitlab.calls).toEqual(['Involved', 'Watched'])
+  const count = (query: string) => query.match(/: mergeRequest\(/g)?.length ?? 0
+  expect(count(gitlab.involvedQueries[0])).toBe(40)
+  expect(count(gitlab.watchedQueries[0])).toBe(60)
+  expect(Object.keys(involved.extra)).toHaveLength(100)
+})
+
+test('a few watched merge requests still cost one request', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(1))
+
+  await fetchInvolved(client(), [1])
+
+  expect(gitlab.calls).toEqual(['Involved'])
 })

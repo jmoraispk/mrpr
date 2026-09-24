@@ -124,10 +124,12 @@ export function App({ focusNoteId = null }: AppProps = {}) {
     focusedNote.current = focusNoteId
     cancelFocus.current?.()
     const location = locateNote(discussions.data, diffs.data, focusNoteId)
-    if (!location) {
+    const notFound = () =>
       setFocusNotice(
         'The comment you opened is no longer on this merge request’s current diff.',
       )
+    if (!location) {
+      notFound()
       return
     }
     setFocusNotice(null)
@@ -145,6 +147,7 @@ export function App({ focusNoteId = null }: AppProps = {}) {
     }
     cancelFocus.current = focusThread(location.discussionId, {
       scroll: location.kind === 'general',
+      onMissing: notFound,
     })
   }, [focusNoteId, diffs.data, discussions.data])
 

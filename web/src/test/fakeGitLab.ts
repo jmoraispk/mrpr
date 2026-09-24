@@ -76,6 +76,7 @@ export function createFakeGitLab() {
   const calls: string[] = []
   const eventQueries: Record<string, string>[] = []
   const involvedQueries: string[] = []
+  const watchedQueries: string[] = []
   let pageSize = 100
   let gate: Promise<void> | null = null
 
@@ -152,6 +153,16 @@ export function createFakeGitLab() {
       }
       return HttpResponse.json({ data })
     }),
+    gitlab.query('Watched', ({ query }) => {
+      calls.push('Watched')
+      watchedQueries.push(query)
+      const data: Record<string, unknown> = {}
+      for (const id of aliases(query)) {
+        const mr = mrs.get(id)
+        data[`m${id}`] = mr ? { updatedAt: mr.updatedAt, state: mr.state } : null
+      }
+      return HttpResponse.json({ data })
+    }),
     gitlab.query('Activity', ({ query }) => {
       calls.push('Activity')
       const data: Record<string, unknown> = {}
@@ -198,6 +209,7 @@ export function createFakeGitLab() {
     calls,
     eventQueries,
     involvedQueries,
+    watchedQueries,
     add(mr: FakeMergeRequest) {
       mrs.set(mr.id, mr)
       return mr

@@ -50,8 +50,18 @@ export interface MergeRequestActivity extends MergeRequestRef {
 }
 
 const PAGE = 100
-/** Merge requests per activity request, keeping each response a sane size. */
-const BATCH = 10
+/*
+ * GitLab caps each query's complexity; its documented default for a signed-in
+ * request is 250 (gitlab-master allows 700). Measured there: one activity
+ * alias costs about 27, the involved lists about 86, and one watched
+ * `updatedAt state` alias about 3. The sizes below keep every query under 250.
+ */
+/** Merge requests per activity request. */
+const BATCH = 5
+/** Watched merge requests riding along in the involved query. */
+const INVOLVED_EXTRAS = 40
+/** Watched merge requests per follow-up query, when there are more. */
+const WATCHED_BATCH = 60
 
 const MR_FIELDS = 'id iid title webUrl updatedAt project { fullPath }'
 const THREAD_FIELDS =
@@ -140,11 +150,10 @@ export async function fetchInvolved(
   extraIds: number[],
   signal?: AbortSignal,
 ): Promise<Involved> {
-  const extras = extraIds
-    .map(
-      (id) => `  m${id}: mergeRequest(id: "${mergeRequestGid(id)}") { updatedAt state }`,
-    )
-    .join('\n')
+  const aliasFor = (id: number) =>
+    `  m${id}: mergeRequest(id: "${mergeRequestGid(id)}") { updatedAt state }`
+  const riding = extraIds.slice(0, INVOLVED_EXTRAS)
+  const extras = riding.map(aliasFor).join('\n')
   const query = `query Involved {
   currentUser {
     authored: authoredMergeRequests(state: opened, first: ${PAGE}, sort: UPDATED_DESC) { nodes { ${MR_FIELDS} } }
@@ -182,9 +191,22 @@ ${extras}
   for (const todo of user.todos.nodes) add(todo.target, 'mentioned')
 
   const extra: Involved['extra'] = {}
-  for (const id of extraIds) {
-    const value = data[`m${id}`] as { updatedAt: string; state: string } | null
-    if (value) extra[id] = { updatedAt: value.updatedAt, state: value.state }
+  const collect = (source: Record<string, unknown>, ids: number[]) => {
+    for (const id of ids) {
+      const value = source[`m${id}`] as { updatedAt: string; state: string } | null
+      if (value) extra[id] = { updatedAt: value.updatedAt, state: value.state }
+    }
+  }
+  collect(data, riding)
+  // Only a heavy watch list pays for more requests; a quiet poll stays one.
+  for (let start = INVOLVED_EXTRAS; start < extraIds.length; start += WATCHED_BATCH) {
+    const chunk = extraIds.slice(start, start + WATCHED_BATCH)
+    const more = await client.graphql<Record<string, unknown>>(
+      `query Watched {\n${chunk.map(aliasFor).join('\n')}\n}`,
+      {},
+      signal,
+    )
+    collect(more, chunk)
   }
   return { listed: [...listed.values()], extra }
 }

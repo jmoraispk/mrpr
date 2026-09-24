@@ -95,3 +95,36 @@ test('cancelling stops the wait', () => {
 
   expect(document.activeElement).not.toBe(thread)
 })
+
+test('a note on a file whose diff is not shown is not found', () => {
+  for (const hidden of [{ collapsed: true }, { too_large: true }]) {
+    const withHidden = [file('a.py'), { ...file('src/parser.py'), ...hidden }]
+    expect(locateNote(discussions, withHidden, 8)).toBeNull()
+  }
+})
+
+test('a thread that never mounts is reported, once', () => {
+  // A positioned note whose line is outside every hunk has a file but no row.
+  vi.useFakeTimers()
+  const onMissing = vi.fn()
+  focusThread('never', { scroll: false, onMissing })
+
+  vi.advanceTimersByTime(7_900)
+  expect(onMissing).not.toHaveBeenCalled()
+  vi.advanceTimersByTime(200)
+  expect(onMissing).toHaveBeenCalledTimes(1)
+})
+
+test('a thread that mounts is not reported missing', () => {
+  vi.useFakeTimers()
+  const onMissing = vi.fn()
+  focusThread('t3', { scroll: false, onMissing })
+  const thread = document.createElement('article')
+  thread.dataset.discussionId = 't3'
+  thread.tabIndex = -1
+  document.body.append(thread)
+
+  vi.advanceTimersByTime(10_000)
+
+  expect(onMissing).not.toHaveBeenCalled()
+})
