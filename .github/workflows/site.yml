@@ -20,6 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Sign-in tokens live in the origin's localStorage, so the site must
+      # have an origin nothing else uses. Checked before anything is built.
+      - name: The site needs an origin of its own
+        run: node web/scripts/check-site-origin.mjs
+        env:
+          DELTA_SITE_ORIGIN: ${{ vars.DELTA_SITE_ORIGIN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -31,7 +37,8 @@ jobs:
       - run: npm run build:site
         working-directory: web
         env:
-          DELTA_SITE_BASE: /delta-review/
+          # A dedicated origin serves the site from its root.
+          DELTA_SITE_BASE: /
           VITE_GITLAB_HOST: ${{ vars.DELTA_GITLAB_HOST }}
           VITE_GITLAB_CLIENT_ID: ${{ vars.DELTA_GITLAB_CLIENT_ID }}
       - name: The site must not bundle the extension polyfill

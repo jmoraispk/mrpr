@@ -91,6 +91,11 @@ async function readAll(): Promise<Record<string, HostAuth>> {
   return (await platform().store.get<Record<string, HostAuth>>(AUTH_KEY)) ?? {}
 }
 
+/** Hosts holding a stored session, whether or not its token is still fresh. */
+export async function sessionHosts(): Promise<string[]> {
+  return Object.keys(await readAll())
+}
+
 async function write(host: string, auth: HostAuth | null): Promise<void> {
   const all = await readAll()
   if (auth) all[host] = auth
@@ -98,24 +103,43 @@ async function write(host: string, auth: HostAuth | null): Promise<void> {
   await platform().store.set({ [AUTH_KEY]: all })
 }
 
+/** How long a token request may take before it counts as GitLab being down. */
+const TOKEN_TIMEOUT_MS = 15_000
+
+type TokenPayload = { access_token: string; refresh_token: string; expires_in: number }
+
+/**
+ * `rejected`: GitLab refused the grant (400/401), so it will never work again.
+ * `unavailable`: no answer, a timeout, or a server-side failure; worth a retry.
+ */
+type TokenResult =
+  | { ok: true; token: TokenPayload }
+  | { ok: false; failure: 'rejected' | 'unavailable' }
+
 async function requestToken(
   host: string,
   body: Record<string, string>,
-): Promise<{ access_token: string; refresh_token: string; expires_in: number } | null> {
+): Promise<TokenResult> {
   try {
     const response = await fetch(`https://${host}/oauth/token`, {
       method: 'POST',
       // A form body keeps this a CORS "simple" request.
       body: new URLSearchParams(body),
+      signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
     })
-    return response.ok ? await response.json() : null
+    if (response.ok) return { ok: true, token: await response.json() }
+    return {
+      ok: false,
+      failure:
+        response.status === 400 || response.status === 401 ? 'rejected' : 'unavailable',
+    }
   } catch {
-    return null
+    return { ok: false, failure: 'unavailable' }
   }
 }
 
 function toAuth(
-  token: { access_token: string; refresh_token: string; expires_in: number },
+  token: TokenPayload,
   now: number,
 ): HostAuth {
   return {
@@ -146,7 +170,7 @@ export async function completeSignIn(
   }
   const site = config.hosts.find((value) => value.host === pending.host)
   const code = url.searchParams.get('code')
-  const token =
+  const result =
     site && code
       ? await requestToken(site.host, {
           grant_type: 'authorization_code',
@@ -156,10 +180,10 @@ export async function completeSignIn(
           redirect_uri: redirectUri(),
         })
       : null
-  if (!site || !token) {
+  if (!site || !result?.ok) {
     throw new AuthError('exchange_failed', 'GitLab did not complete the sign-in. Try again.')
   }
-  const auth = toAuth(token, Date.now())
+  const auth = toAuth(result.token, Date.now())
   await write(site.host, auth)
   const apiBase = `https://${site.host}/api/v4`
   const user = await new GitLabClient(apiBase, async () => auth.accessToken).request<{
@@ -200,11 +224,20 @@ export async function accessToken(
       refresh_token: fresh.refreshToken,
       redirect_uri: redirectUri(),
     })
-    if (!next) {
+    if (!next.ok && next.failure === 'unavailable') {
+      // Asleep, off the VPN, or GitLab having a moment: keep the session so
+      // the next poll can try again, rather than signing everyone out.
+      throw new GitLabError(
+        503,
+        'GitLab could not be reached to renew your sign-in.',
+        'gitlab_unavailable',
+      )
+    }
+    if (!next.ok) {
       await write(site.host, null)
       throw signedOut(site.host)
     }
-    const auth = toAuth(next, now())
+    const auth = toAuth(next.token, now())
     await write(site.host, auth)
     return auth.accessToken
   })

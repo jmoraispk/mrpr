@@ -391,9 +391,28 @@ export function Lists({
           ) : summary.error ? (
             <p className="hub-error">
               {describeHostError(summary.error)}{' '}
-              <a href="#/settings">
-                Reconnect {summary.host ?? summary.hostId}
-              </a>
+              {!platform().needsToken &&
+              (summary.error === 'signed_out' ||
+                summary.error === 'gitlab_authentication_failed') ? (
+                // On the site, Settings only offers sign out, which would
+                // throw the stored inbox away; signing in again keeps it.
+                <button
+                  type="button"
+                  onClick={() => {
+                    const host = summary.host ?? summary.hostId
+                    void platform().connectHost({
+                      host,
+                      apiBase: `https://${host}/api/v4`,
+                    })
+                  }}
+                >
+                  Sign in again
+                </button>
+              ) : (
+                <a href="#/settings">
+                  Reconnect {summary.host ?? summary.hostId}
+                </a>
+              )}
               <span className="hub-detail">{summary.error}</span>
             </p>
           ) : (

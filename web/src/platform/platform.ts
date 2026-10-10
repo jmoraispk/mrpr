@@ -16,3 +16,11 @@ export function platform(): Platform {
   if (!current) throw new Error('No platform installed')
   return current
 }
+
+/**
+ * The platform, or null where none is installed: the CLI's single-review page
+ * renders shared review components without one.
+ */
+export function currentPlatform(): Platform | null {
+  return current
+}

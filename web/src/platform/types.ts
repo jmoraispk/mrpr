@@ -33,4 +33,6 @@ export interface Platform {
   requestHostAccess?(host: string): Promise<boolean>
   /** Extension development builds only. */
   reload?(): void
+  /** Site only: send the user back through sign-in, returning to this page. */
+  reauthenticate?(): Promise<void>
 }

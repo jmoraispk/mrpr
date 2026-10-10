@@ -1,7 +1,7 @@
 import { handleMessage } from '../extension/router'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
-import { accessToken, signIn, signOut } from '../site/auth'
+import { accessToken, sessionHosts, signIn, signOut } from '../site/auth'
 import type { SiteConfig } from '../site/config'
 import { showFaviconDot } from '../site/favicon'
 import { createLocalStore } from './localStore'
@@ -35,6 +35,13 @@ export function createSitePlatform(
     async disconnectHost(id) {
       const site = siteHost(id)
       if (site) await signOut(site)
+    },
+    async reauthenticate() {
+      // The host whose session is gone; with one configured host, that one.
+      const live = await sessionHosts()
+      const site =
+        config.hosts.find((value) => !live.includes(value.host)) ?? config.hosts[0]
+      if (site) await signIn(site, window.location.hash || '#/', config.scopes)
     },
     showUnread: async (count) => showFaviconDot(count > 0),
     send: (message) => handleMessage(message),

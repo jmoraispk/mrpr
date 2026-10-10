@@ -1,4 +1,5 @@
 import { ApiError } from '../api/client'
+import { currentPlatform } from '../platform/platform'
 import { useTransport } from '../transport/context'
 
 interface ErrorStateProps {
@@ -125,8 +126,37 @@ function errorCopy(
   }
 }
 
+/** On the site, an ended sign-in is fixed by signing in again, not by a CLI. */
+function siteSignInEnded(error: Error): (() => Promise<void>) | null {
+  const reauthenticate = currentPlatform()?.reauthenticate
+  const code = error instanceof ApiError ? error.code : null
+  return reauthenticate &&
+    (code === 'signed_out' || code === 'gitlab_authentication_failed')
+    ? reauthenticate
+    : null
+}
+
 export function ErrorState({ error, onRetry }: ErrorStateProps) {
   const transport = useTransport()
+  const signInAgain = siteSignInEnded(error)
+  if (signInAgain) {
+    return (
+      <main className="state-screen error-state" role="alert">
+        <div className="state-mark error-code" aria-hidden="true">
+          401
+        </div>
+        <h1>Your GitLab sign-in has ended</h1>
+        <p>Sign in again to carry on. This merge request reopens afterwards.</p>
+        <button
+          className="primary-action"
+          type="button"
+          onClick={() => void signInAgain()}
+        >
+          Sign in again
+        </button>
+      </main>
+    )
+  }
   const copy = errorCopy(error, transport.targetKey === 'proxy')
   return (
     <main className="state-screen error-state" role="alert">

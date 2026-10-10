@@ -225,3 +225,20 @@ test('signing out revokes, forgets the token and the host, and clears its inbox'
   await expect(listHosts()).resolves.toEqual([])
   await expect(platform().store.get('inbox')).resolves.toEqual({ hosts: {} })
 })
+
+test('a refresh GitLab cannot answer keeps the session for the next try', async () => {
+  for (const unavailable of [
+    () => HttpResponse.json({ message: 'bad gateway' }, { status: 503 }),
+    () => HttpResponse.error(),
+  ]) {
+    await storeAuth(1_000_000)
+    server.use(http.post(`${ORIGIN}/oauth/token`, unavailable))
+
+    await expect(accessToken(SITE, () => 1_000_000)).rejects.toMatchObject({
+      code: 'gitlab_unavailable',
+    })
+    await expect(platform().store.get(AUTH_KEY)).resolves.toEqual({
+      [SITE.host]: { accessToken: 'at-old', refreshToken: 'rt-old', expiresAt: 1_000_000 },
+    })
+  }
+})
