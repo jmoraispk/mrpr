@@ -11,6 +11,7 @@ const fake = createFakeBrowser() as ReturnType<typeof createFakeBrowser> & {
 fake.runtime = { reload }
 
 vi.mock('webextension-polyfill', () => ({ default: fake }))
+await import('../test/installExtensionPlatform')
 
 beforeEach(() => {
   reload.mockClear()

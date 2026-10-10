@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill'
+import { platform } from '../platform/platform'
 
 /**
  * Reloads an unpacked extension from its own UI, so a rebuild does not require
@@ -35,14 +35,15 @@ import browser from 'webextension-polyfill'
  * it in a normally installed extension.
  */
 export function DevReload() {
-  if (!__DELTA_DEV__) return null
+  const reload = platform().reload
+  if (!__DELTA_DEV__ || !reload) return null
 
   return (
     <button
       className="dev-reload"
       title="Reload the unpacked extension from disk. This tab may not survive it — reopen the hub if it closes or stops responding."
       type="button"
-      onClick={() => browser.runtime.reload()}
+      onClick={() => reload()}
     >
       Reload extension
     </button>
