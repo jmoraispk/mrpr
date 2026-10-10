@@ -140,3 +140,49 @@ test('an HTTP failure on GraphQL keeps the REST error codes', async () => {
     code: 'gitlab_authentication_failed',
   })
 })
+
+test('a token function authenticates with a bearer header, fetched per request', async () => {
+  const seen: { auth: string | null; privateToken: string | null }[] = []
+  server.use(
+    http.get('https://gitlab.example.com/api/v4/user', ({ request }) => {
+      seen.push({
+        auth: request.headers.get('Authorization'),
+        privateToken: request.headers.get('PRIVATE-TOKEN'),
+      })
+      return HttpResponse.json({ id: 1 })
+    }),
+  )
+  let calls = 0
+  const client = new GitLabClient('https://gitlab.example.com/api/v4', async () => {
+    calls += 1
+    return `oauth-${calls}`
+  })
+
+  await client.request('GET', '/user')
+  await client.request('GET', '/user')
+
+  expect(seen).toEqual([
+    { auth: 'Bearer oauth-1', privateToken: null },
+    { auth: 'Bearer oauth-2', privateToken: null },
+  ])
+})
+
+test('the client scrubs its own credential out of error messages', async () => {
+  server.use(
+    http.get('https://gitlab.example.com/api/v4/user', () =>
+      HttpResponse.json({ message: 'bad token secret-pat here' }, { status: 401 }),
+    ),
+    http.post('https://gitlab.example.com/api/graphql', () =>
+      HttpResponse.json({ errors: [{ message: 'token oauth-x rejected' }] }),
+    ),
+  )
+
+  await expect(
+    new GitLabClient('https://gitlab.example.com/api/v4', 'secret-pat').request('GET', '/user'),
+  ).rejects.toMatchObject({ message: 'bad token [redacted] here' })
+  await expect(
+    new GitLabClient('https://gitlab.example.com/api/v4', async () => 'oauth-x').graphql(
+      'query { x }',
+    ),
+  ).rejects.toMatchObject({ message: 'token [redacted] rejected' })
+})
