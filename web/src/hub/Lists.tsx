@@ -1,13 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import browser from 'webextension-polyfill'
 
 import type { HostConfig } from '../extension/hosts'
-import { originFor } from '../extension/hosts'
 import type {
   MergeRequestPage,
   MergeRequestSummary,
 } from '../gitlab/mergeRequests'
+import { platform } from '../platform/platform'
 import { hubRequest, type HostSummary } from './api'
 import { parseMergeRequestUrl } from './mrUrl'
 import { describeHostError } from './hostErrors'
@@ -19,7 +18,7 @@ import { mergeRequestKey } from './useInbox'
  * Where the hub remembers which repository groups the user folded away.
  *
  * This page already holds the `storage` permission and a collapsed group is
- * throwaway view state, so it reads and writes `browser.storage.local` itself
+ * throwaway view state, so it reads and writes the platform store itself
  * instead of paying a message round trip to the worker. It touches this key
  * and nothing else: `hosts` and `tokens` belong to the worker (see
  * `extension/hosts.ts`), and a personal access token must never be reachable
@@ -70,12 +69,13 @@ function useCollapsedGroups() {
 
   useEffect(() => {
     let live = true
-    void browser.storage.local.get(COLLAPSED_KEY).then((stored) => {
-      const value = stored[COLLAPSED_KEY]
-      if (!live || !value || typeof value !== 'object') return
-      latest.current = value as CollapsedGroups
-      setCollapsed(latest.current)
-    })
+    void platform()
+      .store.get<CollapsedGroups>(COLLAPSED_KEY)
+      .then((value) => {
+        if (!live || !value || typeof value !== 'object') return
+        latest.current = value
+        setCollapsed(latest.current)
+      })
     return () => {
       live = false
     }
@@ -85,7 +85,7 @@ function useCollapsedGroups() {
     const next = withGroupToggled(latest.current, hostId, repository)
     latest.current = next
     setCollapsed(next)
-    void browser.storage.local.set({ [COLLAPSED_KEY]: next })
+    void platform().store.set({ [COLLAPSED_KEY]: next })
   }, [])
 
   return { collapsed, toggle }
@@ -323,9 +323,7 @@ export function Lists({
   const groups = useCollapsedGroups()
 
   async function grant(host: string) {
-    const granted = await browser.permissions.request({
-      origins: [originFor(host)],
-    })
+    const granted = (await platform().requestHostAccess?.(host)) ?? false
     if (granted) {
       void queryClient.invalidateQueries({ queryKey: ['merge-requests'] })
     }
@@ -393,9 +391,28 @@ export function Lists({
           ) : summary.error ? (
             <p className="hub-error">
               {describeHostError(summary.error)}{' '}
-              <a href="#/settings">
-                Reconnect {summary.host ?? summary.hostId}
-              </a>
+              {!platform().needsToken &&
+              (summary.error === 'signed_out' ||
+                summary.error === 'gitlab_authentication_failed') ? (
+                // On the site, Settings only offers sign out, which would
+                // throw the stored inbox away; signing in again keeps it.
+                <button
+                  type="button"
+                  onClick={() => {
+                    const host = summary.host ?? summary.hostId
+                    void platform().connectHost({
+                      host,
+                      apiBase: `https://${host}/api/v4`,
+                    })
+                  }}
+                >
+                  Sign in again
+                </button>
+              ) : (
+                <a href="#/settings">
+                  Reconnect {summary.host ?? summary.hostId}
+                </a>
+              )}
               <span className="hub-detail">{summary.error}</span>
             </p>
           ) : (

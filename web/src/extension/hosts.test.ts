@@ -4,6 +4,7 @@ import { createFakeBrowser } from '../test/fakeBrowser'
 
 const fake = createFakeBrowser()
 vi.mock('webextension-polyfill', () => ({ default: fake }))
+await import('../test/installExtensionPlatform')
 
 const {
   getHost,

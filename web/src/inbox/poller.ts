@@ -1,10 +1,6 @@
-import browser from 'webextension-polyfill'
-
-import { getToken, listHosts, originFor } from '../extension/hosts'
-import { scrubToken } from '../extension/scrub'
-import { GitLabClient } from '../gitlab/client'
+import { listHosts } from '../extension/hosts'
 import { GitLabError } from '../gitlab/errors'
-import { showUnread } from './badge'
+import { platform } from '../platform/platform'
 import { pollHost } from './pollHost'
 import {
   commitHost,
@@ -55,28 +51,9 @@ async function run({
     ) {
       continue
     }
-    let token: string | null = null
     try {
-      token = await getToken(host.id)
-      if (!token) {
-        throw new GitLabError(
-          400,
-          'Delta has no token stored for this host',
-          'host_not_configured',
-        )
-      }
-      const permitted = await browser.permissions.contains({
-        origins: [originFor(host.host)],
-      })
-      if (!permitted) {
-        throw new GitLabError(
-          403,
-          'Delta no longer has permission for this GitLab host',
-          'permission_missing',
-        )
-      }
       const next = await pollHost({
-        client: new GitLabClient(host.apiBase, token),
+        client: await platform().clientFor(host),
         hostId: host.id,
         username: host.username,
         previous,
@@ -85,13 +62,11 @@ async function run({
       })
       await updateInbox((state) => commitHost(state, host.id, next))
     } catch (error) {
-      // Never thrown out of here: an alarm handler has nowhere to report it,
-      // and the inbox is where the user will look.
+      // Never thrown out of here: a timer has nowhere to report it, and the
+      // inbox is where the user will look. The client has already scrubbed
+      // its credential out of any message.
       const code = error instanceof GitLabError ? error.code : 'delta_internal_error'
-      const message = scrubToken(
-        error instanceof Error ? error.message : String(error),
-        token,
-      )
+      const message = error instanceof Error ? error.message : String(error)
       await updateInbox((state) => recordHostError(state, host.id, { code, message }))
     }
   }
@@ -102,5 +77,5 @@ async function run({
       hosts.map((host) => host.id),
     ),
   )
-  await showUnread(unreadCount(final))
+  await platform().showUnread(unreadCount(final))
 }

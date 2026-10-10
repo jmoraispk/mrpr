@@ -5,6 +5,7 @@ import type { HostInbox, InboxItem, InboxState } from './types'
 
 const fake = createFakeBrowser()
 vi.mock('webextension-polyfill', () => ({ default: fake }))
+await import('../test/installExtensionPlatform')
 
 const {
   commitHost,

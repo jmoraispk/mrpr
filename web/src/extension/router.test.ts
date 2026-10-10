@@ -7,6 +7,7 @@ import { server } from '../test/server'
 
 const fake = createFakeBrowser()
 vi.mock('webextension-polyfill', () => ({ default: fake }))
+await import('../test/installExtensionPlatform')
 
 const { saveHost } = await import('./hosts')
 const { handleMessage, scrubToken } = await import('./router')

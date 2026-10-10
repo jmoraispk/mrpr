@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import browser from 'webextension-polyfill'
 
 import type { HostConfig } from '../extension/hosts'
-import { originFor } from '../extension/hosts'
 import { INBOX_SETTINGS_KEY, loadSettings } from '../inbox/store'
 import type { InboxSettings } from '../inbox/types'
+import { platform } from '../platform/platform'
 import { hubRequest } from './api'
 
 /**
@@ -67,7 +66,7 @@ function InboxPreferences() {
           onChange={(event) => {
             const next = { ...settings, hideBots: event.target.checked }
             setSettings(next)
-            void browser.storage.local.set({ [INBOX_SETTINGS_KEY]: next })
+            void platform().store.set({ [INBOX_SETTINGS_KEY]: next })
           }}
         />{' '}
         Hide comments from bots
@@ -81,6 +80,7 @@ function InboxPreferences() {
 }
 
 export function Settings() {
+  const site = platform()
   const queryClient = useQueryClient()
   const [host, setHost] = useState('')
   const [token, setToken] = useState('')
@@ -107,19 +107,17 @@ export function Settings() {
           async (value) =>
             [
               value.id,
-              await browser.permissions.contains({
-                origins: [originFor(value.host)],
-              }),
+              await site.hasHostAccess!(value.host),
             ] as const,
         ),
       )
       return Object.fromEntries(entries)
     },
-    enabled: (hosts.data?.length ?? 0) > 0,
+    enabled: (hosts.data?.length ?? 0) > 0 && site.hasHostAccess !== undefined,
   })
 
   async function grant(value: HostConfig) {
-    await browser.permissions.request({ origins: [originFor(value.host)] })
+    await site.requestHostAccess?.(value.host)
     void queryClient.invalidateQueries({ queryKey: ['host-permissions'] })
     void queryClient.invalidateQueries({ queryKey: ['merge-requests'] })
   }
@@ -127,9 +125,7 @@ export function Settings() {
   const add = useMutation({
     mutationFn: async () => {
       const cleaned = cleanHostname(host)
-      const granted = await browser.permissions.request({
-        origins: [originFor(cleaned)],
-      })
+      const granted = (await site.requestHostAccess?.(cleaned)) ?? true
       if (!granted) {
         throw new Error(
           `Delta needs permission to reach ${cleaned} before it can use your token.`,
@@ -176,44 +172,48 @@ export function Settings() {
                 </button>
               ) : null}{' '}
               <button type="button" onClick={() => remove.mutate(value.id)}>
-                Remove
+                {site.needsToken ? 'Remove' : 'Sign out'}
               </button>
             </span>
           </li>
         ))}
       </ul>
 
-      <h3 className="eyebrow">Add a host</h3>
-      <p className="hub-note">
-        Create a personal access token with the <code>api</code> scope. Give it
-        an expiry date — Delta stores it in extension storage on this machine.
-      </p>
-      <label className="eyebrow">
-        Hostname
-        <input
-          type="text"
-          placeholder="gitlab.example.com"
-          value={host}
-          onChange={(event) => setHost(event.target.value)}
-        />
-      </label>
-      <label className="eyebrow">
-        Personal access token
-        <input
-          type="password"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-        />
-      </label>
-      <button
-        className="primary-action"
-        type="button"
-        disabled={add.isPending}
-        onClick={() => add.mutate()}
-      >
-        {add.isPending ? 'Checking…' : 'Add host'}
-      </button>
-      {error ? <p className="hub-error">{error}</p> : null}
+      {site.needsToken ? (
+        <>
+          <h3 className="eyebrow">Add a host</h3>
+          <p className="hub-note">
+            Create a personal access token with the <code>api</code> scope. Give it
+            an expiry date — Delta stores it in extension storage on this machine.
+          </p>
+          <label className="eyebrow">
+            Hostname
+            <input
+              type="text"
+              placeholder="gitlab.example.com"
+              value={host}
+              onChange={(event) => setHost(event.target.value)}
+            />
+          </label>
+          <label className="eyebrow">
+            Personal access token
+            <input
+              type="password"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+          </label>
+          <button
+            className="primary-action"
+            type="button"
+            disabled={add.isPending}
+            onClick={() => add.mutate()}
+          >
+            {add.isPending ? 'Checking…' : 'Add host'}
+          </button>
+          {error ? <p className="hub-error">{error}</p> : null}
+        </>
+      ) : null}
       <InboxPreferences />
     </div>
   )

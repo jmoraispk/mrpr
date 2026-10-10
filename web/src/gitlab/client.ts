@@ -8,16 +8,26 @@ export interface RequestOptions {
   signal?: AbortSignal
 }
 
+/** Never let a credential ride out of the client inside an error message. */
+function scrub(message: string, credential: string): string {
+  return credential ? message.split(credential).join('[redacted]') : message
+}
+
 export class GitLabClient {
   private readonly apiBase: string
   private readonly graphqlUrl: string
-  private readonly token: string
+  private readonly auth: string | (() => Promise<string>)
 
-  constructor(apiBase: string, token: string) {
+  /**
+   * `auth` is a personal access token (sent as `PRIVATE-TOKEN`), or a function
+   * returning an OAuth access token (sent as a bearer token). The function is
+   * called for every request, so a token refreshed in between is picked up.
+   */
+  constructor(apiBase: string, auth: string | (() => Promise<string>)) {
     this.apiBase = apiBase.replace(/\/+$/, '')
     // REST lives at /api/v4 and GraphQL beside it at /api/graphql.
     this.graphqlUrl = this.apiBase.replace(/\/v4$/, '/graphql')
-    this.token = token
+    this.auth = auth
   }
 
   private url(path: string, params?: Record<string, string>): string {
@@ -32,10 +42,13 @@ export class GitLabClient {
     method: string,
     url: string,
     options: RequestOptions = {},
-  ): Promise<Response> {
-    const headers: Record<string, string> = {
-      'PRIVATE-TOKEN': this.token,
-    }
+  ): Promise<{ response: Response; credential: string }> {
+    const credential =
+      typeof this.auth === 'string' ? this.auth : await this.auth()
+    const headers: Record<string, string> =
+      typeof this.auth === 'string'
+        ? { 'PRIVATE-TOKEN': credential }
+        : { Authorization: `Bearer ${credential}` }
     if (options.json !== undefined) {
       headers['Content-Type'] = 'application/json'
     }
@@ -44,13 +57,14 @@ export class GitLabClient {
       ? AbortSignal.any([options.signal, timeout])
       : timeout
     try {
-      return await fetch(url, {
+      const response = await fetch(url, {
         method,
         headers,
         body:
           options.json === undefined ? undefined : JSON.stringify(options.json),
         signal,
       })
+      return { response, credential }
     } catch (error) {
       if (timeout.aborted) {
         throw new GitLabError(504, 'GitLab request timed out', 'gitlab_timeout')
@@ -60,7 +74,10 @@ export class GitLabClient {
     }
   }
 
-  private static async raiseForError(response: Response): Promise<void> {
+  private static async raiseForError(
+    response: Response,
+    credential: string,
+  ): Promise<void> {
     if (response.ok) return
     const text = await response.text()
     let message = text
@@ -77,7 +94,7 @@ export class GitLabClient {
     }
     throw new GitLabError(
       response.status,
-      message,
+      scrub(message, credential),
       codeForStatus(response.status),
     )
   }
@@ -87,12 +104,12 @@ export class GitLabClient {
     path: string,
     options: RequestOptions = {},
   ): Promise<T> {
-    const response = await this.send(
+    const { response, credential } = await this.send(
       method,
       this.url(path, options.params),
       options,
     )
-    await GitLabClient.raiseForError(response)
+    await GitLabClient.raiseForError(response, credential)
     return (await response.json()) as T
   }
 
@@ -100,12 +117,12 @@ export class GitLabClient {
     const results: T[] = []
     let page = 1
     for (;;) {
-      const response = await this.send(
+      const { response, credential } = await this.send(
         'GET',
         this.url(path, { page: String(page), per_page: '100' }),
         { signal },
       )
-      await GitLabClient.raiseForError(response)
+      await GitLabClient.raiseForError(response, credential)
       results.push(...((await response.json()) as T[]))
       const next = response.headers.get('x-next-page')
       if (!next) return results
@@ -123,11 +140,11 @@ export class GitLabClient {
     variables: Record<string, unknown> = {},
     signal?: AbortSignal,
   ): Promise<T> {
-    const response = await this.send('POST', this.graphqlUrl, {
+    const { response, credential } = await this.send('POST', this.graphqlUrl, {
       json: { query, variables },
       signal,
     })
-    await GitLabClient.raiseForError(response)
+    await GitLabClient.raiseForError(response, credential)
     const payload = (await response.json()) as {
       data?: T
       errors?: { message: string }[]
@@ -135,7 +152,7 @@ export class GitLabClient {
     if (payload.errors?.length) {
       throw new GitLabError(
         502,
-        payload.errors.map((error) => error.message).join('; '),
+        scrub(payload.errors.map((error) => error.message).join('; '), credential),
         'gitlab_graphql_error',
       )
     }

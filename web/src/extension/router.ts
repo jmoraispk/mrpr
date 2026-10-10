@@ -1,7 +1,4 @@
-import browser from 'webextension-polyfill'
-
 import type { DeltaConfig } from '../api/types'
-import { GitLabClient } from '../gitlab/client'
 import { getDiffs, getMergeRequest } from '../gitlab/diffs'
 import {
   createInline,
@@ -11,8 +8,6 @@ import {
 } from '../gitlab/discussions'
 import { GitLabError } from '../gitlab/errors'
 import { listAuthored, listReviewRequested } from '../gitlab/mergeRequests'
-import { getCurrentUser } from '../gitlab/user'
-import { showUnread } from '../inbox/badge'
 import { pollAll } from '../inbox/poller'
 import {
   inboxView,
@@ -22,17 +17,9 @@ import {
   unreadCount,
   updateInbox,
 } from '../inbox/store'
+import { platform } from '../platform/platform'
 import type { InlineCommentInput, ReviewTarget } from '../transport/types'
-import {
-  getHost,
-  getToken,
-  hostIdFor,
-  listHosts,
-  originFor,
-  removeHost,
-  saveHost,
-  type HostConfig,
-} from './hosts'
+import { getHost, listHosts } from './hosts'
 import type { DeltaMessage, DeltaResponse } from './messages'
 import { scrubToken } from './scrub'
 
@@ -52,33 +39,16 @@ class RouterError extends Error {
   }
 }
 
-async function clientFor(
-  target: ReviewTarget,
-): Promise<{ client: GitLabClient; host: HostConfig; token: string }> {
+async function clientFor(target: ReviewTarget) {
   const host = await getHost(target.hostId)
-  const token = host ? await getToken(target.hostId) : null
-  if (!host || !token) {
+  if (!host) {
     throw new RouterError(
       400,
       'That GitLab host is not configured in Delta',
       'host_not_configured',
     )
   }
-  // The user can revoke a host permission in browser settings at any time.
-  // Without this check the browser blocks the fetch and the client reports it
-  // as `gitlab_unavailable`, telling the user to wait out an outage when the
-  // real fix is one permission grant.
-  const permitted = await browser.permissions.contains({
-    origins: [originFor(host.host)],
-  })
-  if (!permitted) {
-    throw new RouterError(
-      403,
-      'Delta no longer has permission for this GitLab host',
-      'permission_missing',
-    )
-  }
-  return { client: new GitLabClient(host.apiBase, token), host, token }
+  return { client: await platform().clientFor(host), host }
 }
 
 async function runReview(
@@ -125,48 +95,22 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
     case 'listHosts':
       return listHosts()
     case 'removeHost':
-      return removeHost((payload as { id: string }).id).then(() => null)
-    case 'addHost': {
-      const { host, apiBase, token } = payload as {
-        host: string
-        apiBase: string
-        token: string
-      }
-      const user = await getCurrentUser(new GitLabClient(apiBase, token))
-      const config: HostConfig = {
-        id: hostIdFor(host),
-        host: hostIdFor(host),
-        apiBase,
-        userId: user.id,
-        username: user.username,
-      }
-      await saveHost(config, token)
-      return config
-    }
+      return platform()
+        .disconnectHost((payload as { id: string }).id)
+        .then(() => null)
+    case 'addHost':
+      return platform().connectHost(
+        payload as { host: string; apiBase: string; token?: string },
+      )
     case 'listMergeRequests': {
       const hosts = await listHosts()
       return Promise.all(
-        // Everything per host lives inside the try, storage and permission
-        // reads included: anything escaping it rejects the Promise.all and
-        // collapses every host into one 500, which is the outcome this
-        // per-host error object exists to avoid.
+        // Everything per host lives inside the try: anything escaping it
+        // rejects the Promise.all and collapses every host into one 500,
+        // which is the outcome this per-host error object exists to avoid.
         hosts.map(async (host) => {
           try {
-            const token = await getToken(host.id)
-            if (!token) {
-              return { hostId: host.id, error: 'host_not_configured' as const }
-            }
-            const permitted = await browser.permissions.contains({
-              origins: [originFor(host.host)],
-            })
-            if (!permitted) {
-              return {
-                hostId: host.id,
-                host: host.host,
-                error: 'permission_missing' as const,
-              }
-            }
-            const client = new GitLabClient(host.apiBase, token)
+            const client = await platform().clientFor(host)
             const [reviewing, authored] = await Promise.all([
               listReviewRequested(client, host.userId),
               listAuthored(client, host.userId),
@@ -187,12 +131,12 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
     case 'markRead': {
       const { ids } = payload as { ids: string[] }
       const state = await updateInbox((value) => markRead(value, ids))
-      await showUnread(unreadCount(state))
+      await platform().showUnread(unreadCount(state))
       return null
     }
     case 'markAllRead': {
       const state = await updateInbox(markAllRead)
-      await showUnread(unreadCount(state))
+      await platform().showUnread(unreadCount(state))
       return null
     }
     case 'pollNow': {
@@ -208,18 +152,19 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
 export async function handleMessage(
   message: DeltaMessage,
 ): Promise<DeltaResponse> {
-  let token: string | null = null
+  // GitLabClient scrubs its own credential. A token arriving in an addHost
+  // payload is scrubbed here as well, since it may surface before any
+  // client holds it.
+  const token =
+    message.kind === 'delta/hub' && message.op === 'addHost'
+      ? ((message.payload as { token?: string }).token ?? null)
+      : null
   try {
     if (message.kind === 'delta/review') {
-      token = await getToken(message.target.hostId)
       return {
         ok: true,
         data: await runReview(message.op, message.target, message.payload),
       }
-    }
-    if (message.op === 'addHost') {
-      // The token is in the payload, not storage yet — scrub it all the same.
-      token = (message.payload as { token?: string }).token ?? null
     }
     return { ok: true, data: await runHub(message.op, message.payload) }
   } catch (error) {

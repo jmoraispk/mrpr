@@ -24,6 +24,7 @@ fake.runtime = {
   },
 }
 vi.mock('webextension-polyfill', () => ({ default: fake }))
+await import('../test/installExtensionPlatform')
 
 const { Hub } = await import('./Hub')
 

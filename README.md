@@ -68,6 +68,14 @@ glab auth status --hostname gitlab.example.com
 uvx delta-review https://gitlab.com/group/project/-/merge_requests/42
 ```
 
+## Website
+
+Delta Review also runs as a website: open it, sign in with GitLab, and your
+browser talks to GitLab directly. The inbox, merge request lists and review
+view all work there, with nothing to install. See
+[docs/site-setup.md](./docs/site-setup.md) to host it and to develop it
+locally (`npm run dev:site --prefix web`).
+
 ## Browser extension
 
 DeltaReview also runs as a browser extension in Chrome, Edge and Firefox, with

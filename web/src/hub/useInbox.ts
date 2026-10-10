@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import browser from 'webextension-polyfill'
 
 import { INBOX_KEY } from '../inbox/store'
+import { platform } from '../platform/platform'
 import type { InboxView } from '../inbox/types'
 import { hubRequest } from './api'
 
@@ -20,15 +20,15 @@ export function useInbox() {
     queryKey: INBOX_QUERY_KEY,
     queryFn: () => hubRequest<InboxView>('listInbox'),
   })
-  useEffect(() => {
-    const listener = (changes: Record<string, unknown>, area: string) => {
-      if (area === 'local' && INBOX_KEY in changes) {
-        void queryClient.invalidateQueries({ queryKey: INBOX_QUERY_KEY })
-      }
-    }
-    browser.storage.onChanged.addListener(listener)
-    return () => browser.storage.onChanged.removeListener(listener)
-  }, [queryClient])
+  useEffect(
+    () =>
+      platform().store.subscribe((keys) => {
+        if (keys.includes(INBOX_KEY)) {
+          void queryClient.invalidateQueries({ queryKey: INBOX_QUERY_KEY })
+        }
+      }),
+    [queryClient],
+  )
   return inbox
 }
 
