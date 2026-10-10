@@ -10,6 +10,9 @@
     "dev:extension": "node scripts/build-extension.mjs --dev --watch",
     "benchmark:diff": "node scripts/benchmark-diff.mjs",
     "benchmark:browser": "playwright test e2e/diff-performance.spec.ts",
+    "dev:site": "vite --config vite.site.config.ts",
+    "build:site": "tsc -b && vite build --config vite.site.config.ts",
+    "preview:site": "vite preview --config vite.site.config.ts",
     "lint": "oxlint",
     "test": "vitest",
     "preview": "vite preview"

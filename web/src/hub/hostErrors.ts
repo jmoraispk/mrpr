@@ -18,6 +18,7 @@ const HOST_ERRORS: Record<string, string> = {
   gitlab_rate_limited: 'GitLab is rate limiting Delta. Wait briefly, then retry.',
   gitlab_timeout: 'GitLab did not answer in time. Retry when it is responsive.',
   gitlab_unavailable: 'GitLab is unavailable. Retry when it recovers.',
+  signed_out: 'Your sign-in to this host has ended.',
   gitlab_graphql_error:
     'GitLab refused the query Delta uses to find activity. Check that this host runs a recent GitLab.',
 }

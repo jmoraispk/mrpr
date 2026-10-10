@@ -7,6 +7,7 @@ import {
 
 import type { HostConfig } from '../extension/hosts'
 import type { InboxItem, InboxKind, InboxView } from '../inbox/types'
+import { platform } from '../platform/platform'
 import { hubRequest } from './api'
 import { describeHostError } from './hostErrors'
 import { relativeTime } from './relativeTime'
@@ -172,7 +173,23 @@ export function Inbox({ inbox }: { inbox: UseQueryResult<InboxView, Error> }) {
         .map((host) => (
           <p key={host.hostId} className="hub-error">
             {host.host}: {describeHostError(host.error!.code)}{' '}
-            <a href="#/settings">Open settings</a>
+            {!platform().needsToken &&
+            (host.error!.code === 'signed_out' ||
+              host.error!.code === 'gitlab_authentication_failed') ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void platform().connectHost({
+                    host: host.host,
+                    apiBase: `https://${host.host}/api/v4`,
+                  })
+                }
+              >
+                Sign in again
+              </button>
+            ) : (
+              <a href="#/settings">Open settings</a>
+            )}
             <span className="hub-detail">{host.error!.message}</span>
           </p>
         ))}
