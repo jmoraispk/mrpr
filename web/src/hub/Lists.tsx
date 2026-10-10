@@ -10,32 +10,10 @@ import type {
 } from '../gitlab/mergeRequests'
 import { hubRequest, type HostSummary } from './api'
 import { parseMergeRequestUrl } from './mrUrl'
+import { describeHostError } from './hostErrors'
 import { buildReviewHash } from './route'
-
-/**
- * Human sentences for the codes the worker attaches to a single host, so the
- * page never shows a user a bare `gitlab_authentication_failed`. Wording
- * tracks `review/ErrorState.tsx`, which explains the same conditions once the
- * user is inside a review. `permission_missing` is absent on purpose — it has
- * its own branch below, with a button.
- */
-const HOST_ERRORS: Record<string, string> = {
-  host_not_configured:
-    'Delta has no token stored for this host. Add it again in settings.',
-  gitlab_authentication_failed:
-    'GitLab rejected the credentials Delta holds for this host. Renew them in settings.',
-  gitlab_access_denied:
-    'This GitLab account is not allowed to list merge requests on this host.',
-  gitlab_not_found:
-    'GitLab did not recognise this host’s API address. Check the hostname in settings.',
-  gitlab_rate_limited: 'GitLab is rate limiting Delta. Wait briefly, then retry.',
-  gitlab_timeout: 'GitLab did not answer in time. Retry when it is responsive.',
-  gitlab_unavailable: 'GitLab is unavailable. Retry when it recovers.',
-}
-
-function describeHostError(code: string): string {
-  return HOST_ERRORS[code] ?? 'Delta could not load merge requests from this host.'
-}
+import { SetupCard } from './SetupCard'
+import { mergeRequestKey } from './useInbox'
 
 /**
  * Where the hub remembers which repository groups the user folded away.
@@ -157,9 +135,11 @@ function groupByRepository(items: MergeRequestSummary[]): RepositoryGroup[] {
 function MergeRequestRow({
   hostId,
   item,
+  unread,
 }: {
   hostId: string
   item: MergeRequestSummary
+  unread: boolean
 }) {
   const target = {
     hostId,
@@ -169,7 +149,12 @@ function MergeRequestRow({
   return (
     <li className="hub-row">
       <a href={buildReviewHash(target)}>
-        <strong>{item.title}</strong>
+        <strong>
+          {unread ? (
+            <span className="unread-dot" aria-label="Unread activity" />
+          ) : null}
+          {item.title}
+        </strong>
         <span className="hub-row-meta">
           {item.references.full} · {item.author.name}
         </span>
@@ -193,11 +178,13 @@ function Group({
   hostId,
   group,
   collapsed,
+  unread,
   onToggle,
 }: {
   hostId: string
   group: RepositoryGroup
   collapsed: boolean
+  unread: Set<string>
   onToggle: () => void
 }) {
   const count = group.items.length
@@ -221,7 +208,14 @@ function Group({
       {collapsed ? null : (
         <ul className="hub-list">
           {group.items.map((item) => (
-            <MergeRequestRow key={item.id} hostId={hostId} item={item} />
+            <MergeRequestRow
+              key={item.id}
+              hostId={hostId}
+              item={item}
+              unread={unread.has(
+                mergeRequestKey(hostId, repositoryOf(item), item.iid),
+              )}
+            />
           ))}
         </ul>
       )}
@@ -234,12 +228,14 @@ function Section({
   hostId,
   page,
   collapsed,
+  unread,
   onToggle,
 }: {
   title: string
   hostId: string
   page: MergeRequestPage
   collapsed: CollapsedGroups
+  unread: Set<string>
   onToggle: (hostId: string, repository: string) => void
 }) {
   const groups = groupByRepository(page.items)
@@ -255,6 +251,7 @@ function Section({
             hostId={hostId}
             group={group}
             collapsed={isGroupCollapsed(collapsed, hostId, group.repository)}
+            unread={unread}
             onToggle={() => onToggle(hostId, group.repository)}
           />
         ))
@@ -310,7 +307,9 @@ function OpenByUrl({ hosts }: { hosts: HostConfig[] }) {
   )
 }
 
-export function Lists() {
+export function Lists({
+  unread = new Set<string>(),
+}: { unread?: Set<string> } = {}) {
   const queryClient = useQueryClient()
   const hosts = useQuery({
     queryKey: ['hosts'],
@@ -352,16 +351,7 @@ export function Lists() {
     )
   }
   if (!hosts.data?.length) {
-    return (
-      <div className="state-screen">
-        <h1>Add a GitLab host to get started</h1>
-        <p>
-          Delta needs a personal access token with the <code>api</code> scope
-          for each GitLab instance you review on.
-        </p>
-        <a href="#/settings">Open settings</a>
-      </div>
-    )
+    return <SetupCard />
   }
 
   return (
@@ -415,6 +405,7 @@ export function Lists() {
                 hostId={summary.hostId}
                 page={summary.reviewing!}
                 collapsed={groups.collapsed}
+                unread={unread}
                 onToggle={groups.toggle}
               />
               <Section
@@ -422,6 +413,7 @@ export function Lists() {
                 hostId={summary.hostId}
                 page={summary.authored!}
                 collapsed={groups.collapsed}
+                unread={unread}
                 onToggle={groups.toggle}
               />
             </>

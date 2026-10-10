@@ -71,8 +71,12 @@ uvx delta-review https://gitlab.com/group/project/-/merge_requests/42
 ## Browser extension
 
 DeltaReview also runs as a browser extension in Chrome, Edge and Firefox, with
-no local Python required. It adds a toolbar hub listing merge requests awaiting
-your review, and opens the same review interface in a tab.
+no local Python required. It adds a toolbar hub whose landing page is an
+inbox: replies in threads you took part in, comments on your merge requests,
+mentions, and merges, gathered every two minutes while you are at your machine
+and counted on the toolbar icon. Opening one lands on that thread in the same
+review interface the CLI serves. The hub also lists merge requests awaiting
+your review.
 
 There is no extension store. Everything comes from one page, which detects your
 browser and operating system and shows a single path:

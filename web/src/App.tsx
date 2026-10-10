@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ErrorState } from './review/ErrorState'
 import { FileTree } from './review/FileTree'
@@ -12,6 +12,7 @@ import {
   discussionsQueryKey,
   mergeFetchedDiscussions,
 } from './review/discussionCache'
+import { focusThread, locateNote } from './review/noteFocus'
 import { useTransport } from './transport/context'
 
 const DiffStream = lazy(() =>
@@ -27,7 +28,12 @@ const GeneralDiscussionsPanel = lazy(() =>
 
 type UpdateState = 'idle' | 'updating' | 'success' | 'error'
 
-export function App() {
+export interface AppProps {
+  /** Open with this note's thread in view, e.g. from the extension inbox. */
+  focusNoteId?: number | null
+}
+
+export function App({ focusNoteId = null }: AppProps = {}) {
   const queryClient = useQueryClient()
   const transport = useTransport()
   const [requestedFileIndex, setRequestedFileIndex] = useState(0)
@@ -105,6 +111,45 @@ export function App() {
       ),
     [discussions.data],
   )
+
+  const [focusNotice, setFocusNotice] = useState<string | null>(null)
+  const focusedNote = useRef<number | null>(null)
+  const cancelFocus = useRef<(() => void) | null>(null)
+  useEffect(() => () => cancelFocus.current?.(), [])
+  // Once per note: a later refetch of discussions must not yank the reader
+  // back to the thread they arrived at.
+  useEffect(() => {
+    if (!focusNoteId || focusedNote.current === focusNoteId) return
+    if (!diffs.data || !discussions.data) return
+    focusedNote.current = focusNoteId
+    cancelFocus.current?.()
+    const location = locateNote(discussions.data, diffs.data, focusNoteId)
+    const notFound = () =>
+      setFocusNotice(
+        'The comment you opened is no longer on this merge request’s current diff.',
+      )
+    if (!location) {
+      notFound()
+      return
+    }
+    setFocusNotice(null)
+    if (location.kind === 'inline') {
+      setShowComments(true)
+      setRequestedFileIndex(location.fileIndex)
+      scrollNonce.current += 1
+      setScrollRequest({
+        index: location.fileIndex,
+        nonce: scrollNonce.current,
+        discussionId: location.discussionId,
+      })
+    } else {
+      setShowGeneralDiscussions(true)
+    }
+    cancelFocus.current = focusThread(location.discussionId, {
+      scroll: location.kind === 'general',
+      onMissing: notFound,
+    })
+  }, [focusNoteId, diffs.data, discussions.data])
 
   const requiredQueries = [config, mergeRequest, diffs]
   const error = requiredQueries.find(
@@ -340,6 +385,12 @@ export function App() {
               />
             </div>
           </section>
+
+          {focusNotice ? (
+            <p className="focus-notice" role="status">
+              {focusNotice}
+            </p>
+          ) : null}
 
           {showGeneralDiscussions ? (
             <Suspense

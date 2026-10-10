@@ -12,6 +12,16 @@ import {
 import { GitLabError } from '../gitlab/errors'
 import { listAuthored, listReviewRequested } from '../gitlab/mergeRequests'
 import { getCurrentUser } from '../gitlab/user'
+import { showUnread } from '../inbox/badge'
+import { pollAll } from '../inbox/poller'
+import {
+  inboxView,
+  loadInbox,
+  markAllRead,
+  markRead,
+  unreadCount,
+  updateInbox,
+} from '../inbox/store'
 import type { InlineCommentInput, ReviewTarget } from '../transport/types'
 import {
   getHost,
@@ -24,11 +34,9 @@ import {
   type HostConfig,
 } from './hosts'
 import type { DeltaMessage, DeltaResponse } from './messages'
+import { scrubToken } from './scrub'
 
-export function scrubToken(message: string, token: string | null): string {
-  if (!token) return message
-  return message.split(token).join('[redacted]')
-}
+export { scrubToken }
 
 class RouterError extends Error {
   readonly status: number
@@ -173,6 +181,24 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
           }
         }),
       )
+    }
+    case 'listInbox':
+      return inboxView(await loadInbox(), await listHosts())
+    case 'markRead': {
+      const { ids } = payload as { ids: string[] }
+      const state = await updateInbox((value) => markRead(value, ids))
+      await showUnread(unreadCount(state))
+      return null
+    }
+    case 'markAllRead': {
+      const state = await updateInbox(markAllRead)
+      await showUnread(unreadCount(state))
+      return null
+    }
+    case 'pollNow': {
+      const { maxAgeMs } = (payload ?? {}) as { maxAgeMs?: number }
+      await pollAll({ maxAgeMs })
+      return inboxView(await loadInbox(), await listHosts())
     }
     default:
       throw new RouterError(400, `Unknown hub op: ${op}`, 'unknown_op')

@@ -10,6 +10,8 @@ const fake = createFakeBrowser() as ReturnType<typeof createFakeBrowser> & {
 }
 let hosts: unknown[] = []
 let summaries: unknown[] = []
+const EMPTY_INBOX = { hosts: [], items: [], unread: 0 }
+let inbox: unknown = EMPTY_INBOX
 /** Overridable so a test can make `listMergeRequests` fail or hang. */
 let replyToListMergeRequests = async (): Promise<unknown> => ({
   ok: true,
@@ -22,6 +24,7 @@ fake.runtime = {
     const { op } = message as { op: string }
     if (op === 'listHosts') return replyToListHosts()
     if (op === 'listMergeRequests') return replyToListMergeRequests()
+    if (op === 'listInbox') return { ok: true, data: inbox }
     return { ok: true, data: null }
   },
 }
@@ -44,8 +47,11 @@ beforeEach(() => {
   // What a release build sees, restored per test so the one development-build
   // test below cannot leak its flag into the others.
   vi.stubGlobal('__DELTA_DEV__', false)
-  window.location.hash = ''
+  // The existing tests exercise the merge request lists, which moved off the
+  // landing page when the inbox arrived.
+  window.location.hash = '#/merge-requests'
   hosts = []
+  inbox = EMPTY_INBOX
   summaries = []
   replyToListMergeRequests = async () => ({ ok: true, data: summaries })
   replyToListHosts = async () => ({ ok: true, data: hosts })
@@ -71,8 +77,8 @@ test('a development build carries the reload button in the header', async () => 
   const reload = within(meta as HTMLElement).getByRole('button', {
     name: /reload extension/i,
   })
-  // It leads the meta slot, ahead of the Settings link.
-  expect(reload.nextElementSibling).toHaveTextContent('Settings')
+  // It leads the meta slot, ahead of the Inbox link.
+  expect(reload.nextElementSibling).toHaveTextContent('Inbox')
 })
 
 test('a release build leaves the header alone', async () => {
@@ -496,4 +502,59 @@ test('settings refuses a hostname that carries a port', async () => {
   expect(await screen.findByText(/without a port/i)).toBeInTheDocument()
   expect(await screen.findByText(/gitlab\.example\.com/)).toBeInTheDocument()
   expect(fake.granted.size).toBe(0)
+})
+
+test('a merge request with unread activity carries a dot', async () => {
+  hosts = ONE_HOST
+  summaries = acrossRepositories()
+  inbox = {
+    hosts: [],
+    unread: 1,
+    items: [
+      {
+        id: 'h:11',
+        kind: 'reply',
+        hostId: 'h',
+        mrId: 1,
+        project: 'gputelecom/aerial_sdk',
+        iid: 5606,
+        mrTitle: 'Widen the SDK ABI',
+        discussionId: 'd',
+        noteId: 11,
+        author: null,
+        excerpt: '',
+        createdAt: '2026-08-04T10:00:00Z',
+        webUrl: '',
+        read: false,
+      },
+    ],
+  }
+  renderHub()
+  await screen.findByText('Widen the SDK ABI')
+
+  const rows = within(groupFor('gputelecom/aerial_sdk')).getAllByRole('listitem')
+  const widen = rows.find((row) => row.textContent?.includes('Widen the SDK ABI'))!
+  const drop = rows.find((row) => row.textContent?.includes('Drop the dead SDK flag'))!
+  expect(within(widen).getByLabelText('Unread activity')).toBeInTheDocument()
+  expect(within(drop).queryByLabelText('Unread activity')).toBeNull()
+})
+
+test('settings can show bot comments in the inbox', async () => {
+  const user = userEvent.setup()
+  hosts = ONE_HOST
+  window.location.hash = '#/settings'
+  renderHub()
+
+  const toggle = await screen.findByRole('checkbox', {
+    name: /Hide comments from bots/i,
+  })
+  expect(toggle).toBeChecked()
+
+  await user.click(toggle)
+
+  await waitFor(() =>
+    expect(fake.data.inboxSettings).toEqual({ hideBots: false }),
+  )
+  // A page-owned key: the worker's keys are untouched.
+  expect(fake.data.tokens).toBeUndefined()
 })

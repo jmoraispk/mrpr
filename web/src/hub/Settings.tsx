@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import browser from 'webextension-polyfill'
 
 import type { HostConfig } from '../extension/hosts'
 import { originFor } from '../extension/hosts'
+import { INBOX_SETTINGS_KEY, loadSettings } from '../inbox/store'
+import type { InboxSettings } from '../inbox/types'
 import { hubRequest } from './api'
 
 /**
@@ -37,6 +39,45 @@ function cleanHostname(value: string): string {
     )
   }
   return cleaned
+}
+
+/**
+ * Inbox preferences. Like `hubCollapsedGroups`, this is a page-owned key: the
+ * page writes it directly and the worker only reads it, at the next poll.
+ */
+function InboxPreferences() {
+  const [settings, setSettings] = useState<InboxSettings | null>(null)
+  useEffect(() => {
+    let live = true
+    void loadSettings().then((value) => {
+      if (live) setSettings(value)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+  if (!settings) return null
+  return (
+    <section className="hub-section">
+      <h3 className="eyebrow">Inbox</h3>
+      <label className="hub-check">
+        <input
+          type="checkbox"
+          checked={settings.hideBots}
+          onChange={(event) => {
+            const next = { ...settings, hideBots: event.target.checked }
+            setSettings(next)
+            void browser.storage.local.set({ [INBOX_SETTINGS_KEY]: next })
+          }}
+        />{' '}
+        Hide comments from bots
+      </label>
+      <p className="hub-note">
+        Automated reviewers post a lot. This applies to activity found from now
+        on.
+      </p>
+    </section>
+  )
 }
 
 export function Settings() {
@@ -173,6 +214,7 @@ export function Settings() {
         {add.isPending ? 'Checking…' : 'Add host'}
       </button>
       {error ? <p className="hub-error">{error}</p> : null}
+      <InboxPreferences />
     </div>
   )
 }

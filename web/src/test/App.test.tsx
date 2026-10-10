@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import { delay, http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, test } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
 
 import App from '../App'
 import { TestProviders } from './fixtures'
@@ -347,4 +347,87 @@ test('keeps code visible when discussions fail and offers retry', async () => {
       name: 'Retry loading discussions',
     }),
   ).toBeVisible()
+})
+
+test('a note in the MR discussions opens the panel and focuses its thread', async () => {
+  server.use(
+    http.get('/api/discussions', () =>
+      HttpResponse.json([
+        { id: 'general', notes: [{ id: 5, body: '**General review note**' }] },
+      ]),
+    ),
+  )
+
+  render(<App focusNoteId={5} />, { wrapper: TestProviders })
+
+  expect(await screen.findByText('General review note')).toBeVisible()
+  await waitFor(
+    () => {
+      expect(document.activeElement).toHaveAttribute('data-discussion-id', 'general')
+      expect(document.activeElement).toHaveClass('thread-flash')
+    },
+    { timeout: 5_000 },
+  )
+})
+
+test('an inline note turns inline comments on and focuses its thread', async () => {
+  server.use(
+    http.get('/api/discussions', () =>
+      HttpResponse.json([
+        {
+          id: 'inline-1',
+          notes: [
+            {
+              id: 7,
+              body: 'Inline review note',
+              position: {
+                old_path: 'src/parser.py',
+                new_path: 'src/parser.py',
+                old_line: null,
+                new_line: 1,
+              },
+            },
+          ],
+        },
+      ]),
+    ),
+  )
+
+  // jsdom has no layout, and the diff library only draws an inline thread
+  // once its table has a measured width (`useDomWidth` in @git-diff-view).
+  // Give that one element a width; everything else measures as before.
+  const realRect = HTMLElement.prototype.getBoundingClientRect
+  const rect = vi
+    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+    .mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('unified-diff-table-wrapper')
+        ? ({ x: 0, y: 0, top: 0, left: 0, right: 800, bottom: 20, width: 800, height: 20, toJSON() {} } as DOMRect)
+        : realRect.call(this)
+    })
+  try {
+    render(<App focusNoteId={7} />, { wrapper: TestProviders })
+
+    expect(
+      await screen.findByRole('button', { name: /inline comments/i, pressed: true }),
+    ).toBeVisible()
+    await waitFor(
+      () =>
+        expect(document.activeElement).toHaveAttribute(
+          'data-discussion-id',
+          'inline-1',
+        ),
+      { timeout: 5_000 },
+    )
+  } finally {
+    rect.mockRestore()
+  }
+}, 10_000)
+
+test('a note that is no longer on the diff opens the review with a notice', async () => {
+  render(<App focusNoteId={999} />, { wrapper: TestProviders })
+
+  expect(
+    await screen.findByText(/no longer on this merge request’s current diff/i),
+  ).toBeVisible()
+  expect(screen.getByText('Improve parser errors')).toBeVisible()
 })
