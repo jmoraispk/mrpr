@@ -1,8 +1,7 @@
-import browser from 'webextension-polyfill'
-
 import { ApiError } from '../api/client'
-import type { DeltaResponse, HubOp } from '../extension/messages'
+import type { HubOp } from '../extension/messages'
 import type { MergeRequestPage } from '../gitlab/mergeRequests'
+import { platform } from '../platform/platform'
 
 export interface HostSummary {
   hostId: string
@@ -16,11 +15,7 @@ export async function hubRequest<T>(
   op: HubOp,
   payload?: unknown,
 ): Promise<T> {
-  const response = (await browser.runtime.sendMessage({
-    kind: 'delta/hub',
-    op,
-    payload,
-  })) as DeltaResponse
+  const response = await platform().send({ kind: 'delta/hub', op, payload })
   if (!response.ok) {
     throw new ApiError(
       response.error.status,

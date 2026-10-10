@@ -1,9 +1,14 @@
 import browser from 'webextension-polyfill'
 
 import { installInboxPolling, startInboxPolling } from '../inbox/schedule'
+import { createExtensionPlatform } from '../platform/extension'
+import { installPlatform } from '../platform/platform'
 import { forgetHubTab, openHub } from './action'
 import type { DeltaMessage } from './messages'
 import { handleMessage } from './router'
+
+// Before any listener: every handler below reaches storage through it.
+installPlatform(createExtensionPlatform())
 
 // Returning the promise is the cross-browser way to reply asynchronously with
 // webextension-polyfill.

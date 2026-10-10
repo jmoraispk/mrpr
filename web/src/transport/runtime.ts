@@ -1,4 +1,3 @@
-import browser from 'webextension-polyfill'
 
 import { ApiError } from '../api/client'
 import type {
@@ -10,6 +9,7 @@ import type {
   PostingResult,
 } from '../api/types'
 import type { DeltaResponse, ReviewOp } from '../extension/messages'
+import { platform } from '../platform/platform'
 import type { DeltaTransport, InlineCommentInput, ReviewTarget } from './types'
 
 /** Chrome and Firefox phrase a torn-down worker differently. */
@@ -57,12 +57,7 @@ async function sendOnce(
   target: ReviewTarget,
   payload?: unknown,
 ): Promise<DeltaResponse> {
-  return (await browser.runtime.sendMessage({
-    kind: 'delta/review',
-    op,
-    target,
-    payload,
-  })) as DeltaResponse
+  return platform().send({ kind: 'delta/review', op, target, payload })
 }
 
 async function send<T>(

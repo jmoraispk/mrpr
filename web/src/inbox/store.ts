@@ -1,6 +1,6 @@
-import browser from 'webextension-polyfill'
 
 import type { HostConfig } from '../extension/hosts'
+import { platform } from '../platform/platform'
 import { emptyHostInbox } from './pollHost'
 import {
   DEFAULT_SETTINGS,
@@ -20,16 +20,14 @@ export const INBOX_KEY = 'inbox'
 export const INBOX_SETTINGS_KEY = 'inboxSettings'
 
 export async function loadInbox(): Promise<InboxState> {
-  const stored = await browser.storage.local.get(INBOX_KEY)
-  const value = stored[INBOX_KEY] as InboxState | undefined
+  const value = await platform().store.get<InboxState>(INBOX_KEY)
   return value?.hosts ? value : { hosts: {} }
 }
 
 export async function loadSettings(): Promise<InboxSettings> {
-  const stored = await browser.storage.local.get(INBOX_SETTINGS_KEY)
   return {
     ...DEFAULT_SETTINGS,
-    ...(stored[INBOX_SETTINGS_KEY] as Partial<InboxSettings> | undefined),
+    ...(await platform().store.get<Partial<InboxSettings>>(INBOX_SETTINGS_KEY)),
   }
 }
 
@@ -45,7 +43,7 @@ export function updateInbox(
 ): Promise<InboxState> {
   const run = queue.then(async () => {
     const next = change(await loadInbox())
-    await browser.storage.local.set({ [INBOX_KEY]: next })
+    await platform().store.set({ [INBOX_KEY]: next })
     return next
   })
   queue = run.catch(() => undefined)
