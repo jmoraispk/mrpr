@@ -13,6 +13,7 @@
     "dev:site": "vite --config vite.site.config.ts",
     "build:site": "tsc -b && vite build --config vite.site.config.ts",
     "preview:site": "vite preview --config vite.site.config.ts",
+    "test:site": "playwright test --config playwright.site.config.ts",
     "lint": "oxlint",
     "test": "vitest",
     "preview": "vite preview"
