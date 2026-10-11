@@ -7,7 +7,7 @@ import type { InboxView } from '../inbox/types'
 import { hubRequest } from './api'
 
 export const INBOX_QUERY_KEY = ['inbox'] as const
-const TITLE = 'Delta Review'
+const TITLE = 'Mr. PR'
 
 /**
  * The inbox as the worker last stored it. The worker polls on an alarm while

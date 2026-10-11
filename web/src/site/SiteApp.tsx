@@ -16,7 +16,7 @@ function SignedIn() {
 function SignIn({ config, notice }: { config: SiteConfig; notice: string | null }) {
   return (
     <div className="state-screen">
-      <h1>Delta Review</h1>
+      <h1>Mr. PR</h1>
       <p>Your GitLab inbox and merge request reviews, in one place.</p>
       {notice ? (
         <p className="hub-error" role="alert">
@@ -56,7 +56,7 @@ export function SiteApp({ config, notice }: { config: SiteConfig; notice: string
   if (config.hosts.length === 0) {
     return (
       <div className="state-screen">
-        <h1>Delta Review is not set up to sign in</h1>
+        <h1>Mr. PR is not set up to sign in</h1>
         <p>
           This build has no GitLab application id. See{' '}
           <code>docs/site-setup.md</code> in the repository.

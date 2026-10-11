@@ -382,7 +382,7 @@ export function Lists({
           <h2>{summary.host ?? summary.hostId}</h2>
           {summary.error === 'permission_missing' ? (
             <p className="hub-error">
-              Delta no longer has permission to reach{' '}
+              Mr. PR no longer has permission to reach{' '}
               {summary.host ?? summary.hostId}.{' '}
               <button type="button" onClick={() => grant(summary.host!)}>
                 Grant access

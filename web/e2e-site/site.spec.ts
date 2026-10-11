@@ -127,7 +127,7 @@ async function fakeGitLab(page: Page, options: { expiresIn?: number } = {}) {
 
 test('sign in, see a comment in the inbox, open it at its thread', async ({ page }) => {
   await fakeGitLab(page)
-  await page.goto('/')
+  await page.goto('/app/')
 
   await page.getByRole('button', { name: 'Sign in to gitlab.example.com' }).click()
 
@@ -139,7 +139,7 @@ test('sign in, see a comment in the inbox, open it at its thread', async ({ page
 
 test('a token near expiry is refreshed before use', async ({ page }) => {
   const { tokenRequests } = await fakeGitLab(page, { expiresIn: 30 })
-  await page.goto('/')
+  await page.goto('/app/')
   await page.getByRole('button', { name: 'Sign in to gitlab.example.com' }).click()
 
   await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
@@ -150,7 +150,7 @@ test('a token near expiry is refreshed before use', async ({ page }) => {
 
 test('signing out returns to the sign-in screen', async ({ page }) => {
   await fakeGitLab(page)
-  await page.goto('/')
+  await page.goto('/app/')
   await page.getByRole('button', { name: 'Sign in to gitlab.example.com' }).click()
   await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
 
@@ -158,6 +158,20 @@ test('signing out returns to the sign-in screen', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign out' }).click()
   await page.reload()
 
+  await expect(
+    page.getByRole('button', { name: 'Sign in to gitlab.example.com' }),
+  ).toBeVisible()
+})
+
+test('the landing page leads to the app', async ({ page }) => {
+  // The landing page loads web fonts; keep the test off the network.
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort())
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('The code got faster')
+
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/app\/$/)
   await expect(
     page.getByRole('button', { name: 'Sign in to gitlab.example.com' }),
   ).toBeVisible()

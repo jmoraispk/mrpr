@@ -75,7 +75,7 @@ beforeEach(() => {
   inbox = view([])
   replyToPollNow = async () => ({ ok: true, data: inbox })
   window.location.hash = ''
-  document.title = 'Delta Review'
+  document.title = 'Mr. PR'
 })
 
 test('the hub opens on the inbox, grouped by merge request', async () => {
@@ -115,7 +115,7 @@ test('the header and the tab title count unread items', async () => {
 
   const nav = await screen.findByRole('link', { name: /Inbox/ })
   await waitFor(() => expect(nav).toHaveTextContent('2'))
-  expect(document.title).toBe('(2) Delta Review')
+  expect(document.title).toBe('(2) Mr. PR')
 })
 
 test('nothing unread leaves the title and the nav plain', async () => {
@@ -124,7 +124,7 @@ test('nothing unread leaves the title and the nav plain', async () => {
 
   await screen.findByRole('region', { name: /Improve parser errors/ })
   expect(screen.getByRole('link', { name: 'Inbox' })).toBeInTheDocument()
-  expect(document.title).toBe('Delta Review')
+  expect(document.title).toBe('Mr. PR')
 })
 
 test('opening the hub asks for a catch-up poll', async () => {
@@ -175,7 +175,7 @@ test('a failing host is explained in a sentence', async () => {
   renderHub()
 
   expect(
-    await screen.findByText(/GitLab rejected the credentials Delta holds/),
+    await screen.findByText(/GitLab rejected the credentials Mr. PR holds/),
   ).toBeInTheDocument()
   expect(screen.getByText('401 Unauthorized')).toHaveClass('hub-detail')
   // What was already found stays visible.

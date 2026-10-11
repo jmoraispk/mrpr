@@ -56,9 +56,12 @@ export async function pkceChallenge(verifier: string): Promise<string> {
   return base64Url(new Uint8Array(digest))
 }
 
-/** The site's own base URL: one registered redirect URI per origin. */
+/** Where the app lives under the site: the landing page owns the root. */
+export const APP_PATH = 'app/'
+
+/** The app's own URL: one registered redirect URI per origin. */
 export function redirectUri(): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}`
+  return `${window.location.origin}${import.meta.env.BASE_URL}${APP_PATH}`
 }
 
 export async function signIn(

@@ -21,7 +21,7 @@ for (const code of ['signed_out', 'gitlab_authentication_failed']) {
     )
 
     expect(screen.getByRole('heading')).toHaveTextContent('Your GitLab sign-in has ended')
-    expect(screen.queryByText(/Relaunch Delta from the CLI/)).toBeNull()
+    expect(screen.queryByText(/Relaunch Mr. PR from the CLI/)).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Sign in again' }))
 
     expect(reauthenticate).toHaveBeenCalledOnce()
