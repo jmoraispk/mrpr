@@ -196,7 +196,7 @@ test('a per-host failure reads as a sentence, not a machine code', async () => {
   renderHub()
 
   expect(
-    await screen.findByText(/GitLab rejected the credentials Delta holds/i),
+    await screen.findByText(/GitLab rejected the credentials Mr. PR holds/i),
   ).toBeInTheDocument()
   // The raw code stays available, but not as the sentence the user reads.
   expect(

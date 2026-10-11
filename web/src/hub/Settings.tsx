@@ -28,7 +28,7 @@ function cleanHostname(value: string): string {
   if (cleaned.includes(':')) {
     throw new Error(
       `Enter the hostname without a port — "${cleaned.split(':')[0]}". ` +
-        'Delta matches merge request URLs by hostname alone, so a host with ' +
+        'Mr. PR matches merge request URLs by hostname alone, so a host with ' +
         'a port could never match one.',
     )
   }
@@ -128,7 +128,7 @@ export function Settings() {
       const granted = (await site.requestHostAccess?.(cleaned)) ?? true
       if (!granted) {
         throw new Error(
-          `Delta needs permission to reach ${cleaned} before it can use your token.`,
+          `Mr. PR needs permission to reach ${cleaned} before it can use your token.`,
         )
       }
       return hubRequest<HostConfig>('addHost', {
@@ -184,7 +184,7 @@ export function Settings() {
           <h3 className="eyebrow">Add a host</h3>
           <p className="hub-note">
             Create a personal access token with the <code>api</code> scope. Give it
-            an expiry date — Delta stores it in extension storage on this machine.
+            an expiry date — Mr. PR stores it in extension storage on this machine.
           </p>
           <label className="eyebrow">
             Hostname

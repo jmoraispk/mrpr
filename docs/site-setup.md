@@ -1,57 +1,61 @@
-# Hosting Delta Review
+# Hosting Mr. PR
 
-The site is static files. Each visitor signs in with GitLab and their browser
-talks to GitLab directly; the host never sees a token or a merge request.
+The site is static files: the landing page at `/` and the app at `/app/`.
+Each visitor signs in with GitLab and their browser talks to GitLab directly;
+the host never sees a token or a merge request.
 
-## 0. Give the site an origin of its own
+## Why the site needs an origin of its own
 
 Sign-in tokens are kept in the browser's `localStorage`, which belongs to the
-whole origin (scheme and host), not to a path. A GitHub Pages *project* site
-such as `https://jmoraispk.github.io/delta-review/` shares the origin
-`https://jmoraispk.github.io` with every other Pages site of that account, so a
-script on any of them could read a visitor's GitLab token. The site's Content
-Security Policy cannot prevent this: it only governs Delta's own page.
+whole origin (scheme and host), not to a path. Never serve Mr. PR from an
+origin shared with other sites, such as a GitHub Pages project path under
+`<user>.github.io`: a script on any of them could read visitors' tokens. A
+Vercel project gets its own origin (`<project>.vercel.app`), and so does a
+custom domain like `mrpr.dev`. The landing page shares the app's origin, so it
+must never run a script; its Content Security Policy forbids them.
 
-Use one of:
+## 1. Deploy on Vercel
 
-- **A custom domain** for this repository's Pages site (Settings → Pages →
-  Custom domain), for example `https://delta.example.com`.
-- **A dedicated account or organisation** whose root site
-  (`https://<name>.github.io`) serves only Delta.
+On vercel.com: Add New → Project → import `jmoraispk/mrpr`.
 
-Then set the repository variable `DELTA_SITE_ORIGIN` to that origin, with no
-path (see step 2). The deploy refuses to run without it, and refuses an origin
-shared with other Pages sites.
+- Choose **Import single project** next to **web** (Vite). Not the FastAPI
+  `app`, and not "Services".
+- **Root Directory:** `web`. Build settings come from `web/vercel.json`
+  (`npm run build:site`, output `dist-site`).
+- Deploy. Until step 3 the app says it is "not set up to sign in"; the landing
+  page works already.
 
-## 1. Register the sign-in application on GitLab
+Note the address Vercel gives the project, e.g. `https://mrpr.vercel.app`.
+
+## 2. Register the sign-in application on GitLab
 
 On gitlab-master: avatar → Preferences → Applications → Add new application.
 
-- **Name:** Delta Review
+- **Name:** Mr. PR
 - **Redirect URIs**, one per line:
-  - `<DELTA_SITE_ORIGIN>/`, for example `https://delta.example.com/` (the hosted site)
-  - `http://localhost:5173/` (local development)
-  - `http://127.0.0.1:4174/` is not needed: end-to-end tests fake GitLab.
+  - `https://mrpr.vercel.app/app/` (your Vercel address, then `/app/`)
+  - `https://mrpr.dev/app/` (once the domain is connected)
+  - `http://localhost:5173/app/` (local development)
 - **Confidential:** off. The site cannot keep a secret; PKCE replaces one.
-- **Scopes:** `api`. Delta posts comments and replies, which needs write access.
+- **Scopes:** `api`. Mr. PR posts comments and replies, which needs write access.
 
 Save, and copy the **Application ID**. It is public by design; do not copy the
-secret, which Delta never uses.
+secret, which Mr. PR never uses.
 
-## 2. Configure the build
+## 3. Configure the build
 
-In the GitHub repository: Settings → Secrets and variables → Actions →
-Variables:
+In the Vercel project: Settings → Environment Variables:
 
-- `DELTA_SITE_ORIGIN`: the dedicated origin from step 0, e.g. `https://delta.example.com`.
-- `DELTA_GITLAB_CLIENT_ID`: the Application ID.
-- `DELTA_GITLAB_HOST`: `gitlab-master.nvidia.com` (optional; the default).
+- `VITE_GITLAB_CLIENT_ID`: the Application ID.
+- `VITE_GITLAB_HOST`: `gitlab-master.nvidia.com` (optional; the default).
 
-## 3. Turn on GitHub Pages
+Then Deployments → Redeploy. Vite reads these at build time, so a redeploy is
+needed after changing them.
 
-Settings → Pages → Source: **GitHub Actions**. The `site` workflow then
-deploys on every push to `main` that touches `web/`, or on demand from the
-Actions tab.
+## 4. Connect mrpr.dev
+
+Vercel project → Settings → Domains → add `mrpr.dev`, and set the DNS records
+it shows. Add `https://mrpr.dev/app/` to the GitLab application's redirect URIs.
 
 ## Local development
 
@@ -59,16 +63,18 @@ Actions tab.
     echo "VITE_GITLAB_CLIENT_ID=<application id>" > .env.local
     npm run dev:site
 
-Open http://localhost:5173/ and sign in.
+Open http://localhost:5173/app/ and sign in. The landing page is at
+http://localhost:5173/.
 
 ## Security notes
 
 - Tokens are stored in the visitor's browser (`localStorage`), last two hours,
   and refresh automatically. Signing out revokes the current token.
-- The page ships a Content Security Policy allowing only its own scripts and
-  connections to the configured GitLab host. Never add a third-party script.
+- The app ships a Content Security Policy allowing only its own scripts and
+  connections to the configured GitLab host; the landing page allows no script
+  at all. `vercel.json` adds `frame-ancestors 'none'` so neither can be framed.
+  Never add a third-party script.
 - Whoever can push to `main` controls the code that holds visitors' tokens.
   Protect the branch.
-- The site is publicly reachable but contains no data. Confirm with your
-  security policy that signing in to an internal GitLab from a publicly hosted
-  page is acceptable before sharing the link.
+- Vercel's Hobby plan is for non-commercial use. Move to a paid plan before
+  charging for Mr. PR.

@@ -51,7 +51,7 @@ test('signing in sends the browser to GitLab with every parameter', async () => 
   expect(`${url.origin}${url.pathname}`).toBe(`${ORIGIN}/oauth/authorize`)
   expect(Object.fromEntries(url.searchParams)).toEqual({
     client_id: 'client-1',
-    redirect_uri: `${window.location.origin}/`,
+    redirect_uri: `${window.location.origin}/app/`,
     response_type: 'code',
     scope: 'api',
     state: pending.state,
@@ -96,7 +96,7 @@ test('a return carrying the code finishes sign-in and saves the host', async () 
     grant_type: 'authorization_code',
     client_id: 'client-1',
     code: 'c-1',
-    redirect_uri: `${window.location.origin}/`,
+    redirect_uri: `${window.location.origin}/app/`,
   })
   expect(bodies[0].code_verifier).toBeTruthy()
   await expect(listHosts()).resolves.toEqual([

@@ -34,24 +34,24 @@ test.each([
   [401, 'gitlab_authentication_failed', 'GitLab authentication failed'],
   [403, undefined, 'Access denied'],
   [404, undefined, 'Merge request not found'],
-  [403, 'permission_missing', 'Delta lost access to this GitLab host'],
+  [403, 'permission_missing', 'Mr. PR lost access to this GitLab host'],
   [422, 'diff_truncated', 'Diff is incomplete'],
   [429, undefined, 'GitLab rate limit reached'],
   [503, undefined, 'GitLab is unavailable'],
-  [503, 'extension_unavailable', 'Delta background service unavailable'],
+  [503, 'extension_unavailable', 'Mr. PR background service unavailable'],
 ])('explains HTTP %s failures', (status, code, heading) => {
   renderErrorState(new ApiError(status, 'request failed', code))
 
   expect(screen.getByRole('heading', { name: heading })).toBeVisible()
 })
 
-test('names both CLI credential sources in precedence order, not Delta', () => {
+test('names both CLI credential sources in precedence order, not Mr. PR', () => {
   renderErrorState(
     new ApiError(401, 'unauthorized', 'gitlab_authentication_failed'),
     { targetKey: 'proxy' },
   )
 
-  // Delta holds no GitLab credentials under `uvx delta-review`. Two other
+  // Mr. PR holds no GitLab credentials under `uvx delta-review`. Two other
   // things can, and `resolve_token` returns GITLAB_TOKEN before it asks glab,
   // so a user who launched with the variable set can run `glab auth login`
   // all day and still get the same 401. Both have to be named, in the order
@@ -60,18 +60,18 @@ test('names both CLI credential sources in precedence order, not Delta', () => {
   expect(text).toMatch(/GITLAB_TOKEN/)
   expect(text).toMatch(/glab auth login/i)
   expect(text.indexOf('GITLAB_TOKEN')).toBeLessThan(text.indexOf('glab auth'))
-  expect(guidance()).not.toHaveTextContent(/Delta holds/i)
+  expect(guidance()).not.toHaveTextContent(/Mr. PR holds/i)
 })
 
-test('tells an extension user to renew the credentials Delta holds', () => {
+test('tells an extension user to renew the credentials Mr. PR holds', () => {
   renderErrorState(
     new ApiError(401, 'unauthorized', 'gitlab_authentication_failed'),
     { targetKey: 'h/group/project/42' },
   )
 
   // The extension stores its own token and never requires glab.
-  expect(guidance()).toHaveTextContent(/credentials Delta holds/i)
-  expect(guidance()).toHaveTextContent(/Delta settings/i)
+  expect(guidance()).toHaveTextContent(/credentials Mr. PR holds/i)
+  expect(guidance()).toHaveTextContent(/Mr. PR settings/i)
   expect(guidance()).not.toHaveTextContent(/glab/i)
 })
 
@@ -93,7 +93,7 @@ test('surfaces the unknown outcome of a write the transport refused to retry', (
   renderErrorState(
     new ApiError(
       503,
-      'Delta lost contact with its background service. Your comment may ' +
+      'Mr. PR lost contact with its background service. Your comment may ' +
         'or may not have been posted; reload to check before retrying.',
       'extension_unavailable',
     ),

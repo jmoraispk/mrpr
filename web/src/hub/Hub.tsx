@@ -60,7 +60,7 @@ export function Hub() {
       <header className="topbar topbar-hub">
         <a className="brand" href="#/">
           <span className="brand-mark" aria-hidden="true" />
-          <span>delta</span>
+          <span>Mr. PR</span>
         </a>
         <nav className="topbar-meta">
           <DevReload />

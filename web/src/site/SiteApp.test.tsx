@@ -115,3 +115,8 @@ test('the page schedule runs only while signed in', async () => {
   view.unmount()
   expect(schedule.stop).toHaveBeenCalled()
 })
+
+test('the product is called Mr. PR', async () => {
+  renderSite()
+  expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Mr. PR')
+})

@@ -227,7 +227,7 @@ export function App({ focusNoteId = null }: AppProps = {}) {
       <header className="topbar">
         <a className="brand" href={mergeRequest.data.web_url}>
           <span className="brand-mark" aria-hidden="true" />
-          <span>delta</span>
+          <span>Mr. PR</span>
         </a>
         <div className="repository-context">
           {projectUrl ? (

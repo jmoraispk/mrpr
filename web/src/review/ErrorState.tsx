@@ -9,8 +9,8 @@ interface ErrorStateProps {
 
 /**
  * The same screen serves two products that hold GitLab credentials in
- * different places. Under `uvx delta-review` (`targetKey === 'proxy'`) Delta
- * stores no token of its own, so telling that user to renew Delta's
+ * different places. Under `uvx delta-review` (`targetKey === 'proxy'`) Mr. PR
+ * stores no token of its own, so telling that user to renew Mr. PR's
  * credentials points them at something their install does not have. It has
  * two sources instead, and `resolve_token` in `security.py` returns
  * `GITLAB_TOKEN` from the launch environment before it consults `glab` — so
@@ -39,17 +39,17 @@ function errorCopy(
           'launched it from, and the token glab holds otherwise. Replace ' +
           'whichever applies — a fresh GITLAB_TOKEN, or glab auth login — ' +
           'then relaunch and retry.'
-        : 'GitLab rejected the credentials Delta holds for this host. Renew ' +
-          'them in Delta settings, then retry.',
+        : 'GitLab rejected the credentials Mr. PR holds for this host. Renew ' +
+          'them in Mr. PR settings, then retry.',
       mark: '401',
     }
   }
   if (code === 'permission_missing') {
     return {
-      heading: 'Delta lost access to this GitLab host',
+      heading: 'Mr. PR lost access to this GitLab host',
       guidance:
         'The browser permission for this host was withdrawn. Grant it again ' +
-        'from Delta settings, then retry.',
+        'from Mr. PR settings, then retry.',
       mark: '403',
     }
   }
@@ -59,7 +59,7 @@ function errorCopy(
     // advice, and the write's "may or may not have been posted" is the whole
     // point. Show that message rather than a generic line that hides it.
     return {
-      heading: 'Delta background service unavailable',
+      heading: 'Mr. PR background service unavailable',
       guidance: error.message,
       mark: '503',
     }
@@ -81,7 +81,7 @@ function errorCopy(
   if (status === 401) {
     return {
       heading: 'Session expired',
-      guidance: 'Relaunch Delta from the CLI to create a new local session.',
+      guidance: 'Relaunch Mr. PR from the CLI to create a new local session.',
       mark: '401',
     }
   }
@@ -121,7 +121,7 @@ function errorCopy(
   }
   return {
     heading: 'Review could not be loaded',
-    guidance: 'Check that Delta and GitLab are both reachable, then retry.',
+    guidance: 'Check that Mr. PR and GitLab are both reachable, then retry.',
     mark: '!',
   }
 }
