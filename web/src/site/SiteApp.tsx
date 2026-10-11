@@ -35,7 +35,7 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
           <span>Mr. PR</span>
         </h1>
         <p className="signin-headline">
-          Every merge request waiting on you, in one inbox.
+          Your MRs and PRs, handled.
         </p>
         {notice ? (
           <p className="signin-notice" role="alert">
