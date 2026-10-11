@@ -2022,3 +2022,144 @@ button.primary-action {
   align-items: center;
   gap: 6px;
 }
+
+/*
+ * The sign-in page continues the landing page: same paper, ink and margin
+ * line, whatever the visitor's colour scheme, since it is the step between
+ * the two.
+ */
+.signin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: 100vh;
+  padding: 48px 16px;
+  box-sizing: border-box;
+  background: #f4f4f0;
+  color: #12161f;
+  font-family: 'Geist', 'Helvetica Neue', Helvetica, system-ui, sans-serif;
+}
+
+.signin::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: clamp(10px, 3vw, 48px);
+  width: 2px;
+  background: #c2410c;
+  opacity: 0.5;
+  content: '';
+}
+
+.signin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 420px;
+  padding: 36px 32px;
+  box-sizing: border-box;
+  border: 1px solid #dcddd6;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 0 #dcddd6, 0 24px 48px -24px rgba(18, 22, 31, 0.28);
+}
+
+.signin-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-family: 'Bricolage Grotesque', 'Helvetica Neue', system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #12161f;
+}
+
+.signin-headline {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.45;
+  color: #3d4452;
+}
+
+.signin-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fdebdd;
+  color: #8a2e0a;
+  font-size: 14px;
+}
+
+.signin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signin .signin-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: #c2410c;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.signin .signin-button:hover {
+  background: #a3370a;
+}
+
+.signin .signin-button:focus-visible {
+  outline: 2px solid #1e4fd8;
+  outline-offset: 2px;
+}
+
+.signin-button-label {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.signin-button-host {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.signin-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5b6170;
+}
+
+.signin-privacy svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.signin-home {
+  color: #3d4452;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.signin-home:hover {
+  color: #12161f;
+  text-decoration: underline;
+}

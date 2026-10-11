@@ -129,7 +129,7 @@ test('sign in, see a comment in the inbox, open it at its thread', async ({ page
   await fakeGitLab(page)
   await page.goto('/app/')
 
-  await page.getByRole('button', { name: 'Sign in to gitlab.example.com' }).click()
+  await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
   await page.getByRole('button', { name: /Ana commented/ }).click()
@@ -140,7 +140,7 @@ test('sign in, see a comment in the inbox, open it at its thread', async ({ page
 test('a token near expiry is refreshed before use', async ({ page }) => {
   const { tokenRequests } = await fakeGitLab(page, { expiresIn: 30 })
   await page.goto('/app/')
-  await page.getByRole('button', { name: 'Sign in to gitlab.example.com' }).click()
+  await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
   await expect
@@ -151,7 +151,7 @@ test('a token near expiry is refreshed before use', async ({ page }) => {
 test('signing out returns to the sign-in screen', async ({ page }) => {
   await fakeGitLab(page)
   await page.goto('/app/')
-  await page.getByRole('button', { name: 'Sign in to gitlab.example.com' }).click()
+  await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
   await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Settings' }).click()
@@ -159,7 +159,7 @@ test('signing out returns to the sign-in screen', async ({ page }) => {
   await page.reload()
 
   await expect(
-    page.getByRole('button', { name: 'Sign in to gitlab.example.com' }),
+    page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }),
   ).toBeVisible()
 })
 
@@ -173,6 +173,6 @@ test('the landing page leads to the app', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/app\/$/)
   await expect(
-    page.getByRole('button', { name: 'Sign in to gitlab.example.com' }),
+    page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }),
   ).toBeVisible()
 })

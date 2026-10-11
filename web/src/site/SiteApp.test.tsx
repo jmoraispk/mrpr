@@ -70,7 +70,7 @@ test('signed out, it offers to sign in to each configured host', async () => {
   renderSite('Sign-in was cancelled on GitLab.')
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Sign-in was cancelled')
-  await user.click(screen.getByRole('button', { name: 'Sign in to gitlab.example.com' }))
+  await user.click(screen.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }))
 
   expect(fake.connectHost).toHaveBeenCalledWith({
     host: SITE.host,
@@ -104,7 +104,7 @@ test('a signed-out host offers to sign in again', async () => {
 
 test('the page schedule runs only while signed in', async () => {
   renderSite()
-  await screen.findByRole('button', { name: 'Sign in to gitlab.example.com' })
+  await screen.findByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ })
   expect(schedule.startPageSchedule).not.toHaveBeenCalled()
 
   hosts = [HOST]
@@ -119,4 +119,15 @@ test('the page schedule runs only while signed in', async () => {
 test('the product is called Mr. PR', async () => {
   renderSite()
   expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Mr. PR')
+})
+
+test('the sign-in page links home and says where the data goes', async () => {
+  renderSite()
+
+  expect(await screen.findByRole('link', { name: /Back to Mr\. PR/ })).toHaveAttribute('href', '../')
+  expect(
+    screen.getByText(
+      'Your browser talks to GitLab directly. This site never sees your token or your merge requests.',
+    ),
+  ).toBeInTheDocument()
 })
