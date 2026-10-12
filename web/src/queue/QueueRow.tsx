@@ -45,7 +45,7 @@ export function QueueRow({
           <span className="q-ref">
             {row.project} !{row.iid}
           </span>
-          <Badges badges={row.badges} />
+          <Badges badges={row.badges} bucket={row.bucket} />
           {row.mr ? (
             <span className="q-stats">
               <span className="q-plus">+{row.mr.additions}</span>{' '}

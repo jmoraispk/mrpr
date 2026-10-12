@@ -7,7 +7,7 @@ import { nudgeText, requestChangesText } from './commentText'
 import { Composer } from './Composer'
 import type { QueueRow } from './model'
 import { ProjectPicker } from './ProjectPicker'
-import { markItemsRead } from './readState'
+import { focusNoteOf, markItemsRead } from './readState'
 import { reviewHash } from './route'
 import { useSnoozed } from './state'
 import { QUEUE_QUERY_KEY } from './useQueue'
@@ -116,7 +116,7 @@ export function RowDrawer({
         <blockquote className="q-excerpt">{waitingThread.excerpt}</blockquote>
       ) : null}
       <div className="q-actions">
-        <a className="q-primary" href={reviewHash(target)} onClick={onOpen}>
+        <a className="q-primary" href={reviewHash(target, { noteId: focusNoteOf(row) })} onClick={onOpen}>
           Open review
         </a>
         {approved ? (

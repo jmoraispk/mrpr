@@ -17,6 +17,44 @@ const MR = {
   project: { fullPath: 'g/p' },
 }
 
+/** An MR waiting on your review, known only to the queue's Facts query. */
+const REVIEW = {
+  id: 'gid://gitlab/MergeRequest/200',
+  iid: '2',
+  title: 'Retry budget for webhooks',
+  webUrl: `${GITLAB}/g/q/-/merge_requests/2`,
+  createdAt: NOW,
+  updatedAt: NOW,
+  project: { fullPath: 'g/q' },
+}
+
+function facts(
+  mr: typeof MR & { createdAt?: string },
+  author: string,
+  reviewers: [string, string][],
+  lines: [number, number],
+) {
+  return {
+    ...mr,
+    createdAt: mr.createdAt ?? NOW,
+    draft: false,
+    approved: false,
+    approvalsLeft: 1,
+    author: { username: author, name: author.toUpperCase(), avatarUrl: null, bot: false },
+    reviewers: {
+      nodes: reviewers.map(([username, reviewState]) => ({
+        username,
+        name: username.toUpperCase(),
+        mergeRequestInteraction: { reviewState },
+      })),
+    },
+    diffStatsSummary: { additions: lines[0], deletions: lines[1], fileCount: 1 },
+    headPipeline: { status: 'SUCCESS' },
+    labels: { nodes: [] },
+    diffHeadSha: 'head-1',
+  }
+}
+
 /** Everything GitLab would answer, keyed by what the page asks for. */
 async function fakeGitLab(
   page: Page,
@@ -24,6 +62,11 @@ async function fakeGitLab(
 ) {
   const tokenRequests: Record<string, string>[] = []
   const authorizeRequests: Record<string, string>[] = []
+  /** What the review MR's head is now; tests move it to make new commits. */
+  const state = { reviewHead: 'head-1' }
+  const posted: { path: string; body: string }[] = []
+  const approvals: string[] = []
+  const compares: Record<string, string>[] = []
   await page.route(`${options.origin ?? GITLAB}/**`, async (route: Route) => {
     const request = route.request()
     const url = new URL(request.url())
@@ -53,6 +96,16 @@ async function fakeGitLab(
     if (url.pathname === '/api/v4/events') return json([])
     if (url.pathname === '/api/graphql') {
       const query = (request.postDataJSON() as { query: string }).query
+      if (query.startsWith('query Facts')) {
+        return json({
+          data: {
+            currentUser: {
+              authored: { nodes: [facts(MR, 'joao', [['john', 'UNREVIEWED']], [40, 8])] },
+              reviewing: { nodes: [facts(REVIEW, 'ana', [['joao', 'UNREVIEWED']], [120, 10])] },
+            },
+          },
+        })
+      }
       if (query.startsWith('query Involved')) {
         return json({
           data: {
@@ -96,6 +149,39 @@ async function fakeGitLab(
         })
       }
     }
+    const reviewPath = '/api/v4/projects/g%2Fq/merge_requests/2'
+    if (url.pathname === reviewPath) {
+      return json({
+        iid: 2,
+        title: REVIEW.title,
+        web_url: REVIEW.webUrl,
+        state: 'opened',
+        source_branch: 'retry',
+        target_branch: 'main',
+        sha: state.reviewHead,
+      })
+    }
+    if (url.pathname === `${reviewPath}/approve` || url.pathname === `${reviewPath}/unapprove`) {
+      approvals.push(url.pathname.split('/').pop()!)
+      return json({})
+    }
+    if (url.pathname === `${reviewPath}/discussions` && request.method() === 'POST') {
+      posted.push({ path: url.pathname, body: (request.postDataJSON() as { body: string }).body })
+      return json({ id: 'd9', notes: [] })
+    }
+    if (url.pathname === `${reviewPath}/diffs`) {
+      return json(
+        [{ old_path: 'src/retry.py', new_path: 'src/retry.py', diff: '@@ -1 +1 @@\n-a\n+b' }],
+        { 'x-next-page': '' },
+      )
+    }
+    if (url.pathname === `${reviewPath}/discussions`) return json([], { 'x-next-page': '' })
+    if (url.pathname === '/api/v4/projects/g%2Fq/repository/compare') {
+      compares.push(Object.fromEntries(url.searchParams))
+      return json({
+        diffs: [{ old_path: 'src/budget.py', new_path: 'src/budget.py', diff: '@@ -1 +1 @@\n-1\n+2' }],
+      })
+    }
     const mrPath = '/api/v4/projects/g%2Fp/merge_requests/1'
     if (url.pathname === mrPath) {
       return json({
@@ -127,19 +213,107 @@ async function fakeGitLab(
     }
     return route.fulfill({ status: 404, headers: CORS, json: { message: `unmocked ${url.pathname}` } })
   })
-  return { tokenRequests, authorizeRequests }
+  return { tokenRequests, authorizeRequests, state, posted, approvals, compares }
 }
 
-test('sign in, see a comment in the inbox, open it at its thread', async ({ page }) => {
-  await fakeGitLab(page)
+async function signIn(page: Page) {
   await page.goto('/app/')
-
   await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
+  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+}
 
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
-  await page.getByRole('button', { name: /Ana commented/ }).click()
+test('sign in, see the queue, open a comment at its thread', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+
+  const queue = page.getByRole('navigation', { name: 'Queue' })
+  await expect(queue.getByRole('link', { name: /Needs you\s*1/ })).toBeVisible()
+  const first = page.getByRole('article').first()
+  await expect(first).toContainText('Retry budget for webhooks')
+  await expect(first).toContainText('Blocking 1 person')
+
+  // Ana's comment on your MR is folded into its row, in Returned to you.
+  await expect(queue.getByRole('link', { name: /Returned to you\s*1/ })).toBeVisible()
+  await page.getByRole('article').filter({ hasText: 'Improve parser errors' }).click()
+  await page.getByRole('link', { name: 'Open review' }).click()
   await expect(page).toHaveURL(/#\/mr\/gitlab\.example\.com\/g%2Fp\/1\/note\/11$/)
   await expect(page.locator(':focus')).toHaveAttribute('data-discussion-id', 'd1')
+})
+
+test('approve from the keyboard', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
+
+  await page.keyboard.press('j')
+  await page.keyboard.press('k')
+  await page.keyboard.press('a')
+
+  await expect(page.getByText('Approved ·')).toBeVisible()
+  expect(gitlab.approvals).toEqual(['approve'])
+})
+
+test('request changes tags the author and is signed', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
+
+  await page.keyboard.press('x')
+  await page.getByRole('textbox').pressSequentially('add the invoice ID to the error')
+  await page.getByRole('button', { name: 'Post' }).click()
+
+  await expect.poll(() => gitlab.posted.length).toBe(1)
+  expect(gitlab.posted[0].body).toBe(
+    '@ana Requesting changes: add the invoice ID to the error\n\n*— via Mr. PR*',
+  )
+})
+
+test('d shows only what changed since your last review', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
+
+  // First look: open the review, which records head-1.
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/#\/mr\/gitlab\.example\.com\/g%2Fq\/2$/)
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Retry budget for webhooks' }),
+  ).toBeVisible()
+  await page.goBack()
+  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+
+  // New commits arrive.
+  gitlab.state.reviewHead = 'head-2'
+  await page.keyboard.press('d')
+
+  await expect(page.getByRole('button', { name: 'Since your last review' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(page.getByRole('region', { name: 'src/budget.py' })).toBeVisible()
+  expect(gitlab.compares).toEqual([{ from: 'head-1', to: 'head-2', straight: 'false' }])
+})
+
+test('the queue has a dark mode and its own fonts, under the app’s security policy', async ({
+  page,
+}) => {
+  const blocked: string[] = []
+  page.on('console', (message) => {
+    if (/Content Security Policy/i.test(message.text())) blocked.push(message.text())
+  })
+  await fakeGitLab(page)
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Dark mode' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.locator('.q-shell')).toHaveCSS('background-color', 'rgb(15, 18, 24)')
+
+  const loaded = await page.evaluate(async () => {
+    await document.fonts.ready
+    return (await document.fonts.load('16px "Geist Variable"')).length
+  })
+  expect(loaded).toBeGreaterThan(0)
+  expect(blocked).toEqual([])
 })
 
 test('a token near expiry is refreshed before use', async ({ page }) => {
@@ -147,7 +321,7 @@ test('a token near expiry is refreshed before use', async ({ page }) => {
   await page.goto('/app/')
   await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
 
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
   await expect
     .poll(() => tokenRequests.map((body) => body.grant_type))
     .toContain('refresh_token')
@@ -157,7 +331,7 @@ test('signing out returns to the sign-in screen', async ({ page }) => {
   await fakeGitLab(page)
   await page.goto('/app/')
   await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Sign out' }).click()
@@ -220,7 +394,7 @@ test('the first person from a new server sets it up, and it is shared', async ({
   await page.getByLabel('Application ID').fill(PASTED_ID)
   await page.getByRole('button', { name: 'Sign in' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
   expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
   await expect.poll(() => posts).toEqual([{ host: 'gitlab.other.org', clientId: PASTED_ID }])
 })
@@ -233,7 +407,7 @@ test('the next person from that server goes straight to GitLab', async ({ page }
   await page.getByLabel('Paste a link to any merge request').fill(OTHER + '/g/p/-/merge_requests/1')
   await page.getByRole('button', { name: 'Continue' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
   expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
   await expect(page.getByText('Congratulations')).toHaveCount(0)
   expect(posts).toEqual([])

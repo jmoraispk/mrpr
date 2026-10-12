@@ -542,3 +542,41 @@ test('a failed approval says so', async () => {
   await user.click(await screen.findByRole('button', { name: 'Approve' }))
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't approve")
 })
+
+test('a second visit in the same session knows about the first look', async () => {
+  const looks: string[] = []
+  const transport = {
+    ...createHttpTransport(),
+    lastLook: async () => looks.at(-1) ?? null,
+    markLooked: async (sha: string) => {
+      looks.push(sha)
+    },
+    getDiffsSince: async () => [],
+  }
+  server.use(
+    http.get('/api/mr', () =>
+      HttpResponse.json({
+        iid: 42,
+        title: 'Improve parser errors',
+        web_url: 'https://gitlab.example.com/x/-/merge_requests/42',
+        state: 'opened',
+        source_branch: 'a',
+        target_branch: 'main',
+        sha: 'head-1',
+      }),
+    ),
+  )
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <TransportProvider transport={transport}>{children}</TransportProvider>
+    </QueryClientProvider>
+  )
+
+  const first = render(<App />, { wrapper: Wrapper })
+  await waitFor(() => expect(looks).toEqual(['head-1']))
+  first.unmount()
+
+  render(<App />, { wrapper: Wrapper })
+  expect(await screen.findByRole('button', { name: 'Since your last review' })).toBeVisible()
+})

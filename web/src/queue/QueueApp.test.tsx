@@ -191,7 +191,7 @@ test('g w jumps to a bucket and ? shows every key', async () => {
   expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
 })
 
-test('opening a review reads what was folded into its row', async () => {
+test('opening a review lands on the waiting thread and reads what was folded into its row', async () => {
   items = [
     {
       id: `${H}:55`,
@@ -220,6 +220,8 @@ test('opening a review reads what was folded into its row', async () => {
       payload: { ids: [`${H}:55`] },
     }),
   )
+  // Straight to the thread that was waiting, as the inbox did.
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1/note/55')
 })
 
 test('with no projects, one click makes one per repository', async () => {
@@ -259,4 +261,32 @@ test('+ New project opens the project form', async () => {
   renderApp()
   await user.click(await screen.findByRole('button', { name: '+ New project' }))
   expect(screen.getByRole('form', { name: 'New project' })).toBeInTheDocument()
+})
+
+test('opening the queue catches up a stale poll', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  expect(fake.sent).toContainEqual({
+    kind: 'delta/hub',
+    op: 'pollNow',
+    payload: { maxAgeMs: 60_000 },
+  })
+})
+
+test('one review is singular, and a small MR outside Quick wins is not called one', async () => {
+  hosts[0].mrs = [
+    mr(1, { title: 'Retry budget for webhooks' }),
+    mr(5, {
+      title: 'Small, already approved, new comment',
+      roles: ['author'],
+      author: JOAO,
+      additions: 4,
+      deletions: 1,
+      reviewers: [{ username: 'ana', name: 'Ana', state: 'REQUESTED_CHANGES' }],
+    }),
+  ]
+  renderApp()
+  expect(await screen.findByRole('heading', { name: '1 review needs you' })).toBeInTheDocument()
+  const returned = (await screen.findAllByRole('article'))[1]
+  expect(within(returned).getByText('Small · ~1 min')).toBeInTheDocument()
 })

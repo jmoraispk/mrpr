@@ -65,15 +65,17 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   })
-  // The head you reviewed before this visit. Never refetched, so it keeps
-  // meaning "before" after this visit records a new look.
+  // The head you reviewed before this visit: read fresh as the review opens,
+  // then never again, so it keeps meaning "before" after this visit records a
+  // new look. Readiness waits for this visit's read, not a cached earlier one.
   const lastLook = useQuery({
     queryKey: ['last-look', transport.targetKey],
     queryFn: async () => (await transport.lastLook?.()) ?? null,
     staleTime: Infinity,
+    refetchOnMount: 'always',
     enabled: Boolean(transport.lastLook),
   })
-  const lastLookReady = !transport.lastLook || lastLook.isFetched
+  const lastLookReady = !transport.lastLook || lastLook.isFetchedAfterMount
   const [sinceChosen, setSince] = useState(startSince)
   const sinceFrom =
     sinceChosen && lastLook.data && transport.getDiffsSince ? lastLook.data : null

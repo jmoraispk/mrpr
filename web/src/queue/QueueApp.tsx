@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
 import App from '../App'
+import { hubRequest } from '../hub/api'
 import { describeHostError } from '../hub/hostErrors'
 import { Settings } from '../hub/Settings'
 import { useUnreadTitle } from '../hub/useInbox'
+import { ACTIVE_POLL_MAX_AGE_MS } from '../inbox/types'
 import { platform } from '../platform/platform'
 import { TransportProvider } from '../transport/context'
 import { createRuntimeTransport } from '../transport/runtime'
@@ -13,13 +15,16 @@ import { ProjectDialog } from './ProjectDialog'
 import { moveRow, projectOf, projectsFromRepositories } from './projects'
 import { ProjectsSettings } from './ProjectsSettings'
 import { QueueList } from './QueueList'
-import { markRowRead } from './readState'
+import { focusNoteOf, markRowRead } from './readState'
 import { RowDrawer, type DrawerRequest } from './RowDrawer'
 import { parseSiteRoute, reviewHash, type SiteRoute } from './route'
 import { useProjects } from './state'
 import { useTheme } from './theme'
 import { useQueue } from './useQueue'
 import { useQueueKeys } from './useQueueKeys'
+
+const needsYouHeading = (count: number) =>
+  count === 1 ? '1 review needs you' : `${count} reviews need you`
 
 /** The project route for MRs no project claims. Project ids are random base-36, never this. */
 const UNSORTED = 'unsorted'
@@ -47,6 +52,11 @@ export function QueueApp() {
   const [request, setRequest] = useState<DrawerRequest | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   useUnreadTitle(queue.counts['needs-you'] + queue.counts['quick-wins'])
+  // Opening the queue is a sign the user is looking; catch up if the last
+  // poll is stale rather than waiting up to two minutes for the next.
+  useEffect(() => {
+    void hubRequest('pollNow', { maxAgeMs: ACTIVE_POLL_MAX_AGE_MS }).catch(() => undefined)
+  }, [])
 
   const inProject = (id: string) => (row: QueueRow) =>
     id === UNSORTED ? projectOf(row, projects) === null : projectOf(row, projects)?.id === id
@@ -75,7 +85,7 @@ export function QueueApp() {
     markRowRead(current)
     window.location.hash = reviewHash(
       { hostId: current.hostId, project: current.project, iid: current.iid },
-      { since },
+      { since, noteId: since ? null : focusNoteOf(current) },
     )
   }
   useQueueKeys(
@@ -121,7 +131,7 @@ export function QueueApp() {
         : (projects.find((p) => p.id === route.id)?.name ?? 'Project')
       : route.name === 'queue' && route.bucket
         ? BUCKET_LABELS[route.bucket]
-        : `${queue.counts['needs-you'] + queue.counts['quick-wins']} reviews need you`
+        : needsYouHeading(queue.counts['needs-you'] + queue.counts['quick-wins'])
 
   // Errors from either source: the queue's own fetch, or the inbox poll.
   const errors = new Map<string, { host: string; code: string }>()

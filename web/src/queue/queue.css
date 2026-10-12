@@ -234,3 +234,6 @@
 .q-dialog label { display: flex; flex-direction: column; gap: 4px; }
 .q-projects-settings { padding: 0 20px 20px; }
 .q-projects-settings textarea { width: 100%; box-sizing: border-box; font-family: var(--font-mono); font-size: 12px; }
+
+/* index.css styles every h1/h2 for the review view; the queue sets its own. */
+.q-shell h2, .q-shell h3 { color: var(--ink); font-family: var(--font-body); letter-spacing: normal; }

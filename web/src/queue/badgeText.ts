@@ -1,9 +1,10 @@
-import type { Badge } from './model'
+import type { Badge, Bucket } from './model'
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const SIZE_NAMES = { S: 'Small', M: 'Medium', L: 'Large' } as const
 
-export function badgeText(badge: Badge): string {
+/** A badge in words. "Quick win" is said only of rows in Quick wins. */
+export function badgeText(badge: Badge, bucket?: Bucket): string {
   switch (badge.kind) {
     case 'blocking':
       return `Blocking ${plural(badge.count, 'person', 'people')}`
@@ -18,7 +19,7 @@ export function badgeText(badge: Badge): string {
     case 'ai-authored':
       return 'AI-authored'
     case 'size':
-      return badge.size === 'S' && badge.minutes <= 2
+      return bucket === 'quick-wins'
         ? `Quick win · ~${badge.minutes} min`
         : `${SIZE_NAMES[badge.size]} · ~${badge.minutes} min`
     case 'waiting-on': {
