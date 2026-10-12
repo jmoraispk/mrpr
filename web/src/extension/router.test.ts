@@ -255,3 +255,24 @@ test('pollNow polls and returns the fresh inbox', async () => {
     data: { unread: 1, items: [{ id: 'gitlab.example.com:11' }] },
   })
 })
+
+test('listQueue returns each host’s MRs with facts, or its error', async () => {
+  fake.granted.add('https://gitlab.example.com/*')
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(1))
+  gitlab.lists.authored.push(1)
+
+  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+
+  expect(response).toMatchObject({
+    ok: true,
+    data: [
+      {
+        hostId: 'gitlab.example.com',
+        username: 'joao',
+        error: null,
+        mrs: [{ id: 1, roles: ['author'] }],
+      },
+    ],
+  })
+})

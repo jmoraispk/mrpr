@@ -35,6 +35,20 @@ export interface FakeMergeRequest {
   updatedAt: string
   state: 'opened' | 'merged' | 'closed'
   discussions: FakeDiscussion[]
+  /** What the queue's Facts query reports; defaults fill anything left out. */
+  facts?: Partial<{
+    draft: boolean
+    approvalsLeft: number
+    author: string
+    authorBot: boolean
+    reviewers: [string, string][]
+    additions: number
+    deletions: number
+    pipeline: string
+    labels: string[]
+    headSha: string
+    createdAt: string
+  }>
 }
 
 export function fakeMergeRequest(
@@ -129,7 +143,53 @@ export function createFakeGitLab() {
   })
   const gitlab = graphql.link(GRAPHQL)
 
+  const factsNode = (id: number) => {
+    const mr = mrs.get(id)!
+    const f = mr.facts ?? {}
+    const author = f.author ?? 'ana'
+    return {
+      ...mrFields(mr),
+      createdAt: f.createdAt ?? mr.updatedAt,
+      draft: f.draft ?? false,
+      approved: (f.approvalsLeft ?? 1) === 0,
+      approvalsLeft: f.approvalsLeft ?? 1,
+      author: {
+        username: author,
+        name: author.toUpperCase(),
+        avatarUrl: null,
+        bot: f.authorBot ?? false,
+      },
+      reviewers: {
+        nodes: (f.reviewers ?? []).map(([username, reviewState]) => ({
+          username,
+          name: username.toUpperCase(),
+          mergeRequestInteraction: { reviewState },
+        })),
+      },
+      diffStatsSummary: {
+        additions: f.additions ?? 10,
+        deletions: f.deletions ?? 2,
+        fileCount: 1,
+      },
+      headPipeline: f.pipeline ? { status: f.pipeline } : null,
+      labels: { nodes: (f.labels ?? []).map((title) => ({ title })) },
+      diffHeadSha: f.headSha ?? 'sha-head',
+    }
+  }
+
   server.use(
+    gitlab.query('Facts', () => {
+      calls.push('Facts')
+      const known = (ids: number[]) => ids.filter((id) => mrs.has(id)).map(factsNode)
+      return HttpResponse.json({
+        data: {
+          currentUser: {
+            authored: { nodes: known(lists.authored) },
+            reviewing: { nodes: known(lists.reviewing) },
+          },
+        },
+      })
+    }),
     gitlab.query('Involved', async ({ query }) => {
       calls.push('Involved')
       involvedQueries.push(query)

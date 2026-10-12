@@ -18,6 +18,7 @@ export type HubOp =
   | 'markRead'
   | 'markAllRead'
   | 'pollNow'
+  | 'listQueue'
 
 export type DeltaMessage =
   | {

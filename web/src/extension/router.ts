@@ -8,6 +8,7 @@ import {
 } from '../gitlab/discussions'
 import { GitLabError } from '../gitlab/errors'
 import { listAuthored, listReviewRequested } from '../gitlab/mergeRequests'
+import { fetchQueueMrs, type QueueHost } from '../gitlab/queueFacts'
 import { pollAll } from '../inbox/poller'
 import {
   inboxView,
@@ -120,6 +121,25 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
             return {
               hostId: host.id,
               host: host.host,
+              error: error instanceof GitLabError ? error.code : 'gitlab_error',
+            }
+          }
+        }),
+      )
+    }
+    case 'listQueue': {
+      const hosts = await listHosts()
+      // As with listMergeRequests: one host failing must not hide the others.
+      return Promise.all(
+        hosts.map(async (host): Promise<QueueHost> => {
+          const base = { hostId: host.id, host: host.host, username: host.username }
+          try {
+            const mrs = await fetchQueueMrs(await platform().clientFor(host))
+            return { ...base, mrs, error: null }
+          } catch (error) {
+            return {
+              ...base,
+              mrs: [],
               error: error instanceof GitLabError ? error.code : 'gitlab_error',
             }
           }
