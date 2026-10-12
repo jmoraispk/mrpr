@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ErrorState } from './review/ErrorState'
@@ -31,9 +31,11 @@ type UpdateState = 'idle' | 'updating' | 'success' | 'error'
 export interface AppProps {
   /** Open with this note's thread in view, e.g. from the extension inbox. */
   focusNoteId?: number | null
+  /** Open showing only what changed since your last review, when there was one. */
+  startSince?: boolean
 }
 
-export function App({ focusNoteId = null }: AppProps = {}) {
+export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
   const queryClient = useQueryClient()
   const transport = useTransport()
   const [requestedFileIndex, setRequestedFileIndex] = useState(0)
@@ -63,13 +65,41 @@ export function App({ focusNoteId = null }: AppProps = {}) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   })
+  // The head you reviewed before this visit. Never refetched, so it keeps
+  // meaning "before" after this visit records a new look.
+  const lastLook = useQuery({
+    queryKey: ['last-look', transport.targetKey],
+    queryFn: async () => (await transport.lastLook?.()) ?? null,
+    staleTime: Infinity,
+    enabled: Boolean(transport.lastLook),
+  })
+  const lastLookReady = !transport.lastLook || lastLook.isFetched
+  const [sinceChosen, setSince] = useState(startSince)
+  const sinceFrom =
+    sinceChosen && lastLook.data && transport.getDiffsSince ? lastLook.data : null
   const diffs = useQuery({
-    queryKey: ['diffs', transport.targetKey],
-    queryFn: ({ signal }) => transport.getDiffs(signal),
+    queryKey: ['diffs', transport.targetKey, sinceFrom ?? 'all'],
+    queryFn: ({ signal }) =>
+      sinceFrom
+        ? transport.getDiffsSince!(sinceFrom, signal)
+        : transport.getDiffs(signal),
+    // Toggling "since" swaps the file list in place, not behind a loading screen.
+    placeholderData: keepPreviousData,
+    // Opening straight into "since": wait to learn what "since" means.
+    enabled: !startSince || lastLookReady,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   })
+  const [approved, setApproved] = useState(false)
+  const [approveError, setApproveError] = useState<string | null>(null)
+  const headSha = mergeRequest.data?.sha
+  const looked = useRef(false)
+  useEffect(() => {
+    if (looked.current || !headSha || !transport.markLooked || !lastLookReady) return
+    looked.current = true
+    void transport.markLooked(headSha)
+  }, [headSha, transport, lastLookReady])
   const discussions = useQuery({
     queryKey: discussionsQueryKey(transport.targetKey),
     queryFn: async ({ signal }) =>
@@ -186,6 +216,18 @@ export function App({ focusNoteId = null }: AppProps = {}) {
   const activeFile = diffs.data[activeFileIndex]
   const threadCount = discussions.data?.length ?? 0
   const projectUrl = projectUrlFrom(mergeRequest.data.web_url)
+
+  async function approveMergeRequest() {
+    try {
+      await transport.approve!()
+      setApproved(true)
+      setApproveError(null)
+      // Approving counts as a look.
+      if (headSha) void transport.markLooked?.(headSha)
+    } catch {
+      setApproveError("Couldn't approve. GitLab may not let you approve this one.")
+    }
+  }
 
   async function updateReview() {
     const activeFilePath = activeFile?.new_path ?? activeFile?.old_path
@@ -341,6 +383,29 @@ export function App({ focusNoteId = null }: AppProps = {}) {
               >
                 {updateState === 'updating' ? 'Updating…' : 'Update'}
               </button>
+              {lastLook.data && transport.getDiffsSince ? (
+                <button
+                  className="review-since"
+                  aria-pressed={sinceChosen}
+                  type="button"
+                  onClick={() => setSince((value) => !value)}
+                >
+                  Since your last review
+                </button>
+              ) : null}
+              {transport.approve ? (
+                approved ? (
+                  <span className="review-approved">Approved</span>
+                ) : (
+                  <button
+                    className="review-approve"
+                    type="button"
+                    onClick={() => void approveMergeRequest()}
+                  >
+                    Approve
+                  </button>
+                )
+              ) : null}
               {generalDiscussions.length > 0 ? (
                 <button
                   className="mr-discussions-toggle"
@@ -371,6 +436,11 @@ export function App({ focusNoteId = null }: AppProps = {}) {
               {updateState === 'error' ? (
                 <span className="update-status" aria-live="polite">
                   Review could not be fully updated.
+                </span>
+              ) : null}
+              {approveError ? (
+                <span className="update-status" role="alert">
+                  {approveError}
                 </span>
               ) : null}
               </div>

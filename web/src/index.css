@@ -642,6 +642,8 @@ a:focus-visible {
 
 .gitlab-link,
 .review-update,
+.review-since,
+.review-approve,
 .mr-discussions-toggle,
 .discussion-load-error,
 .mr-discussions-panel header > button {
@@ -655,6 +657,18 @@ a:focus-visible {
   font-family: var(--mono);
   font-size: 10px;
   text-decoration: none;
+}
+
+.review-since[aria-pressed='true'] {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.review-approved {
+  color: var(--success);
+  font-family: var(--mono);
+  font-size: 10px;
 }
 
 .review-update:disabled {

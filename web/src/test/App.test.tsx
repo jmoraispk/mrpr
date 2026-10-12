@@ -1,10 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { focusManager, onlineManager } from '@tanstack/react-query'
+import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { delay, http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import App from '../App'
+import type { ReactNode } from 'react'
+
+import { TransportProvider } from '../transport/context'
+import { createHttpTransport } from '../transport/http'
+import type { DeltaTransport } from '../transport/types'
 import { TestProviders } from './fixtures'
 import { server } from './server'
 
@@ -430,4 +435,110 @@ test('a note that is no longer on the diff opens the review with a notice', asyn
     await screen.findByText(/no longer on this merge request’s current diff/i),
   ).toBeVisible()
   expect(screen.getByText('Improve parser errors')).toBeVisible()
+})
+
+function transportWrapper(extra: Partial<DeltaTransport>) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TransportProvider transport={{ ...createHttpTransport(), ...extra }}>
+          {children}
+        </TransportProvider>
+      </QueryClientProvider>
+    )
+  }
+}
+
+test('opening a review records the head as looked at', async () => {
+  const markLooked = vi.fn(async () => {})
+  server.use(
+    http.get('/api/mr', () =>
+      HttpResponse.json({
+        iid: 42,
+        title: 'Improve parser errors',
+        web_url: 'https://gitlab.example.com/x/-/merge_requests/42',
+        state: 'opened',
+        source_branch: 'a',
+        target_branch: 'main',
+        sha: 'head-2',
+      }),
+    ),
+  )
+  render(<App />, {
+    wrapper: transportWrapper({
+      markLooked,
+      lastLook: async () => 'head-1',
+      getDiffsSince: async () => [],
+    }),
+  })
+  await waitFor(() => expect(markLooked).toHaveBeenCalledWith('head-2'))
+})
+
+test('since your last review shows only what changed after the last look', async () => {
+  const user = userEvent.setup()
+  const getDiffsSince = vi.fn(async () => [
+    {
+      old_path: 'src/new.py',
+      new_path: 'src/new.py',
+      diff: '@@ -1 +1 @@\n-a\n+b',
+      new_file: false,
+      renamed_file: false,
+      deleted_file: false,
+      collapsed: false,
+      too_large: false,
+    },
+  ])
+  render(<App />, {
+    wrapper: transportWrapper({
+      markLooked: async () => {},
+      lastLook: async () => 'head-1',
+      getDiffsSince,
+    }),
+  })
+
+  await user.click(await screen.findByRole('button', { name: 'Since your last review' }))
+
+  expect(getDiffsSince).toHaveBeenCalledWith('head-1', expect.anything())
+  expect(
+    await screen.findByRole('region', { name: 'src/new.py' }, { timeout: 5_000 }),
+  ).toBeVisible()
+})
+
+test('without a previous look there is no since toggle', async () => {
+  render(<App />, {
+    wrapper: transportWrapper({
+      markLooked: async () => {},
+      lastLook: async () => null,
+      getDiffsSince: async () => [],
+    }),
+  })
+  await screen.findByText('Improve parser errors')
+  expect(screen.queryByRole('button', { name: 'Since your last review' })).toBeNull()
+})
+
+test('the review view can approve', async () => {
+  const user = userEvent.setup()
+  const approve = vi.fn(async () => {})
+  render(<App />, {
+    wrapper: transportWrapper({ approve, markLooked: async () => {}, lastLook: async () => null }),
+  })
+  await user.click(await screen.findByRole('button', { name: 'Approve' }))
+  expect(approve).toHaveBeenCalledOnce()
+  expect(await screen.findByText('Approved')).toBeInTheDocument()
+})
+
+test('a failed approval says so', async () => {
+  const user = userEvent.setup()
+  render(<App />, {
+    wrapper: transportWrapper({
+      approve: async () => {
+        throw new Error('403')
+      },
+    }),
+  })
+  await user.click(await screen.findByRole('button', { name: 'Approve' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't approve")
 })
