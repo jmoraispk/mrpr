@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { deleteProject, exportProjects, importProjects } from './projects'
 import { useProjects } from './state'
@@ -6,14 +6,15 @@ import { useProjects } from './state'
 /** Projects in Settings: delete them, or carry them to another browser as JSON. */
 export function ProjectsSettings() {
   const [projects, setProjects] = useProjects()
-  const [file, setFile] = useState(() => exportProjects(projects))
+  // What the user typed or pasted; until then, the current list as a file.
+  const [draft, setDraft] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // Show the current list as the file whenever it changes.
-  useEffect(() => setFile(exportProjects(projects)), [projects])
+  const file = draft ?? exportProjects(projects)
 
   function importFile() {
     try {
       setProjects(importProjects(file))
+      setDraft(null)
       setError(null)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Not a Mr. PR projects file')
@@ -33,7 +34,10 @@ export function ProjectsSettings() {
             <button
               type="button"
               aria-label={`Delete ${project.name}`}
-              onClick={() => setProjects(deleteProject(projects, project.id))}
+              onClick={() => {
+                setProjects(deleteProject(projects, project.id))
+                setDraft(null)
+              }}
             >
               Delete
             </button>
@@ -48,7 +52,7 @@ export function ProjectsSettings() {
         aria-label="Projects file"
         rows={6}
         value={file}
-        onChange={(event) => setFile(event.target.value)}
+        onChange={(event) => setDraft(event.target.value)}
       />
       <button type="button" onClick={importFile}>
         Import
