@@ -3,14 +3,16 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import './index.css'
+import { createLocalStore } from './platform/localStore'
 import { createSitePlatform } from './platform/site'
 import { installPlatform } from './platform/platform'
 import { AuthError, completeSignIn } from './site/auth'
 import { siteConfig } from './site/config'
+import { loadCustomHosts, useSite } from './site/servers'
 import { SiteApp } from './site/SiteApp'
 
 const config = siteConfig()
-installPlatform(createSitePlatform(config))
+const store = createLocalStore()
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,7 +37,11 @@ async function finishSignInIfReturning(): Promise<string | null> {
   }
 }
 
-void finishSignInIfReturning().then((notice) => {
+async function start(): Promise<void> {
+  // Servers set up in this browser join the ones built in.
+  for (const site of await loadCustomHosts(store)) useSite(config, site)
+  installPlatform(createSitePlatform(config, store))
+  const notice = await finishSignInIfReturning()
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -43,4 +49,6 @@ void finishSignInIfReturning().then((notice) => {
       </QueryClientProvider>
     </StrictMode>,
   )
-})
+}
+
+void start()

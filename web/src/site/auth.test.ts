@@ -242,3 +242,51 @@ test('a refresh GitLab cannot answer keeps the session for the next try', async 
     })
   }
 })
+
+test('a sign-in started from a pasted setup completes even if the config lacks it, and is published after success', async () => {
+  const OTHER = { host: 'gitlab.other.org', clientId: 'd'.repeat(64) }
+  await signIn(OTHER, '#/', 'api', () => {}, { publish: { replaces: 'e'.repeat(64) } })
+  const { state } = JSON.parse(sessionStorage.getItem(PENDING_KEY)!)
+  const published: unknown[] = []
+  server.use(
+    http.post('https://gitlab.other.org/oauth/token', () =>
+      HttpResponse.json({ access_token: 'at', refresh_token: 'rt', expires_in: 7200 }),
+    ),
+    http.get('https://gitlab.other.org/api/v4/user', () => HttpResponse.json({ id: 1, username: 'u' })),
+    http.post('/api/registry', async ({ request }) => {
+      published.push(await request.json())
+      return HttpResponse.json({ clientId: OTHER.clientId })
+    }),
+  )
+
+  await completeSignIn(
+    new URL(`${window.location.origin}/app/?code=c&state=${state}`),
+    { hosts: [], scopes: 'api' },
+  )
+
+  await expect.poll(() => published).toEqual([
+    { host: 'gitlab.other.org', clientId: OTHER.clientId, replaces: 'e'.repeat(64) },
+  ])
+})
+
+test('nothing is published until a sign-in succeeds, and never for a looked-up id', async () => {
+  const published: unknown[] = []
+  server.use(
+    http.post('/api/registry', async ({ request }) => {
+      published.push(await request.json())
+      return HttpResponse.json({})
+    }),
+    http.post(`${ORIGIN}/oauth/token`, () =>
+      HttpResponse.json({ error: 'invalid_grant' }, { status: 400 }),
+    ),
+  )
+  await signIn(SITE, '#/', 'api', () => {}, { publish: {} })
+  const first = JSON.parse(sessionStorage.getItem(PENDING_KEY)!)
+  await expect(
+    completeSignIn(new URL(`${window.location.origin}/app/?code=c&state=${first.state}`), CONFIG),
+  ).rejects.toMatchObject({ reason: 'exchange_failed' })
+
+  await signIn(SITE, '#/', 'api', () => {})
+  expect(JSON.parse(sessionStorage.getItem(PENDING_KEY)!).publish).toBeUndefined()
+  expect(published).toEqual([])
+})
