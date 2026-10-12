@@ -1,11 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
+import type { MrOverview } from '../gitlab/mrOverview'
 import { hubRequest } from '../hub/api'
 import { describeHostError } from '../hub/hostErrors'
 import { Settings } from '../hub/Settings'
 import { useUnreadTitle } from '../hub/useInbox'
 import { ACTIVE_POLL_MAX_AGE_MS } from '../inbox/types'
 import { platform } from '../platform/platform'
+import type { ReviewTarget } from '../transport/types'
 import { KeyHelp } from './KeyHelp'
 import { BUCKET_LABELS, BUCKET_ORDER, todaysBudget, type QueueRow } from './model'
 import { ProjectDialog } from './ProjectDialog'
@@ -14,6 +16,7 @@ import { ProjectsSettings } from './ProjectsSettings'
 import { NoticeBar } from './NoticeBar'
 import { QueueList } from './QueueList'
 import { focusNoteOf, markRowRead } from './readState'
+import { MrHeader, type HeaderRequest } from './mr/MrHeader'
 import { MrPanel } from './mr/MrPanel'
 import { listHash, parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
 import { useProjects } from './state'
@@ -106,9 +109,13 @@ export function QueueApp() {
       },
     )
   }
-  // Until the header handles requests, a request just opens the MR.
-  const askHeader = () => {
-    if (current && route.name !== 'review') open(current)
+  const [headerRequest, setHeaderRequest] = useState<HeaderRequest | null>(null)
+  const [, setReplyTo] = useState<string | null>(null)
+  // r, x, n and m start their action in the MR header, opening the MR first.
+  const askHeader = (request: HeaderRequest) => {
+    if (!current) return
+    if (route.name !== 'review') open(current)
+    setHeaderRequest(request)
   }
   useQueueKeys(
     {
@@ -145,10 +152,10 @@ export function QueueApp() {
       help: () => setHelpOpen((value) => !value),
       approve: () => current && actions.approve(current),
       snooze: () => current && actions.snooze(current),
-      reply: askHeader,
-      changes: askHeader,
-      nudge: askHeader,
-      moveProject: askHeader,
+      reply: () => askHeader('reply'),
+      changes: () => askHeader('changes'),
+      nudge: () => askHeader('nudge'),
+      moveProject: () => askHeader('move'),
     },
     route.name !== 'settings',
   )
@@ -341,9 +348,35 @@ export function QueueApp() {
                 tab={route.tab}
                 full={route.full}
                 noteId={route.noteId}
-                header={(overview) => (
-                  <h2 className="mr-title">{overview?.title ?? openRow?.title}</h2>
-                )}
+                header={(overview) => {
+                  const target = route.target
+                  // An MR outside the queue still gets the queue's notice, from its overview.
+                  const asRow = openRow ?? (overview ? rowFromOverview(overview, target) : null)
+                  return (
+                    <MrHeader
+                      target={target}
+                      row={openRow}
+                      overview={overview}
+                      full={route.full}
+                      fullHref={reviewHash(target, {
+                        tab: route.tab,
+                        noteId: route.noteId,
+                        full: !route.full,
+                      })}
+                      closeHref={listHash(listRoute)}
+                      onApprove={() => asRow && actions.approve(asRow)}
+                      onSnooze={() => openRow && actions.snooze(openRow)}
+                      onReply={(id) => {
+                        setReplyTo(id)
+                        if (route.tab !== 'overview') {
+                          window.location.hash = reviewHash(target, { full: route.full })
+                        }
+                      }}
+                      request={headerRequest}
+                      onRequestHandled={() => setHeaderRequest(null)}
+                    />
+                  )
+                }}
                 overview={(overview) => <p>{overview.description}</p>}
               />
             ) : null}
@@ -353,4 +386,24 @@ export function QueueApp() {
       <KeyHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
+}
+
+/** A stand-in queue row for an MR the queue doesn't list, so actions can name it. */
+function rowFromOverview(overview: MrOverview, target: ReviewTarget): QueueRow {
+  return {
+    key: `${target.hostId}:${target.project}!${target.iid}`,
+    hostId: target.hostId,
+    host: target.hostId,
+    mr: null,
+    project: target.project,
+    iid: target.iid,
+    title: overview.title,
+    webUrl: overview.webUrl,
+    updatedAt: overview.updatedAt,
+    bucket: 'done',
+    score: 0,
+    badges: [],
+    items: [],
+    snoozed: false,
+  }
 }

@@ -423,3 +423,37 @@ test('a and s still work on the list without opening anything', async () => {
   expect(window.location.hash).toBe('')
   expect(await screen.findByRole('status')).toHaveTextContent('Approved Retry budget for webhooks')
 })
+
+test('approve from the panel header outlives the row moving, and Undo works', async () => {
+  const user = userEvent.setup()
+  transport.approve.mockImplementationOnce(async () => {
+    hosts[0].mrs[0] = {
+      ...hosts[0].mrs[0],
+      reviewers: [{ username: 'joao', name: 'Joao', state: 'APPROVED' }],
+    }
+  })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  await user.click(within(panel).getByRole('button', { name: 'Approve' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('Approved Retry budget for webhooks')
+  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+  await waitFor(() => expect(transport.unapprove).toHaveBeenCalledOnce())
+})
+
+test('x on the list opens the MR with request changes started', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'x' })
+  expect(await screen.findByRole('textbox')).toHaveValue('@ana Requesting changes: ')
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1')
+})
+
+test('approving an MR that is not in the queue still works and says so', async () => {
+  const user = userEvent.setup()
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fother/77'
+  renderApp()
+  const panel = await screen.findByRole('region', { name: 'An MR' })
+  await user.click(await within(panel).findByRole('button', { name: 'Approve' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('Approved An MR')
+})
