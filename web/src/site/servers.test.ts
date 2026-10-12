@@ -9,7 +9,7 @@ import {
   publishToDirectory,
   rememberHost,
   resolveServer,
-  useSite,
+  adoptSite,
 } from './servers'
 
 const ID = 'a'.repeat(64)
@@ -79,8 +79,8 @@ test('publishing posts the host and id, and never throws', async () => {
 
 test('using a site adds or replaces it in the config', () => {
   const config = { hosts: [{ host: 'gitlab.example.com', clientId: ID }], scopes: 'api' }
-  useSite(config, { host: 'gitlab.example.com', clientId: 'b'.repeat(64) })
-  useSite(config, { host: 'gitlab.other.org', clientId: ID })
+  adoptSite(config, { host: 'gitlab.example.com', clientId: 'b'.repeat(64) })
+  adoptSite(config, { host: 'gitlab.other.org', clientId: ID })
   expect(config.hosts).toEqual([
     { host: 'gitlab.example.com', clientId: 'b'.repeat(64) },
     { host: 'gitlab.other.org', clientId: ID },

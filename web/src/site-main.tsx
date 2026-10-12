@@ -8,7 +8,7 @@ import { createSitePlatform } from './platform/site'
 import { installPlatform } from './platform/platform'
 import { AuthError, completeSignIn } from './site/auth'
 import { siteConfig } from './site/config'
-import { loadCustomHosts, useSite } from './site/servers'
+import { loadCustomHosts, adoptSite } from './site/servers'
 import { SiteApp } from './site/SiteApp'
 
 const config = siteConfig()
@@ -39,7 +39,7 @@ async function finishSignInIfReturning(): Promise<string | null> {
 
 async function start(): Promise<void> {
   // Servers set up in this browser join the ones built in.
-  for (const site of await loadCustomHosts(store)) useSite(config, site)
+  for (const site of await loadCustomHosts(store)) adoptSite(config, site)
   installPlatform(createSitePlatform(config, store))
   const notice = await finishSignInIfReturning()
   createRoot(document.getElementById('root')!).render(

@@ -1,11 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import { installPlatform } from '../platform/platform'
 import { createFakePlatform } from '../test/fakePlatform'
+import { server } from '../test/server'
 import { SiteApp } from './SiteApp'
+
+const signIn = vi.hoisted(() => vi.fn(async () => {}))
+vi.mock('./auth', async (original) => ({ ...(await original<object>()), signIn }))
 
 const schedule = vi.hoisted(() => ({
   stop: vi.fn(),
@@ -35,6 +40,7 @@ let inbox: unknown
 let fake: ReturnType<typeof createFakePlatform>
 
 beforeEach(() => {
+  signIn.mockClear()
   hosts = []
   inbox = EMPTY_INBOX
   window.location.hash = ''
@@ -60,11 +66,6 @@ function renderSite(notice: string | null = null, config = { hosts: [SITE], scop
   )
 }
 
-test('a build without a GitLab application says how to set one up', async () => {
-  renderSite(null, { hosts: [], scopes: 'api' })
-  expect(await screen.findByText(/not set up to sign in/i)).toBeInTheDocument()
-})
-
 test('signed out, it offers to sign in to each configured host', async () => {
   const user = userEvent.setup()
   renderSite('Sign-in was cancelled on GitLab.')
@@ -72,10 +73,7 @@ test('signed out, it offers to sign in to each configured host', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Sign-in was cancelled')
   await user.click(screen.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }))
 
-  expect(fake.connectHost).toHaveBeenCalledWith({
-    host: SITE.host,
-    apiBase: 'https://gitlab.example.com/api/v4',
-  })
+  expect(signIn).toHaveBeenCalledWith(SITE, expect.any(String), 'api')
 })
 
 test('signed in, it is the hub', async () => {
@@ -130,4 +128,42 @@ test('the sign-in page links home and says where the data goes', async () => {
       'Your browser talks to GitLab directly. This site never sees your token or your merge requests.',
     ),
   ).toBeInTheDocument()
+})
+
+test('with no built-in server, the link field is still there', async () => {
+  renderSite(null, { hosts: [], scopes: 'api' })
+  expect(await screen.findByLabelText('Paste a link to any merge request')).toBeInTheDocument()
+})
+
+test('a pasted link to a known server signs straight in', async () => {
+  const user = userEvent.setup()
+  renderSite()
+  await user.type(
+    await screen.findByLabelText('Paste a link to any merge request'),
+    'https://gitlab.example.com/g/p/-/merge_requests/1',
+  )
+  await user.click(screen.getByRole('button', { name: 'Continue' }))
+  await waitFor(() =>
+    expect(signIn).toHaveBeenCalledWith(SITE, expect.any(String), 'api'),
+  )
+})
+
+test('a pasted link to an unknown server opens the setup', async () => {
+  const user = userEvent.setup()
+  server.use(http.get('/api/registry', () => HttpResponse.json({ error: 'unknown' }, { status: 404 })))
+  renderSite()
+  await user.type(
+    await screen.findByLabelText('Paste a link to any merge request'),
+    'https://gitlab.other.org/g/p/-/merge_requests/1',
+  )
+  await user.click(screen.getByRole('button', { name: 'Continue' }))
+  expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Congratulations')
+})
+
+test('a bad link explains itself', async () => {
+  const user = userEvent.setup()
+  renderSite()
+  await user.type(await screen.findByLabelText('Paste a link to any merge request'), 'hello')
+  await user.click(screen.getByRole('button', { name: 'Continue' }))
+  expect(screen.getByRole('alert')).toHaveTextContent('Paste a link to a merge request')
 })

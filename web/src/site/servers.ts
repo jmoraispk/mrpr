@@ -18,7 +18,7 @@ export async function rememberHost(store: KeyValueStore, site: SiteHost): Promis
 }
 
 /** Add `site` to the running config, replacing any entry for the same host. */
-export function useSite(config: SiteConfig, site: SiteHost): void {
+export function adoptSite(config: SiteConfig, site: SiteHost): void {
   const index = config.hosts.findIndex((value) => value.host === site.host)
   if (index >= 0) config.hosts[index] = site
   else config.hosts.push(site)
