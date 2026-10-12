@@ -15,6 +15,10 @@ export interface QueueKeyHandlers {
   jump(bucket: Bucket): void
   jumpProject(): void
   help(): void
+  /** Escape: leave full screen, else close the MR. */
+  close(): void
+  /** f: full screen on or off. */
+  full(): void
 }
 
 const JUMPS: Record<string, Bucket> = {
@@ -72,6 +76,8 @@ export function useQueueKeys(handlers: QueueKeyHandlers, enabled = true): void {
         m: () => h.moveProject(),
         d: () => h.diffSince(),
         '?': () => h.help(),
+        Escape: () => h.close(),
+        f: () => h.full(),
         g: () => {
           pendingG = true
         },

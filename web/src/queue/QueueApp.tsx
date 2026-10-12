@@ -1,14 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
-import App from '../App'
 import { hubRequest } from '../hub/api'
 import { describeHostError } from '../hub/hostErrors'
 import { Settings } from '../hub/Settings'
 import { useUnreadTitle } from '../hub/useInbox'
 import { ACTIVE_POLL_MAX_AGE_MS } from '../inbox/types'
 import { platform } from '../platform/platform'
-import { TransportProvider } from '../transport/context'
-import { createRuntimeTransport } from '../transport/runtime'
 import { KeyHelp } from './KeyHelp'
 import { BUCKET_LABELS, BUCKET_ORDER, todaysBudget, type QueueRow } from './model'
 import { ProjectDialog } from './ProjectDialog'
@@ -17,8 +14,8 @@ import { ProjectsSettings } from './ProjectsSettings'
 import { NoticeBar } from './NoticeBar'
 import { QueueList } from './QueueList'
 import { focusNoteOf, markRowRead } from './readState'
-import { RowDrawer, type DrawerRequest } from './RowDrawer'
-import { parseSiteRoute, reviewHash, type SiteRoute } from './route'
+import { MrPanel } from './mr/MrPanel'
+import { listHash, parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
 import { useProjects } from './state'
 import { useTheme } from './theme'
 import { useQueue } from './useQueue'
@@ -50,8 +47,6 @@ export function QueueApp() {
   const [newProjectOpen, setNewProjectOpen] = useState(false)
   const theme = useTheme()
   const [selected, setSelected] = useState<string | null>(null)
-  const [drawerClosed, setDrawerClosed] = useState(false)
-  const [request, setRequest] = useState<DrawerRequest | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const actions = useRowActions()
   useUnreadTitle(queue.counts['needs-you'] + queue.counts['quick-wins'])
@@ -60,87 +55,114 @@ export function QueueApp() {
   useEffect(() => {
     void hubRequest('pollNow', { maxAgeMs: ACTIVE_POLL_MAX_AGE_MS }).catch(() => undefined)
   }, [])
+  // The list an MR was opened from, so closing it returns there.
+  const [listRoute, setListRoute] = useState<SiteRoute>(() =>
+    route.name === 'review' || route.name === 'settings' ? { name: 'queue', bucket: null } : route,
+  )
+  useEffect(() => {
+    if (route.name !== 'review' && route.name !== 'settings') setListRoute(route)
+  }, [route])
+  const shown = route.name === 'review' ? listRoute : route
 
   const inProject = (id: string) => (row: QueueRow) =>
     id === UNSORTED ? projectOf(row, projects) === null : projectOf(row, projects)?.id === id
   // A project's view keeps Waiting and Done too, so nothing in it is forgotten.
   // Snoozed rows show only on their own list, where `s` brings them back.
   const listed =
-    route.name === 'snoozed'
+    shown.name === 'snoozed'
       ? queue.rows.filter((row) => row.snoozed)
-      : (route.name === 'project'
-          ? queue.rows.filter((row) => row.bucket !== 'folded' && inProject(route.id)(row))
-          : route.name === 'queue' && route.bucket
-            ? queue.rows.filter((row) => row.bucket === route.bucket)
+      : (shown.name === 'project'
+          ? queue.rows.filter((row) => row.bucket !== 'folded' && inProject(shown.id)(row))
+          : shown.name === 'queue' && shown.bucket
+            ? queue.rows.filter((row) => row.bucket === shown.bucket)
             : queue.rows.filter((row) => row.bucket !== 'done' && row.bucket !== 'folded')
         ).filter((row) => !row.snoozed)
   const visible = listed
   const snoozedCount = queue.rows.filter((row) => row.snoozed).length
-  // The keyboard always has a row: the one picked, else the first.
-  const current = visible.find((row) => row.key === selected) ?? visible[0] ?? null
-  const select = (key: string) => {
-    setSelected(key)
-    setDrawerClosed(false)
-  }
-  const ask = (next: DrawerRequest) => {
-    // With no row, a request would linger and fire on the next drawer.
-    if (!current) return
-    setDrawerClosed(false)
-    setRequest(next)
-  }
-  const openReview = (since: boolean) => {
-    if (!current) return
-    markRowRead(current)
+  const openTarget = route.name === 'review' ? route.target : null
+  const openRow = openTarget
+    ? (queue.rows.find(
+        (row) =>
+          row.hostId === openTarget.hostId &&
+          row.project === openTarget.project &&
+          row.iid === openTarget.iid,
+      ) ?? null)
+    : null
+  // The keyboard's row: the open MR, else the one picked, else the first.
+  // An open MR outside the list has no row, so j/k start from the top.
+  const current =
+    openRow ??
+    visible.find((row) => row.key === selected) ??
+    (openTarget ? null : (visible[0] ?? null))
+  const open = (row: QueueRow, tab: ReviewTab = 'overview') => {
+    markRowRead(row)
+    setSelected(row.key)
     window.location.hash = reviewHash(
-      { hostId: current.hostId, project: current.project, iid: current.iid },
-      { tab: since ? 'since' : 'overview', noteId: since ? null : focusNoteOf(current) },
+      { hostId: row.hostId, project: row.project, iid: row.iid },
+      {
+        tab,
+        noteId: tab === 'overview' ? focusNoteOf(row) : null,
+        full: route.name === 'review' && route.full,
+      },
     )
+  }
+  // Until the header handles requests, a request just opens the MR.
+  const askHeader = () => {
+    if (current && route.name !== 'review') open(current)
   }
   useQueueKeys(
     {
       move(delta) {
         if (!visible.length) return
         const index = current ? visible.indexOf(current) : -1
-        select(visible[Math.min(visible.length - 1, Math.max(0, index + delta))].key)
+        const next =
+          visible[index < 0 ? 0 : Math.min(visible.length - 1, Math.max(0, index + delta))]
+        if (route.name === 'review') open(next)
+        else setSelected(next.key)
       },
-      open: () => openReview(false),
-      diffSince: () => openReview(true),
+      open: () => current && open(current),
+      diffSince: () => current && open(current, 'since'),
+      close() {
+        if (route.name !== 'review') return
+        window.location.hash = route.full
+          ? reviewHash(route.target, { tab: route.tab, noteId: route.noteId })
+          : listHash(listRoute)
+      },
+      full() {
+        if (route.name !== 'review') return
+        window.location.hash = reviewHash(route.target, {
+          tab: route.tab,
+          noteId: route.noteId,
+          full: !route.full,
+        })
+      },
       jump(bucket) {
         window.location.hash = `#/bucket/${bucket}`
       },
       jumpProject() {
         document.querySelector<HTMLElement>('nav[aria-label="Projects"] a')?.focus()
       },
-      help: () => setHelpOpen((open) => !open),
-      approve: () => ask('approve'),
-      reply: () => ask('reply'),
-      changes: () => ask('changes'),
-      nudge: () => ask('nudge'),
-      snooze: () => ask('snooze'),
-      moveProject: () => ask('move'),
+      help: () => setHelpOpen((value) => !value),
+      approve: () => current && actions.approve(current),
+      snooze: () => current && actions.snooze(current),
+      reply: askHeader,
+      changes: askHeader,
+      nudge: askHeader,
+      moveProject: askHeader,
     },
-    route.name !== 'review' && route.name !== 'settings',
+    route.name !== 'settings',
   )
-
-  if (route.name === 'review') {
-    return (
-      <TransportProvider
-        key={`${route.target.hostId}/${route.target.project}/${route.target.iid}`}
-        transport={createRuntimeTransport(route.target)}
-      >
-        <App focusNoteId={route.noteId} startSince={route.tab === 'since'} />
-      </TransportProvider>
-    )
-  }
+  const me =
+    (openTarget && queue.hosts.find((host) => host.hostId === openTarget.hostId)?.username) ?? ''
   const heading =
-    route.name === 'snoozed'
+    shown.name === 'snoozed'
       ? 'Snoozed'
-      : route.name === 'project'
-      ? route.id === UNSORTED
+      : shown.name === 'project'
+      ? shown.id === UNSORTED
         ? 'Unsorted'
-        : (projects.find((p) => p.id === route.id)?.name ?? 'Project')
-      : route.name === 'queue' && route.bucket
-        ? BUCKET_LABELS[route.bucket]
+        : (projects.find((p) => p.id === shown.id)?.name ?? 'Project')
+      : shown.name === 'queue' && shown.bucket
+        ? BUCKET_LABELS[shown.bucket]
         : needsYouHeading(queue.counts['needs-you'] + queue.counts['quick-wins'])
 
   // Errors from either source: the queue's own fetch, or the inbox poll.
@@ -174,7 +196,7 @@ export function QueueApp() {
   )
 
   return (
-    <div className="q-shell">
+    <div className={`q-shell${route.name === 'review' ? ' has-panel' : ''}`}>
       <aside className="q-sidebar">
         <a className="q-brand" href="#/">
           Mr. PR
@@ -286,28 +308,43 @@ export function QueueApp() {
             <Settings />
             <ProjectsSettings />
           </>
-        ) : queue.isLoading ? (
-          <p className="q-empty">Loading your queue…</p>
         ) : (
-          <div className="q-with-drawer">
-            <QueueList
-              rows={listed}
-              projects={projects}
-              selectedKey={current?.key ?? null}
-              onSelect={select}
-              heading={heading}
-              grouped={route.name === 'project'}
-            />
-            {current && !drawerClosed ? (
-              <RowDrawer
-                key={current.key}
-                row={current}
-                onClose={() => setDrawerClosed(true)}
-                onApprove={() => actions.approve(current)}
-                onSnooze={() => actions.snooze(current)}
-                onOpen={() => markRowRead(current)}
-                request={request}
-                onRequestHandled={() => setRequest(null)}
+          <div
+            className={`q-split${route.name === 'review' ? ' has-panel' : ''}${
+              route.name === 'review' && route.full ? ' is-full' : ''
+            }`}
+          >
+            <div className="q-list-pane">
+              {queue.isLoading ? (
+                <p className="q-empty">Loading your queue…</p>
+              ) : (
+                <QueueList
+                  rows={listed}
+                  projects={projects}
+                  selectedKey={current?.key ?? null}
+                  onSelect={(key) => {
+                    const row = visible.find((value) => value.key === key)
+                    if (row) open(row)
+                  }}
+                  heading={heading}
+                  grouped={shown.name === 'project'}
+                  compact={route.name === 'review'}
+                />
+              )}
+            </div>
+            {route.name === 'review' ? (
+              <MrPanel
+                key={`${route.target.hostId}/${route.target.project}/${route.target.iid}`}
+                target={route.target}
+                row={openRow}
+                me={me}
+                tab={route.tab}
+                full={route.full}
+                noteId={route.noteId}
+                header={(overview) => (
+                  <h2 className="mr-title">{overview?.title ?? openRow?.title}</h2>
+                )}
+                overview={(overview) => <p>{overview.description}</p>}
               />
             ) : null}
           </div>

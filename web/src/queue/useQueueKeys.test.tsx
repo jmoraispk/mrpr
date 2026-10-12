@@ -17,6 +17,8 @@ function handlers() {
     jump: vi.fn(),
     jumpProject: vi.fn(),
     help: vi.fn(),
+    close: vi.fn(),
+    full: vi.fn(),
   }
 }
 
@@ -77,4 +79,13 @@ test('modifier combinations are left to the browser', () => {
   renderHook(() => useQueueKeys(h))
   fireEvent.keyDown(window, { key: 'r', ctrlKey: true })
   expect(h.reply).not.toHaveBeenCalled()
+})
+
+test('Escape closes and f toggles full screen', () => {
+  const h = handlers()
+  renderHook(() => useQueueKeys(h))
+  fireEvent.keyDown(window, { key: 'Escape' })
+  fireEvent.keyDown(window, { key: 'f' })
+  expect(h.close).toHaveBeenCalledOnce()
+  expect(h.full).toHaveBeenCalledOnce()
 })

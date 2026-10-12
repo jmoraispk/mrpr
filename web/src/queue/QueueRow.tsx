@@ -8,17 +8,19 @@ export function QueueRow({
   rank,
   project,
   selected,
+  compact = false,
   onSelect,
 }: {
   row: Row
   rank: number | null
   project: Project | null
   selected: boolean
+  compact?: boolean
   onSelect: () => void
 }) {
   return (
     <article
-      className={`q-row${selected ? ' is-selected' : ''}`}
+      className={`q-row${selected ? ' is-selected' : ''}${compact ? ' is-compact' : ''}`}
       aria-current={selected ? 'true' : undefined}
       onClick={onSelect}
       data-key={row.key}
