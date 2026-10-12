@@ -20,11 +20,12 @@ const APP_POLICY = [
 
 /**
  * The landing page shares the app's origin, and with it the stored tokens, so
- * it may run no script at all. It only needs its own styles and web fonts.
+ * it runs only its own script file (public/landing.js: theme toggle and feature
+ * tabs), never inline code, plus its own styles and web fonts.
  */
 const LANDING_POLICY = [
   "default-src 'self'",
-  "script-src 'none'",
+  "script-src 'self'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   'font-src https://fonts.gstatic.com',
   "img-src 'self' data:",
