@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
+import type { InboxItem } from '../inbox/types'
 import { installPlatform } from '../platform/platform'
 import { createFakePlatform } from '../test/fakePlatform'
 import { QueueApp } from './QueueApp'
@@ -47,10 +48,12 @@ function mr(id: number, over: Partial<QueueMr> = {}): QueueMr {
 }
 
 let hosts: QueueHost[]
+let items: InboxItem[] = []
 let fake: ReturnType<typeof createFakePlatform>
 
 beforeEach(() => {
   window.location.hash = ''
+  items = []
   Object.values(transport).forEach((fn) => fn.mockClear())
   hosts = [
     {
@@ -76,10 +79,11 @@ beforeEach(() => {
   ]
   fake = createFakePlatform({
     send: async (message) => {
+      fake.sent.push(message)
       if (message.kind !== 'delta/hub') return { ok: true, data: null }
       if (message.op === 'listQueue') return { ok: true, data: hosts }
       if (message.op === 'listInbox') {
-        return { ok: true, data: { hosts: [], items: [], unread: 0 } }
+        return { ok: true, data: { hosts: [], items, unread: items.length } }
       }
       if (message.op === 'listHosts') return { ok: true, data: [] }
       return { ok: true, data: null }
@@ -144,4 +148,75 @@ test('a host error shows its sentence and offers to sign in again', async () => 
   expect(await screen.findByText(/Your sign-in to this host has ended/)).toBeInTheDocument()
   screen.getByRole('button', { name: 'Sign in again' }).click()
   expect(fake.connectHost).toHaveBeenCalledWith({ host: H, apiBase: `https://${H}/api/v4` })
+})
+
+test('j moves the selection and a approves the selected row', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'j' })
+  fireEvent.keyDown(window, { key: 'a' })
+  await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
+  expect(document.querySelector('.q-row.is-selected')?.textContent).toContain('Fix flaky test')
+})
+
+test('x opens request changes for the selected row, and typing there is not a shortcut', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'x' })
+  const box = await screen.findByRole('textbox')
+  expect(box).toHaveValue('@ana Requesting changes: ')
+  fireEvent.keyDown(box, { key: 'a' })
+  expect(transport.approve).not.toHaveBeenCalled()
+})
+
+test('d opens the selected review since your last look; Enter opens it plainly', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'd' })
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1/since')
+  window.location.hash = ''
+  items = []
+  fireEvent.keyDown(window, { key: 'Enter' })
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1')
+})
+
+test('g w jumps to a bucket and ? shows every key', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'g' })
+  fireEvent.keyDown(window, { key: 'w' })
+  expect(window.location.hash).toBe('#/bucket/waiting')
+  fireEvent.keyDown(window, { key: '?' })
+  expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
+})
+
+test('opening a review reads what was folded into its row', async () => {
+  items = [
+    {
+      id: `${H}:55`,
+      kind: 'mention',
+      hostId: H,
+      mrId: 1,
+      project: 'g/sdk',
+      iid: 1,
+      mrTitle: 'Retry budget for webhooks',
+      discussionId: 'd',
+      noteId: 55,
+      author: null,
+      excerpt: '@joao can you look?',
+      createdAt: '2026-10-11T09:00:00Z',
+      webUrl: '',
+      read: false,
+    },
+  ]
+  renderApp()
+  expect(await screen.findByText('@joao can you look?')).toBeInTheDocument()
+  fireEvent.keyDown(window, { key: 'Enter' })
+  await waitFor(() =>
+    expect(fake.sent).toContainEqual({
+      kind: 'delta/hub',
+      op: 'markRead',
+      payload: { ids: [`${H}:55`] },
+    }),
+  )
 })

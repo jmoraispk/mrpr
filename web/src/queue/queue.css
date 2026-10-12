@@ -190,3 +190,29 @@
 .q-approved { color: var(--ok-ink); font-weight: 600; }
 .q-actions .q-approved button { padding: 2px 8px; }
 @media (max-width: 1000px) { .q-with-drawer { grid-template-columns: 1fr; } }
+
+/* The keyboard help. */
+.q-help {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10;
+  width: min(360px, calc(100vw - 48px));
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px -12px rgba(18, 22, 31, 0.35);
+}
+.q-help dl { display: grid; gap: 6px; margin: 0 0 12px; }
+.q-help dl > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.q-help dd { margin: 0; color: var(--ink-2); }
+.q-help button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}

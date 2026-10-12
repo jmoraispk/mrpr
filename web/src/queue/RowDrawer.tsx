@@ -1,21 +1,36 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { hubRequest } from '../hub/api'
 import { INBOX_QUERY_KEY } from '../hub/useInbox'
 import { createRuntimeTransport } from '../transport/runtime'
 import { nudgeText, requestChangesText } from './commentText'
 import { Composer } from './Composer'
 import type { QueueRow } from './model'
 import { ProjectPicker } from './ProjectPicker'
+import { markItemsRead } from './readState'
 import { reviewHash } from './route'
 import { useSnoozed } from './state'
 import { QUEUE_QUERY_KEY } from './useQueue'
 
 type Mode = null | 'reply' | 'changes' | 'nudge' | 'move'
+/** An action asked for from the keyboard, run once by the drawer. */
+export type DrawerRequest = 'approve' | 'reply' | 'changes' | 'nudge' | 'snooze' | 'move'
 
 /** What you can do to one row without opening it. */
-export function RowDrawer({ row, onClose }: { row: QueueRow; onClose: () => void }) {
+export function RowDrawer({
+  row,
+  onClose,
+  onOpen = () => {},
+  request = null,
+  onRequestHandled = () => {},
+}: {
+  row: QueueRow
+  onClose: () => void
+  /** Called as the review opens from here. */
+  onOpen?: () => void
+  request?: DrawerRequest | null
+  onRequestHandled?: () => void
+}) {
   const target = { hostId: row.hostId, project: row.project, iid: row.iid }
   const transport = createRuntimeTransport(target)
   const queryClient = useQueryClient()
@@ -63,10 +78,9 @@ export function RowDrawer({ row, onClose }: { row: QueueRow; onClose: () => void
     if (!waitingThread?.discussionId) return
     await transport.replyToDiscussion(waitingThread.discussionId, body)
     // Answered: the thread no longer waits on you.
-    const ids = unreadForMe
-      .filter((item) => item.discussionId === waitingThread.discussionId)
-      .map((item) => item.id)
-    await hubRequest('markRead', { ids }).catch(() => {})
+    await markItemsRead(
+      unreadForMe.filter((item) => item.discussionId === waitingThread.discussionId),
+    )
     refresh()
   }
 
@@ -74,6 +88,21 @@ export function RowDrawer({ row, onClose }: { row: QueueRow; onClose: () => void
     await transport.postComment!(body)
     refresh()
   }
+
+  useEffect(() => {
+    if (!request) return
+    onRequestHandled()
+    if (request === 'approve') {
+      if (!approved) void approve()
+    } else if (request === 'snooze') snooze(row.key, row.updatedAt)
+    else if (request === 'reply') {
+      if (waitingThread) setMode('reply')
+    } else if (request === 'nudge') {
+      if (row.bucket === 'waiting' && waitingReviewers.length) setMode('nudge')
+    } else setMode(request)
+    // Runs once per request; the handlers read this render's row.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request])
 
   return (
     <aside className="q-drawer" aria-label={`Actions for ${row.title}`}>
@@ -87,7 +116,7 @@ export function RowDrawer({ row, onClose }: { row: QueueRow; onClose: () => void
         <blockquote className="q-excerpt">{waitingThread.excerpt}</blockquote>
       ) : null}
       <div className="q-actions">
-        <a className="q-primary" href={reviewHash(target)}>
+        <a className="q-primary" href={reviewHash(target)} onClick={onOpen}>
           Open review
         </a>
         {approved ? (
