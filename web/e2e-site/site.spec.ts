@@ -52,6 +52,7 @@ function facts(
     headPipeline: { status: 'SUCCESS' },
     labels: { nodes: [] },
     diffHeadSha: 'head-1',
+    shouldBeRebased: false,
   }
 }
 
@@ -230,7 +231,7 @@ test('sign in, see the queue, open a comment at its thread', async ({ page }) =>
   await expect(queue.getByRole('link', { name: /Needs you\s*1/ })).toBeVisible()
   const first = page.getByRole('article').first()
   await expect(first).toContainText('Retry budget for webhooks')
-  await expect(first).toContainText('Blocking 1 person')
+  await expect(first).toContainText('by ANA')
 
   // Ana's comment on your MR is folded into its row, in Returned to you.
   await expect(queue.getByRole('link', { name: /Returned to you\s*1/ })).toBeVisible()

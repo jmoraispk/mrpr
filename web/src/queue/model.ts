@@ -4,7 +4,7 @@ import type { InboxItem } from '../inbox/types'
 export type Bucket = 'needs-you' | 'quick-wins' | 'returned' | 'waiting' | 'done' | 'folded'
 
 export type Badge =
-  | { kind: 'blocking'; count: number }
+  | { kind: 'needs-rebase' }
   | { kind: 'commits-since'; count: number }
   | { kind: 'threads-waiting'; count: number }
   | { kind: 'pipeline-failed' }
@@ -112,9 +112,9 @@ function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, 
   } else bucket = 'done'
 
   const needsYou = bucket === 'needs-you' || bucket === 'quick-wins'
+  // Who is blocked still ranks the row; it is no longer shown as a badge.
   const blocking =
     1 + mr.reviewers.filter((r) => r.username !== me && r.state === 'APPROVED').length
-  if (needsYou) badges.push({ kind: 'blocking', count: blocking })
   if (forMe.length) badges.push({ kind: 'threads-waiting', count: threadCount(forMe) })
   if (commits > 0) badges.push({ kind: 'commits-since', count: commits })
   if (bucket === 'returned' && mine?.state === 'REQUESTED_CHANGES' && commits > 0) {
@@ -127,6 +127,7 @@ function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, 
   }
   // A failed pipeline matters only where it blocks a merge you own or must approve.
   if (mr.pipeline === 'FAILED' && (isAuthor || needsYou)) badges.push({ kind: 'pipeline-failed' })
+  if (isAuthor && mr.needsRebase) badges.push({ kind: 'needs-rebase' })
   if (mr.draft) badges.push({ kind: 'draft' })
   if (mr.labels.some((label) => AGENT_LABEL.test(label))) badges.push({ kind: 'ai-authored' })
   badges.push(sizeBadge(lines))

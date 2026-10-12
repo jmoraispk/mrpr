@@ -29,6 +29,8 @@ export interface QueueMr {
   pipeline: string | null
   labels: string[]
   headSha: string | null
+  /** Behind its target on a project that needs rebasing (your own MRs show it). */
+  needsRebase: boolean
 }
 
 /** One signed-in host's queue MRs, or why they could not be fetched. */
@@ -44,10 +46,10 @@ const FIELDS = `id iid title webUrl createdAt updatedAt project { fullPath } dra
   author { username name avatarUrl bot }
   reviewers { nodes { username name mergeRequestInteraction { reviewState } } }
   diffStatsSummary { additions deletions fileCount } headPipeline { status }
-  labels { nodes { title } } diffHeadSha`
+  labels { nodes { title } } diffHeadSha shouldBeRebased`
 
 /**
- * Measured against GitLab's complexity budget: 172 for both lists, under the
+ * Measured against GitLab's complexity budget: 200 for both lists (with shouldBeRebased), under the
  * default limit of 250. Kept apart from the per-poll query for that reason.
  */
 const QUERY = `query Facts {
@@ -80,6 +82,7 @@ interface RawMr {
   headPipeline: { status: string } | null
   labels: { nodes: { title: string }[] }
   diffHeadSha: string | null
+  shouldBeRebased: boolean | null
 }
 
 const numericId = (gid: string) => Number(gid.slice(gid.lastIndexOf('/') + 1))
@@ -119,6 +122,7 @@ function toQueueMr(raw: RawMr): QueueMr {
     pipeline: raw.headPipeline?.status ?? null,
     labels: raw.labels.nodes.map((label) => label.title),
     headSha: raw.diffHeadSha,
+    needsRebase: Boolean(raw.shouldBeRebased),
   }
 }
 

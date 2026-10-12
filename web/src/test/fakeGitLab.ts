@@ -187,6 +187,7 @@ export function createFakeGitLab() {
       headPipeline: f.pipeline ? { status: f.pipeline } : null,
       labels: { nodes: (f.labels ?? []).map((title) => ({ title })) },
       diffHeadSha: f.headSha ?? 'sha-head',
+      shouldBeRebased: f.needsRebase ?? false,
     }
   }
 

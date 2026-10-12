@@ -44,6 +44,7 @@ function mr(id: number, over: Partial<QueueMr> = {}): QueueMr {
     pipeline: 'SUCCESS',
     labels: [],
     headSha: 'h',
+    needsRebase: false,
     ...over,
   }
 }
@@ -119,7 +120,8 @@ test('the queue lists rows in bucket order with their badges', async () => {
     'Fix flaky test',
     'Port billing',
   ])
-  expect(within(rows[0]).getByText('Blocking 1 person')).toBeInTheDocument()
+  expect(within(rows[0]).getByText('by Ana')).toBeInTheDocument()
+  expect(screen.queryByText(/Blocking/)).toBeNull()
   expect(within(rows[1]).getByText('Quick win · ~1 min')).toBeInTheDocument()
   expect(within(rows[2]).getByText(/Waiting on John/)).toBeInTheDocument()
 })

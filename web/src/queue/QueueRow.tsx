@@ -45,6 +45,7 @@ export function QueueRow({
           <span className="q-ref">
             {row.project} !{row.iid}
           </span>
+          {row.mr ? <span className="q-by">by {row.mr.author.name}</span> : null}
           <Badges badges={row.badges} bucket={row.bucket} />
           {row.mr ? (
             <span className="q-stats">

@@ -103,6 +103,7 @@
 .q-title { margin: 0; font-size: 15px; font-weight: 600; }
 .q-age, .q-ref { color: var(--muted); font: 12px var(--font-mono); }
 .q-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+.q-by { color: var(--ink-2); }
 .q-project { display: inline-flex; align-items: center; color: var(--ink-2); font-weight: 500; }
 .q-badges { display: contents; }
 .q-badge { padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--ink-2); }
