@@ -10,6 +10,7 @@ import { createRuntimeTransport } from '../transport/runtime'
 import { BUCKET_LABELS, BUCKET_ORDER, todaysBudget } from './model'
 import { projectOf } from './projects'
 import { QueueList } from './QueueList'
+import { RowDrawer } from './RowDrawer'
 import { parseSiteRoute, type SiteRoute } from './route'
 import { useProjects } from './state'
 import { useTheme } from './theme'
@@ -66,6 +67,7 @@ export function QueueApp() {
       : route.name === 'queue' && route.bucket
         ? BUCKET_LABELS[route.bucket]
         : `${queue.counts['needs-you'] + queue.counts['quick-wins']} reviews need you`
+  const selectedRow = listed.find((row) => row.key === selected && !row.snoozed) ?? null
 
   // Errors from either source: the queue's own fetch, or the inbox poll.
   const errors = new Map<string, { host: string; code: string }>()
@@ -170,14 +172,23 @@ export function QueueApp() {
         ) : queue.isLoading ? (
           <p className="q-empty">Loading your queue…</p>
         ) : (
-          <QueueList
-            rows={listed}
-            projects={projects}
-            selectedKey={selected}
-            onSelect={setSelected}
-            heading={heading}
-            grouped={route.name === 'project'}
-          />
+          <div className="q-with-drawer">
+            <QueueList
+              rows={listed}
+              projects={projects}
+              selectedKey={selected}
+              onSelect={setSelected}
+              heading={heading}
+              grouped={route.name === 'project'}
+            />
+            {selectedRow ? (
+              <RowDrawer
+                key={selectedRow.key}
+                row={selectedRow}
+                onClose={() => setSelected(null)}
+              />
+            ) : null}
+          </div>
         )}
       </main>
     </div>
