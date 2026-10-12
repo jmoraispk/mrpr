@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
@@ -219,4 +220,43 @@ test('opening a review reads what was folded into its row', async () => {
       payload: { ids: [`${H}:55`] },
     }),
   )
+})
+
+test('with no projects, one click makes one per repository', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await user.click(
+    await screen.findByRole('button', { name: 'Create one project per repository' }),
+  )
+  const projects = within(screen.getByRole('navigation', { name: 'Projects' }))
+  expect(await projects.findByRole('link', { name: /sdk/ })).toBeInTheDocument()
+})
+
+test('dropping a row on a project moves it there', async () => {
+  await fake.store.set({
+    projects: [
+      { id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: [], labels: [] }, pinned: [] },
+    ],
+  })
+  renderApp()
+  const [first] = await screen.findAllByRole('article')
+  const target = await screen.findByRole('link', { name: /Payments/ })
+  const data = new Map<string, string>()
+  const dataTransfer = {
+    setData: (type: string, value: string) => data.set(type, value),
+    getData: (type: string) => data.get(type) ?? '',
+  }
+  fireEvent.dragStart(first, { dataTransfer })
+  fireEvent.dragOver(target, { dataTransfer })
+  fireEvent.drop(target, { dataTransfer })
+  await waitFor(async () =>
+    expect(await fake.store.get('projects')).toMatchObject([{ pinned: [`${H}:1`] }]),
+  )
+})
+
+test('+ New project opens the project form', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await user.click(await screen.findByRole('button', { name: '+ New project' }))
+  expect(screen.getByRole('form', { name: 'New project' })).toBeInTheDocument()
 })

@@ -9,7 +9,9 @@ import { TransportProvider } from '../transport/context'
 import { createRuntimeTransport } from '../transport/runtime'
 import { KeyHelp } from './KeyHelp'
 import { BUCKET_LABELS, BUCKET_ORDER, todaysBudget, type QueueRow } from './model'
-import { projectOf } from './projects'
+import { ProjectDialog } from './ProjectDialog'
+import { moveRow, projectOf, projectsFromRepositories } from './projects'
+import { ProjectsSettings } from './ProjectsSettings'
 import { QueueList } from './QueueList'
 import { markRowRead } from './readState'
 import { RowDrawer, type DrawerRequest } from './RowDrawer'
@@ -37,7 +39,8 @@ function useSiteRoute(): SiteRoute {
 export function QueueApp() {
   const route = useSiteRoute()
   const queue = useQueue()
-  const [projects] = useProjects()
+  const [projects, setProjects] = useProjects()
+  const [newProjectOpen, setNewProjectOpen] = useState(false)
   const theme = useTheme()
   const [selected, setSelected] = useState<string | null>(null)
   const [drawerClosed, setDrawerClosed] = useState(false)
@@ -131,12 +134,19 @@ export function QueueApp() {
     }
   }
 
+  // Each project link is also a drop target for a dragged row.
   const projectLink = (id: string, label: ReactNode, count: ReactNode) => (
     <a
       key={id}
       href={`#/project/${id}`}
       className="q-bucket"
       aria-current={route.name === 'project' && route.id === id ? 'page' : undefined}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault()
+        const key = event.dataTransfer.getData('text/mrpr-row')
+        if (key) setProjects(moveRow(projects, key, id === UNSORTED ? null : id))
+      }}
     >
       <span>{label}</span>
       <span className="q-count">{count}</span>
@@ -188,6 +198,25 @@ export function QueueApp() {
             'Unsorted',
             queue.rows.filter((row) => row.bucket !== 'folded' && inProject(UNSORTED)(row)).length,
           )}
+          {projects.length === 0 && queue.rows.length > 0 ? (
+            <button
+              type="button"
+              className="q-sidebar-action"
+              onClick={() =>
+                setProjects(projectsFromRepositories(projects, queue.rows.map((row) => row.project)))
+              }
+            >
+              Create one project per repository
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="q-sidebar-action"
+            onClick={() => setNewProjectOpen((open) => !open)}
+          >
+            + New project
+          </button>
+          {newProjectOpen ? <ProjectDialog onClose={() => setNewProjectOpen(false)} /> : null}
         </nav>
         <div className="q-sidebar-foot">
           <a href="#/settings">Settings</a>
@@ -219,7 +248,10 @@ export function QueueApp() {
           </p>
         ))}
         {route.name === 'settings' ? (
-          <Settings />
+          <>
+            <Settings />
+            <ProjectsSettings />
+          </>
         ) : queue.isLoading ? (
           <p className="q-empty">Loading your queue…</p>
         ) : (
