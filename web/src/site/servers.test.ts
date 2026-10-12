@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
 
 import { createMemoryStore } from '../test/fakePlatform'
@@ -37,7 +37,7 @@ test('a known host resolves without asking the directory', async () => {
 
 test('an unknown host asks the directory', async () => {
   msw.use(
-    http.get('/api/registry', ({ request }) =>
+    http.get('/api/registry/', ({ request }) =>
       new URL(request.url).searchParams.get('host') === 'gitlab.example.com'
         ? HttpResponse.json({ clientId: ID })
         : HttpResponse.json({ error: 'unknown' }, { status: 404 }),
@@ -49,25 +49,40 @@ test('an unknown host asks the directory', async () => {
     site: { host: 'gitlab.example.com', clientId: ID },
     source: 'directory',
   })
-  await expect(resolveServer({ host: 'x.org', origin: 'https://x.org' }, config)).resolves.toBeNull()
+  await expect(resolveServer({ host: 'x.org', origin: 'https://x.org' }, config)).resolves.toEqual({
+    site: null,
+    reason: 'unknown',
+  })
 })
 
-test('an unreachable directory counts as unknown', async () => {
+test('a directory that cannot answer is told apart from an unknown server', async () => {
   for (const reply of [
     () => HttpResponse.error(),
     () => HttpResponse.json({ error: 'x' }, { status: 500 }),
     () => HttpResponse.text('not json'),
     () => HttpResponse.json({ clientId: 'not-an-id' }),
   ]) {
-    msw.use(http.get('/api/registry', reply))
-    await expect(lookupDirectory('gitlab.example.com')).resolves.toBeNull()
+    msw.use(http.get('/api/registry/', reply))
+    await expect(lookupDirectory('gitlab.example.com')).resolves.toEqual({ status: 'unavailable' })
   }
+  msw.use(http.get('/api/registry/', () => HttpResponse.json({ error: 'unknown' }, { status: 404 })))
+  await expect(lookupDirectory('gitlab.example.com')).resolves.toEqual({ status: 'unknown' })
+})
+
+test('a directory that stalls is given up on', async () => {
+  msw.use(
+    http.get('/api/registry/', async () => {
+      await delay('infinite')
+      return HttpResponse.json({})
+    }),
+  )
+  await expect(lookupDirectory('gitlab.example.com', 50)).resolves.toEqual({ status: 'unavailable' })
 })
 
 test('publishing posts the host and id, and never throws', async () => {
   const bodies: unknown[] = []
   msw.use(
-    http.post('/api/registry', async ({ request }) => {
+    http.post('/api/registry/', async ({ request }) => {
       bodies.push(await request.json())
       return HttpResponse.json({}, { status: 500 })
     }),

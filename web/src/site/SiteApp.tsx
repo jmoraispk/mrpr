@@ -30,7 +30,7 @@ function Mark() {
   )
 }
 
-type View = 'signin' | { setup: Server; replacing?: string }
+type View = 'signin' | { setup: Server; replacing?: string; directoryDown?: boolean }
 
 const returnTo = () => window.location.hash || '#/'
 
@@ -60,8 +60,10 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
     setBusy(true)
     try {
       const resolved = await resolveServer(parsed.server, config)
-      if (resolved) await go(resolved.site, resolved.source !== 'config')
-      else setView({ setup: parsed.server })
+      if (resolved.site) await go(resolved.site, resolved.source !== 'config')
+      else {
+        setView({ setup: parsed.server, directoryDown: resolved.reason === 'unavailable' })
+      }
     } finally {
       setBusy(false)
     }
@@ -72,6 +74,7 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
       <SetupView
         server={view.setup}
         replacing={view.replacing}
+        directoryDown={view.directoryDown}
         onBack={() => setView('signin')}
       />
     )
@@ -116,7 +119,7 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
         {config.hosts.length > 0 ? (
           <div className="signin-actions">
             {config.hosts.map((site) => (
-              <div key={site.host} className="signin-actions">
+              <div key={site.host} className="signin-host">
                 <button
                   className="signin-button"
                   type="button"

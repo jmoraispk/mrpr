@@ -253,7 +253,7 @@ test('a sign-in started from a pasted setup completes even if the config lacks i
       HttpResponse.json({ access_token: 'at', refresh_token: 'rt', expires_in: 7200 }),
     ),
     http.get('https://gitlab.other.org/api/v4/user', () => HttpResponse.json({ id: 1, username: 'u' })),
-    http.post('/api/registry', async ({ request }) => {
+    http.post('/api/registry/', async ({ request }) => {
       published.push(await request.json())
       return HttpResponse.json({ clientId: OTHER.clientId })
     }),
@@ -272,7 +272,7 @@ test('a sign-in started from a pasted setup completes even if the config lacks i
 test('nothing is published until a sign-in succeeds, and never for a looked-up id', async () => {
   const published: unknown[] = []
   server.use(
-    http.post('/api/registry', async ({ request }) => {
+    http.post('/api/registry/', async ({ request }) => {
       published.push(await request.json())
       return HttpResponse.json({})
     }),
@@ -289,4 +289,23 @@ test('nothing is published until a sign-in succeeds, and never for a looked-up i
   await signIn(SITE, '#/', 'api', () => {})
   expect(JSON.parse(sessionStorage.getItem(PENDING_KEY)!).publish).toBeUndefined()
   expect(published).toEqual([])
+})
+
+test('the code is exchanged under the id the sign-in started with', async () => {
+  // Another tab may have learned a different id for the same server meanwhile.
+  const STARTED = { host: SITE.host, clientId: 'f'.repeat(64) }
+  await signIn(STARTED, '#/', 'api', () => {})
+  const { state } = JSON.parse(sessionStorage.getItem(PENDING_KEY)!)
+  const clientIds: string[] = []
+  server.use(
+    http.post(`${ORIGIN}/oauth/token`, async ({ request }) => {
+      clientIds.push(new URLSearchParams(await request.text()).get('client_id') ?? '')
+      return HttpResponse.json({ access_token: 'at', refresh_token: 'rt', expires_in: 7200 })
+    }),
+    http.get(`${ORIGIN}/api/v4/user`, () => HttpResponse.json({ id: 7, username: 'joao' })),
+  )
+
+  await completeSignIn(new URL(`${window.location.origin}/app/?code=c&state=${state}`), CONFIG)
+
+  expect(clientIds).toEqual(['f'.repeat(64)])
 })

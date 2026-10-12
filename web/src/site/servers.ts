@@ -5,7 +5,7 @@ import type { Server } from './server'
 /** Setups pasted in this browser: host → Application ID. */
 export const CUSTOM_HOSTS_KEY = 'customHosts'
 const CLIENT_ID = /^[0-9a-f]{64}$/
-const REGISTRY = `${import.meta.env.BASE_URL}api/registry`
+const REGISTRY = `${import.meta.env.BASE_URL}api/registry/`
 
 export async function loadCustomHosts(store: KeyValueStore): Promise<SiteHost[]> {
   const stored = (await store.get<Record<string, string>>(CUSTOM_HOSTS_KEY)) ?? {}
@@ -24,15 +24,35 @@ export function adoptSite(config: SiteConfig, site: SiteHost): void {
   else config.hosts.push(site)
 }
 
-/** The directory's id for `host`, or null for unknown or unreachable. */
-export async function lookupDirectory(host: string): Promise<string | null> {
+export type DirectoryAnswer =
+  | { status: 'found'; clientId: string }
+  | { status: 'unknown' }
+  | { status: 'unavailable' }
+
+/** How long to wait for the directory before going on without it. */
+const LOOKUP_TIMEOUT_MS = 5_000
+
+/**
+ * What the directory knows about `host`. `unknown` is its own answer (404);
+ * anything else that is not a valid id, including no answer in time, is
+ * `unavailable`, so the setup view can say it could not check.
+ */
+export async function lookupDirectory(
+  host: string,
+  timeoutMs = LOOKUP_TIMEOUT_MS,
+): Promise<DirectoryAnswer> {
   try {
-    const response = await fetch(`${REGISTRY}?host=${encodeURIComponent(host)}`)
-    if (!response.ok) return null
+    const response = await fetch(`${REGISTRY}?host=${encodeURIComponent(host)}`, {
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    if (response.status === 404) return { status: 'unknown' }
+    if (!response.ok) return { status: 'unavailable' }
     const { clientId } = (await response.json()) as { clientId?: unknown }
-    return typeof clientId === 'string' && CLIENT_ID.test(clientId) ? clientId : null
+    return typeof clientId === 'string' && CLIENT_ID.test(clientId)
+      ? { status: 'found', clientId }
+      : { status: 'unavailable' }
   } catch {
-    return null
+    return { status: 'unavailable' }
   }
 }
 
@@ -52,9 +72,14 @@ export async function publishToDirectory(host: string, clientId: string): Promis
 export async function resolveServer(
   server: Server,
   config: SiteConfig,
-): Promise<{ site: SiteHost; source: 'config' | 'directory' } | null> {
+): Promise<
+  | { site: SiteHost; source: 'config' | 'directory' }
+  | { site: null; reason: 'unknown' | 'unavailable' }
+> {
   const known = config.hosts.find((value) => value.host === server.host)
   if (known) return { site: known, source: 'config' }
-  const clientId = await lookupDirectory(server.host)
-  return clientId ? { site: { host: server.host, clientId }, source: 'directory' } : null
+  const answer = await lookupDirectory(server.host)
+  return answer.status === 'found'
+    ? { site: { host: server.host, clientId: answer.clientId }, source: 'directory' }
+    : { site: null, reason: answer.status }
 }
