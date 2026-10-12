@@ -1,12 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import type { HostConfig } from '../extension/hosts'
 import { Hub } from '../hub/Hub'
 import { hubRequest } from '../hub/api'
 import { lockedPoll, startPageSchedule } from '../inbox/pageSchedule'
 import { platform } from '../platform/platform'
-import type { SiteConfig } from './config'
+import { signIn } from './auth'
+import { siteConfig, type SiteConfig, type SiteHost } from './config'
+import { EXAMPLE_MR_URL, parseServer, type Server } from './server'
+import { rememberHost, resolveServer, adoptSite } from './servers'
+import { SetupView } from './SetupView'
 
 function SignedIn() {
   useEffect(() => startPageSchedule({ poll: lockedPoll }), [])
@@ -26,7 +30,53 @@ function Mark() {
   )
 }
 
+type View = 'signin' | { setup: Server; replacing?: string }
+
+const returnTo = () => window.location.hash || '#/'
+
 function SignIn({ config, notice }: { config: SiteConfig; notice: string | null }) {
+  const [view, setView] = useState<View>('signin')
+  const [link, setLink] = useState('')
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  // Servers built into this deployment can't be set up again from here.
+  const builtIn = new Set(siteConfig().hosts.map((value) => value.host))
+
+  async function go(site: SiteHost, remember: boolean) {
+    adoptSite(config, site)
+    // Built-in ids stay in the build: a copy here would outlive a rotation.
+    if (remember) await rememberHost(platform().store, site)
+    await signIn(site, returnTo(), config.scopes)
+  }
+
+  async function continueWith(event: FormEvent) {
+    event.preventDefault()
+    const parsed = parseServer(link)
+    if (!parsed.ok) {
+      setLinkError(parsed.message)
+      return
+    }
+    setLinkError(null)
+    setBusy(true)
+    try {
+      const resolved = await resolveServer(parsed.server, config)
+      if (resolved) await go(resolved.site, resolved.source !== 'config')
+      else setView({ setup: parsed.server })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (view !== 'signin') {
+    return (
+      <SetupView
+        server={view.setup}
+        replacing={view.replacing}
+        onBack={() => setView('signin')}
+      />
+    )
+  }
+
   return (
     <main className="signin">
       <div className="signin-card">
@@ -42,24 +92,57 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
             {notice}
           </p>
         ) : null}
-        <div className="signin-actions">
-          {config.hosts.map((site) => (
-            <button
-              key={site.host}
-              className="signin-button"
-              type="button"
-              onClick={() =>
-                void platform().connectHost({
-                  host: site.host,
-                  apiBase: `https://${site.host}/api/v4`,
-                })
-              }
-            >
-              <span className="signin-button-label">Sign in with GitLab</span>
-              <span className="signin-button-host">{site.host}</span>
+        <form className="signin-link" onSubmit={(event) => void continueWith(event)}>
+          <label htmlFor="mr-link">Paste a link to any merge request</label>
+          <div className="signin-link-row">
+            <input
+              id="mr-link"
+              value={link}
+              placeholder={EXAMPLE_MR_URL}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setLink(event.target.value)}
+            />
+            <button type="submit" disabled={busy}>
+              {busy ? 'Checking…' : 'Continue'}
             </button>
-          ))}
-        </div>
+          </div>
+          {linkError ? (
+            <p className="signin-notice" role="alert">
+              {linkError}
+            </p>
+          ) : null}
+        </form>
+        {config.hosts.length > 0 ? (
+          <div className="signin-actions">
+            {config.hosts.map((site) => (
+              <div key={site.host} className="signin-actions">
+                <button
+                  className="signin-button"
+                  type="button"
+                  onClick={() => void signIn(site, returnTo(), config.scopes)}
+                >
+                  <span className="signin-button-label">Sign in with GitLab</span>
+                  <span className="signin-button-host">{site.host}</span>
+                </button>
+                {builtIn.has(site.host) ? null : (
+                  <button
+                    className="signin-again"
+                    type="button"
+                    onClick={() =>
+                      setView({
+                        setup: { host: site.host, origin: `https://${site.host}` },
+                        replacing: site.clientId,
+                      })
+                    }
+                  >
+                    Sign-in not working? Set it up again
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
         <p className="signin-privacy">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <rect x="4" y="11" width="16" height="10" rx="2" />
@@ -82,20 +165,8 @@ export function SiteApp({ config, notice }: { config: SiteConfig; notice: string
   const hosts = useQuery({
     queryKey: ['hosts'],
     queryFn: () => hubRequest<HostConfig[]>('listHosts'),
-    enabled: config.hosts.length > 0,
   })
 
-  if (config.hosts.length === 0) {
-    return (
-      <div className="state-screen">
-        <h1>Mr. PR is not set up to sign in</h1>
-        <p>
-          This build has no GitLab application id. See{' '}
-          <code>docs/site-setup.md</code> in the repository.
-        </p>
-      </div>
-    )
-  }
   if (hosts.isLoading) return <p>Loading…</p>
   if (!hosts.data?.length) return <SignIn config={config} notice={notice} />
   return <SignedIn />

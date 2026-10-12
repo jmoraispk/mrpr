@@ -18,9 +18,13 @@ const MR = {
 }
 
 /** Everything GitLab would answer, keyed by what the page asks for. */
-async function fakeGitLab(page: Page, options: { expiresIn?: number } = {}) {
+async function fakeGitLab(
+  page: Page,
+  options: { expiresIn?: number; origin?: string } = {},
+) {
   const tokenRequests: Record<string, string>[] = []
-  await page.route(`${GITLAB}/**`, async (route: Route) => {
+  const authorizeRequests: Record<string, string>[] = []
+  await page.route(`${options.origin ?? GITLAB}/**`, async (route: Route) => {
     const request = route.request()
     const url = new URL(request.url())
     const json = (body: unknown, extra: Record<string, string> = {}) =>
@@ -29,6 +33,7 @@ async function fakeGitLab(page: Page, options: { expiresIn?: number } = {}) {
       return route.fulfill({ status: 204, headers: CORS })
     }
     if (url.pathname === '/oauth/authorize') {
+      authorizeRequests.push(Object.fromEntries(url.searchParams))
       const back = new URL(url.searchParams.get('redirect_uri')!)
       back.searchParams.set('code', 'code-1')
       back.searchParams.set('state', url.searchParams.get('state')!)
@@ -122,7 +127,7 @@ async function fakeGitLab(page: Page, options: { expiresIn?: number } = {}) {
     }
     return route.fulfill({ status: 404, headers: CORS, json: { message: `unmocked ${url.pathname}` } })
   })
-  return { tokenRequests }
+  return { tokenRequests, authorizeRequests }
 }
 
 test('sign in, see a comment in the inbox, open it at its thread', async ({ page }) => {
@@ -175,4 +180,61 @@ test('the landing page leads to the app', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }),
   ).toBeVisible()
+})
+
+const OTHER = 'https://gitlab.other.org'
+const PASTED_ID = 'ab'.repeat(32)
+
+/** The shared directory, which vite preview does not serve. */
+async function fakeRegistry(page: Page, known: Record<string, string> = {}) {
+  const posts: unknown[] = []
+  await page.route('**/api/registry**', async (route) => {
+    const request = route.request()
+    if (request.method() === 'POST') {
+      posts.push(request.postDataJSON())
+      return route.fulfill({ json: { clientId: PASTED_ID } })
+    }
+    const host = new URL(request.url()).searchParams.get('host') ?? ''
+    return known[host]
+      ? route.fulfill({ json: { clientId: known[host] } })
+      : route.fulfill({ status: 404, json: { error: 'unknown' } })
+  })
+  return { posts }
+}
+
+test('the first person from a new server sets it up, and it is shared', async ({ page }) => {
+  const { authorizeRequests } = await fakeGitLab(page, { origin: OTHER })
+  const { posts } = await fakeRegistry(page)
+  await page.goto('/app/')
+
+  await page.getByLabel('Paste a link to any merge request').fill(OTHER + '/g/p/-/merge_requests/1')
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Congratulations')
+  const widths = await page.locator('.setup-step img').evaluateAll((images) =>
+    images.map((image) => (image as HTMLImageElement).naturalWidth),
+  )
+  expect(widths).toHaveLength(3)
+  expect(widths.every((width) => width > 0)).toBe(true)
+
+  await page.getByLabel('Application ID').fill(PASTED_ID)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
+  await expect.poll(() => posts).toEqual([{ host: 'gitlab.other.org', clientId: PASTED_ID }])
+})
+
+test('the next person from that server goes straight to GitLab', async ({ page }) => {
+  const { authorizeRequests } = await fakeGitLab(page, { origin: OTHER })
+  const { posts } = await fakeRegistry(page, { 'gitlab.other.org': PASTED_ID })
+  await page.goto('/app/')
+
+  await page.getByLabel('Paste a link to any merge request').fill(OTHER + '/g/p/-/merge_requests/1')
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
+  await expect(page.getByText('Congratulations')).toHaveCount(0)
+  expect(posts).toEqual([])
 })

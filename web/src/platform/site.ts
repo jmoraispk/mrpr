@@ -1,3 +1,4 @@
+import { listHosts } from '../extension/hosts'
 import { handleMessage } from '../extension/router'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
@@ -37,10 +38,14 @@ export function createSitePlatform(
       if (site) await signOut(site)
     },
     async reauthenticate() {
-      // The host whose session is gone; with one configured host, that one.
+      // The signed-in server whose session ended, not whichever is configured
+      // first: with several servers the order says nothing about which died.
       const live = await sessionHosts()
+      const ended = (await listHosts()).find((value) => !live.includes(value.host))
       const site =
-        config.hosts.find((value) => !live.includes(value.host)) ?? config.hosts[0]
+        (ended && siteHost(ended.host)) ??
+        config.hosts.find((value) => !live.includes(value.host)) ??
+        config.hosts[0]
       if (site) await signIn(site, window.location.hash || '#/', config.scopes)
     },
     showUnread: async (count) => showFaviconDot(count > 0),
