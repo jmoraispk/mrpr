@@ -30,3 +30,10 @@ test('snoozing stores the MR version; unsnoozing removes it', async () => {
   act(() => result.current[1]('h:1', null))
   await waitFor(() => expect(result.current[0]).toEqual({}))
 })
+
+test('a damaged stored projects value never reaches the app', async () => {
+  await fake.store.set({ projects: [{ name: 'X' }, 'junk'] })
+  const { result } = renderHook(() => useProjects())
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(result.current[0]).toEqual([])
+})

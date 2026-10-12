@@ -74,8 +74,39 @@ export function exportProjects(projects: Project[]): string {
   return JSON.stringify({ mrpr: 'projects', version: 1, projects }, null, 2)
 }
 
+const isStrings = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string')
+
+function isProject(value: unknown): value is Project {
+  const p = value as Partial<Project> | null
+  return (
+    typeof p === 'object' &&
+    p !== null &&
+    typeof p.id === 'string' &&
+    /^[\w-]+$/.test(p.id) &&
+    typeof p.name === 'string' &&
+    typeof p.color === 'string' &&
+    typeof p.rules === 'object' &&
+    p.rules !== null &&
+    isStrings(p.rules.repositories) &&
+    isStrings(p.rules.labels) &&
+    isStrings(p.pinned)
+  )
+}
+
+/** Only well-formed projects, each id once: a damaged value must never reach the app. */
+export function normalizeProjects(value: unknown): Project[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  return value.filter((entry): entry is Project => {
+    if (!isProject(entry) || seen.has(entry.id)) return false
+    seen.add(entry.id)
+    return true
+  })
+}
+
 export function importProjects(json: string): Project[] {
-  let parsed: { mrpr?: string; projects?: Project[] }
+  let parsed: { mrpr?: string; projects?: unknown }
   try {
     parsed = JSON.parse(json) as typeof parsed
   } catch {
@@ -84,5 +115,8 @@ export function importProjects(json: string): Project[] {
   if (parsed?.mrpr !== 'projects' || !Array.isArray(parsed.projects)) {
     throw new Error(NOT_PROJECTS)
   }
-  return parsed.projects
+  const projects = normalizeProjects(parsed.projects)
+  // Refuse rather than silently drop part of what the user meant to import.
+  if (projects.length !== parsed.projects.length) throw new Error(NOT_PROJECTS)
+  return projects
 }

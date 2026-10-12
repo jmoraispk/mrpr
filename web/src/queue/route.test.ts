@@ -10,6 +10,7 @@ test('queue, buckets, projects, settings', () => {
   expect(parseSiteRoute('#/bucket/nonsense')).toEqual({ name: 'queue', bucket: null })
   expect(parseSiteRoute('#/project/abc')).toEqual({ name: 'project', id: 'abc' })
   expect(parseSiteRoute('#/settings')).toEqual({ name: 'settings' })
+  expect(parseSiteRoute('#/snoozed')).toEqual({ name: 'snoozed' })
 })
 
 test('a review, a note in it, and its since-last view round-trip', () => {

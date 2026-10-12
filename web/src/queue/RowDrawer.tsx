@@ -7,25 +7,31 @@ import { nudgeText, requestChangesText } from './commentText'
 import { Composer } from './Composer'
 import type { QueueRow } from './model'
 import { ProjectPicker } from './ProjectPicker'
-import { focusNoteOf, markItemsRead } from './readState'
+import { focusNoteOf, latestWaiting, markItemsRead } from './readState'
 import { reviewHash } from './route'
-import { useSnoozed } from './state'
 import { QUEUE_QUERY_KEY } from './useQueue'
 
 type Mode = null | 'reply' | 'changes' | 'nudge' | 'move'
 /** An action asked for from the keyboard, run once by the drawer. */
 export type DrawerRequest = 'approve' | 'reply' | 'changes' | 'nudge' | 'snooze' | 'move'
 
-/** What you can do to one row without opening it. */
+/**
+ * What you can do to one row without opening it. Approve and snooze belong to
+ * the queue, whose notice (with Undo) outlives the row moving away.
+ */
 export function RowDrawer({
   row,
   onClose,
+  onApprove,
+  onSnooze,
   onOpen = () => {},
   request = null,
   onRequestHandled = () => {},
 }: {
   row: QueueRow
   onClose: () => void
+  onApprove: () => void
+  onSnooze: () => void
   /** Called as the review opens from here. */
   onOpen?: () => void
   request?: DrawerRequest | null
@@ -34,44 +40,15 @@ export function RowDrawer({
   const target = { hostId: row.hostId, project: row.project, iid: row.iid }
   const transport = createRuntimeTransport(target)
   const queryClient = useQueryClient()
-  const [, snooze] = useSnoozed()
   const [mode, setMode] = useState<Mode>(null)
-  const [approved, setApproved] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
-  const unreadForMe = row.items.filter(
-    (item) => !item.read && (item.kind === 'reply' || item.kind === 'mention'),
-  )
-  // The latest thread waiting on you.
-  const waitingThread = unreadForMe.at(-1)
+  const waitingThread = latestWaiting(row)
   const waitingReviewers = (row.mr?.reviewers ?? [])
     .filter((reviewer) => reviewer.state === 'UNREVIEWED' || reviewer.state === 'REVIEW_STARTED')
     .map((reviewer) => reviewer.username)
+  const canNudge = row.bucket === 'waiting' && waitingReviewers.length > 0
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: QUEUE_QUERY_KEY })
     void queryClient.invalidateQueries({ queryKey: INBOX_QUERY_KEY })
-  }
-
-  async function approve() {
-    try {
-      await transport.approve!()
-      setApproved(true)
-      setNotice(null)
-      // Approving counts as a look, and moves the row out of Needs you on the next fetch.
-      if (row.mr?.headSha) void transport.markLooked?.(row.mr.headSha)
-      refresh()
-    } catch {
-      setNotice("Couldn't approve. GitLab may not let you approve this one.")
-    }
-  }
-
-  async function undo() {
-    try {
-      await transport.unapprove!()
-      setApproved(false)
-      refresh()
-    } catch {
-      setNotice("Couldn't undo the approval. It still stands in GitLab.")
-    }
   }
 
   async function reply(body: string) {
@@ -79,7 +56,7 @@ export function RowDrawer({
     await transport.replyToDiscussion(waitingThread.discussionId, body)
     // Answered: the thread no longer waits on you.
     await markItemsRead(
-      unreadForMe.filter((item) => item.discussionId === waitingThread.discussionId),
+      row.items.filter((item) => item.discussionId === waitingThread.discussionId),
     )
     refresh()
   }
@@ -92,13 +69,14 @@ export function RowDrawer({
   useEffect(() => {
     if (!request) return
     onRequestHandled()
-    if (request === 'approve') {
-      if (!approved) void approve()
-    } else if (request === 'snooze') snooze(row.key, row.updatedAt)
+    if (request === 'approve') onApprove()
+    else if (request === 'snooze') onSnooze()
     else if (request === 'reply') {
       if (waitingThread) setMode('reply')
     } else if (request === 'nudge') {
-      if (row.bucket === 'waiting' && waitingReviewers.length) setMode('nudge')
+      if (canNudge) setMode('nudge')
+    } else if (request === 'changes') {
+      if (row.mr) setMode('changes')
     } else setMode(request)
     // Runs once per request; the handlers read this render's row.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,51 +94,41 @@ export function RowDrawer({
         <blockquote className="q-excerpt">{waitingThread.excerpt}</blockquote>
       ) : null}
       <div className="q-actions">
-        <a className="q-primary" href={reviewHash(target, { noteId: focusNoteOf(row) })} onClick={onOpen}>
+        <a
+          className="q-primary"
+          href={reviewHash(target, { noteId: focusNoteOf(row) })}
+          onClick={onOpen}
+        >
           Open review
         </a>
-        {approved ? (
-          <span className="q-approved">
-            Approved ·{' '}
-            <button type="button" onClick={() => void undo()}>
-              Undo
-            </button>
-          </span>
-        ) : (
-          <button type="button" onClick={() => void approve()}>
-            Approve
-          </button>
-        )}
+        <button type="button" onClick={onApprove}>
+          Approve
+        </button>
         <button type="button" onClick={() => setMode('reply')} disabled={!waitingThread}>
           Reply
         </button>
-        <button type="button" onClick={() => setMode('changes')}>
+        <button type="button" onClick={() => setMode('changes')} disabled={!row.mr}>
           Request changes
         </button>
-        {row.bucket === 'waiting' && waitingReviewers.length ? (
+        {canNudge ? (
           <button type="button" onClick={() => setMode('nudge')}>
             Nudge
           </button>
         ) : null}
-        <button type="button" onClick={() => snooze(row.key, row.updatedAt)}>
-          Snooze
+        <button type="button" onClick={onSnooze}>
+          {row.snoozed ? 'Unsnooze' : 'Snooze'}
         </button>
         <button type="button" onClick={() => setMode('move')}>
           Move to project
         </button>
       </div>
-      {notice ? (
-        <p className="mutation-error" role="alert">
-          {notice}
-        </p>
-      ) : null}
       {mode === 'reply' && waitingThread ? (
         <Composer label="Reply" initial="" onCancel={() => setMode(null)} onSend={reply} />
       ) : null}
-      {mode === 'changes' ? (
+      {mode === 'changes' && row.mr ? (
         <Composer
           label="Request changes"
-          initial={requestChangesText(row.mr?.author.username ?? '')}
+          initial={requestChangesText(row.mr.author.username)}
           onCancel={() => setMode(null)}
           onSend={comment}
         />

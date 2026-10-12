@@ -290,3 +290,59 @@ test('one review is singular, and a small MR outside Quick wins is not called on
   const returned = (await screen.findAllByRole('article'))[1]
   expect(within(returned).getByText('Small · ~1 min')).toBeInTheDocument()
 })
+
+test('an approval outlives its row leaving the list, and a failed undo says so', async () => {
+  const user = userEvent.setup()
+  // GitLab now reports the approval, so the next fetch moves the row to Done.
+  transport.approve.mockImplementationOnce(async () => {
+    hosts[0].mrs[0] = { ...hosts[0].mrs[0], reviewers: [{ username: 'joao', name: 'Joao', state: 'APPROVED' }] }
+  })
+  transport.unapprove.mockRejectedValueOnce(new Error('403'))
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'a' })
+
+  const toast = await screen.findByRole('status')
+  expect(toast).toHaveTextContent('Approved Retry budget for webhooks')
+  await waitFor(() =>
+    expect(screen.queryByRole('article', { name: /Retry budget/ })).toBeNull(),
+  )
+  expect(screen.getAllByRole('article').map((row) => row.textContent)).not.toContain(
+    expect.stringContaining('Retry budget'),
+  )
+  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't undo the approval")
+})
+
+test('a snooze can be undone, and snoozed MRs are listed', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 's' })
+  await waitFor(() =>
+    expect(screen.getAllByRole('article')[0]).not.toHaveTextContent('Retry budget'),
+  )
+  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+  await waitFor(() =>
+    expect(screen.getAllByRole('article')[0]).toHaveTextContent('Retry budget'),
+  )
+
+  fireEvent.keyDown(window, { key: 's' })
+  await user.click(await screen.findByRole('link', { name: /Snoozed\s*1/ }))
+  const rows = await screen.findAllByRole('article')
+  expect(rows).toHaveLength(1)
+  expect(rows[0]).toHaveTextContent('Retry budget')
+})
+
+test('approving counts as a look; a failed approval says so and keeps the row', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'a' })
+  await waitFor(() => expect(transport.markLooked).toHaveBeenCalledWith('h'))
+
+  transport.approve.mockRejectedValueOnce(new Error('403'))
+  fireEvent.keyDown(window, { key: 'j' })
+  fireEvent.keyDown(window, { key: 'a' })
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't approve Fix flaky test")
+  expect(screen.getAllByRole('article').map((r) => r.textContent).join()).toContain('Fix flaky test')
+})

@@ -479,6 +479,7 @@ test('opening a review records the head as looked at', async () => {
 
 test('since your last review shows only what changed after the last look', async () => {
   const user = userEvent.setup()
+  server.use(mrWithHead('head-2'))
   const getDiffsSince = vi.fn(async () => [
     {
       old_path: 'src/new.py',
@@ -576,7 +577,67 @@ test('a second visit in the same session knows about the first look', async () =
   const first = render(<App />, { wrapper: Wrapper })
   await waitFor(() => expect(looks).toEqual(['head-1']))
   first.unmount()
+  // New commits since that look.
+  server.use(mrWithHead('head-2'))
 
   render(<App />, { wrapper: Wrapper })
   expect(await screen.findByRole('button', { name: 'Since your last review' })).toBeVisible()
+})
+
+function mrWithHead(sha: string) {
+  return http.get('/api/mr', () =>
+    HttpResponse.json({
+      iid: 42,
+      title: 'Improve parser errors',
+      web_url: 'https://gitlab.example.com/x/-/merge_requests/42',
+      state: 'opened',
+      source_branch: 'a',
+      target_branch: 'main',
+      sha,
+    }),
+  )
+}
+
+test('since your last review is read-only for new inline comments', async () => {
+  const user = userEvent.setup()
+  server.use(mrWithHead('head-2'))
+  render(<App />, {
+    wrapper: transportWrapper({
+      markLooked: async () => {},
+      lastLook: async () => 'head-1',
+      getDiffsSince: async () => [
+        {
+          old_path: 'src/new.py',
+          new_path: 'src/new.py',
+          diff: '@@ -1 +1 @@\n-a\n+b',
+          new_file: false,
+          renamed_file: false,
+          deleted_file: false,
+          collapsed: false,
+          too_large: false,
+        },
+      ],
+    }),
+  })
+  await user.click(await screen.findByRole('button', { name: 'Since your last review' }))
+  await screen.findByRole('region', { name: 'src/new.py' }, { timeout: 5_000 })
+  expect(screen.queryByRole('button', { name: /Comment on (old|new) line/ })).toBeNull()
+  expect(screen.getByText(/switch back to comment inline/i)).toBeInTheDocument()
+})
+
+test('with nothing new since your last review, there is no since view', async () => {
+  server.use(mrWithHead('head-1'))
+  const getDiffsSince = vi.fn(async () => [])
+  render(<App startSince />, {
+    wrapper: transportWrapper({
+      markLooked: async () => {},
+      lastLook: async () => 'head-1',
+      getDiffsSince,
+    }),
+  })
+  expect(
+    (await screen.findAllByText('src/parser.py', undefined, { timeout: 5_000 }))[0],
+  ).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Since your last review' })).toBeNull()
+  expect(getDiffsSince).not.toHaveBeenCalled()
 })

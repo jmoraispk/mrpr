@@ -237,3 +237,29 @@
 
 /* index.css styles every h1/h2 for the review view; the queue sets its own. */
 .q-shell h2, .q-shell h3 { color: var(--ink); font-family: var(--font-body); letter-spacing: normal; }
+
+/* The last action, with Undo; it outlives the row it was about. */
+.q-notice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 14px;
+}
+.q-notice > span { flex: 1; }
+.q-notice.is-error { border-color: var(--warm-ink); background: var(--warm-bg); color: var(--warm-ink); }
+.q-notice button {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.q-notice button[aria-label='Dismiss'] { border: 0; background: none; color: var(--muted); font-size: 18px; }

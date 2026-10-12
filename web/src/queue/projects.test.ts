@@ -4,6 +4,7 @@ import type { QueueRow } from './model'
 import {
   createProject,
   deleteProject,
+  normalizeProjects,
   exportProjects,
   importProjects,
   moveRow,
@@ -74,4 +75,16 @@ test('export and import round-trip, and junk is refused', () => {
   expect(importProjects(exportProjects(projects))).toEqual(projects)
   expect(() => importProjects('{"nope":1}')).toThrow('Not a Mr. PR projects file')
   expect(() => importProjects('junk')).toThrow('Not a Mr. PR projects file')
+})
+
+test('an import whose projects are malformed is refused', () => {
+  expect(() =>
+    importProjects('{"mrpr":"projects","projects":[{"name":"X"}]}'),
+  ).toThrow('Not a Mr. PR projects file')
+})
+
+test('stored projects are cleaned: junk entries dropped, duplicate ids kept once', () => {
+  const good = { id: 'a', name: 'A', color: '#C2410C', rules: { repositories: [], labels: [] }, pinned: [] }
+  expect(normalizeProjects([good, { name: 'X' }, null, { ...good, name: 'again' }])).toEqual([good])
+  expect(normalizeProjects('nonsense')).toEqual([])
 })

@@ -80,6 +80,8 @@ export interface DiffFileSectionProps {
   onInlineCountChange?: (count: number) => void
   onRequestShowComments?: () => void
   onSelectionChange?: (selection: SelectionRange | null) => void
+  /** Show threads but start no new inline comments, e.g. a diff not of the MR's own versions. */
+  readOnly?: boolean
 }
 
 interface PositionedDiscussion {
@@ -156,6 +158,7 @@ export function DiffFileSection({
   onInlineCountChange,
   onRequestShowComments,
   onSelectionChange,
+  readOnly = false,
 }: DiffFileSectionProps) {
   const [highlight, setHighlight] = useState(false)
   const [selection, setSelection] = useState<SelectionRange | null>(null)
@@ -607,9 +610,16 @@ export function DiffFileSection({
           }
           diffViewTheme={theme}
           diffViewHighlight={highlight}
-          diffViewAddWidget
+          diffViewAddWidget={!readOnly}
           diffViewFontSize={12}
-          extendData={showComments ? extendData : EMPTY_EXTEND_DATA}
+          extendData={
+            !showComments
+              ? EMPTY_EXTEND_DATA
+              : readOnly
+                // Old-side anchors are numbered against the MR's base, not this diff's.
+                ? { oldFile: {}, newFile: extendData.newFile }
+                : extendData
+          }
           onAddWidgetClick={selectLine}
           renderWidgetLine={({ lineNumber, side, onClose }) => (
             <div className="inline-comment-widget">

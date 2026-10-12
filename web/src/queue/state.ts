@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { platform } from '../platform/platform'
-import type { Project } from './projects'
+import { normalizeProjects, type Project } from './projects'
 
 /** A value in this browser's store, kept in sync across hook instances and tabs. */
-function useStored<T>(key: string, fallback: T): [T, (next: T) => void] {
+function useStored<T>(
+  key: string,
+  fallback: T,
+  // Whatever is stored passes through this first; a damaged value must not crash the app.
+  clean: (stored: unknown) => T = (stored) => (stored as T | undefined) ?? fallback,
+): [T, (next: T) => void] {
   const [value, setValue] = useState<T>(fallback)
   useEffect(() => {
     let live = true
     const read = () =>
       void platform()
-        .store.get<T>(key)
+        .store.get<unknown>(key)
         .then((stored) => {
-          if (live) setValue(stored ?? fallback)
+          if (live) setValue(clean(stored))
         })
     read()
     const stop = platform().store.subscribe((keys) => {
@@ -36,7 +41,7 @@ function useStored<T>(key: string, fallback: T): [T, (next: T) => void] {
 }
 
 export function useProjects(): [Project[], (next: Project[]) => void] {
-  return useStored<Project[]>('projects', [])
+  return useStored<Project[]>('projects', [], normalizeProjects)
 }
 
 /** Row key → the MR's updatedAt when snoozed; null unsnoozes. */

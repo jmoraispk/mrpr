@@ -20,7 +20,8 @@ export function QueueList({
   /** Label each bucket, for a project's view that spans them all. */
   grouped?: boolean
 }) {
-  const visible = rows.filter((row) => !row.snoozed)
+  // The caller decides what to list; snoozed rows appear only on their own list.
+  const visible = rows
   return (
     <section className="q-list" aria-label={heading}>
       <header className="q-list-head">

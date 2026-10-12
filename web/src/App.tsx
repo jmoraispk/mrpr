@@ -62,6 +62,8 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
     queryKey: ['merge-request', transport.targetKey],
     queryFn: ({ signal }) => transport.getMergeRequest(signal),
     staleTime: 30_000,
+    // Each visit reads the head afresh: "since your last review" depends on it.
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   })
@@ -77,8 +79,13 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
   })
   const lastLookReady = !transport.lastLook || lastLook.isFetchedAfterMount
   const [sinceChosen, setSince] = useState(startSince)
-  const sinceFrom =
-    sinceChosen && lastLook.data && transport.getDiffsSince ? lastLook.data : null
+  // This visit's head, never a cached one from an earlier visit.
+  const headSha = mergeRequest.isFetchedAfterMount ? mergeRequest.data?.sha : undefined
+  // Only when the head moved since that look is there anything to show.
+  const sinceAvailable = Boolean(
+    lastLook.data && transport.getDiffsSince && headSha && lastLook.data !== headSha,
+  )
+  const sinceFrom = sinceChosen && sinceAvailable ? lastLook.data! : null
   const diffs = useQuery({
     queryKey: ['diffs', transport.targetKey, sinceFrom ?? 'all'],
     queryFn: ({ signal }) =>
@@ -88,14 +95,13 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
     // Toggling "since" swaps the file list in place, not behind a loading screen.
     placeholderData: keepPreviousData,
     // Opening straight into "since": wait to learn what "since" means.
-    enabled: !startSince || lastLookReady,
+    enabled: !startSince || (lastLookReady && mergeRequest.isFetchedAfterMount),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   })
   const [approved, setApproved] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
-  const headSha = mergeRequest.data?.sha
   const looked = useRef(false)
   useEffect(() => {
     if (looked.current || !headSha || !transport.markLooked || !lastLookReady) return
@@ -385,15 +391,20 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
               >
                 {updateState === 'updating' ? 'Updating…' : 'Update'}
               </button>
-              {lastLook.data && transport.getDiffsSince ? (
+              {sinceAvailable ? (
                 <button
                   className="review-since"
-                  aria-pressed={sinceChosen}
+                  aria-pressed={Boolean(sinceFrom)}
                   type="button"
                   onClick={() => setSince((value) => !value)}
                 >
                   Since your last review
                 </button>
+              ) : null}
+              {sinceFrom ? (
+                <span className="update-status">
+                  Only what changed since your last review; switch back to comment inline.
+                </span>
               ) : null}
               {transport.approve ? (
                 approved ? (
@@ -498,6 +509,7 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
                 onActiveIndexChange={setRequestedFileIndex}
                 onInlineCountChange={setInlineCount}
                 onRequestShowComments={() => setShowComments(true)}
+                readOnly={Boolean(sinceFrom)}
               />
             </Suspense>
           ) : (

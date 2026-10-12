@@ -249,7 +249,7 @@ test('approve from the keyboard', async ({ page }) => {
   await page.keyboard.press('k')
   await page.keyboard.press('a')
 
-  await expect(page.getByText('Approved ·')).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Approved Retry budget for webhooks')
   expect(gitlab.approvals).toEqual(['approve'])
 })
 

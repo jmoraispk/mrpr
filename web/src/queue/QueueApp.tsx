@@ -14,6 +14,7 @@ import { BUCKET_LABELS, BUCKET_ORDER, todaysBudget, type QueueRow } from './mode
 import { ProjectDialog } from './ProjectDialog'
 import { moveRow, projectOf, projectsFromRepositories } from './projects'
 import { ProjectsSettings } from './ProjectsSettings'
+import { NoticeBar } from './NoticeBar'
 import { QueueList } from './QueueList'
 import { focusNoteOf, markRowRead } from './readState'
 import { RowDrawer, type DrawerRequest } from './RowDrawer'
@@ -22,6 +23,7 @@ import { useProjects } from './state'
 import { useTheme } from './theme'
 import { useQueue } from './useQueue'
 import { useQueueKeys } from './useQueueKeys'
+import { useRowActions } from './useRowActions'
 
 const needsYouHeading = (count: number) =>
   count === 1 ? '1 review needs you' : `${count} reviews need you`
@@ -51,6 +53,7 @@ export function QueueApp() {
   const [drawerClosed, setDrawerClosed] = useState(false)
   const [request, setRequest] = useState<DrawerRequest | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
+  const actions = useRowActions()
   useUnreadTitle(queue.counts['needs-you'] + queue.counts['quick-wins'])
   // Opening the queue is a sign the user is looking; catch up if the last
   // poll is stale rather than waiting up to two minutes for the next.
@@ -61,13 +64,18 @@ export function QueueApp() {
   const inProject = (id: string) => (row: QueueRow) =>
     id === UNSORTED ? projectOf(row, projects) === null : projectOf(row, projects)?.id === id
   // A project's view keeps Waiting and Done too, so nothing in it is forgotten.
+  // Snoozed rows show only on their own list, where `s` brings them back.
   const listed =
-    route.name === 'project'
-      ? queue.rows.filter((row) => row.bucket !== 'folded' && inProject(route.id)(row))
-      : route.name === 'queue' && route.bucket
-        ? queue.rows.filter((row) => row.bucket === route.bucket)
-        : queue.rows.filter((row) => row.bucket !== 'done' && row.bucket !== 'folded')
-  const visible = listed.filter((row) => !row.snoozed)
+    route.name === 'snoozed'
+      ? queue.rows.filter((row) => row.snoozed)
+      : (route.name === 'project'
+          ? queue.rows.filter((row) => row.bucket !== 'folded' && inProject(route.id)(row))
+          : route.name === 'queue' && route.bucket
+            ? queue.rows.filter((row) => row.bucket === route.bucket)
+            : queue.rows.filter((row) => row.bucket !== 'done' && row.bucket !== 'folded')
+        ).filter((row) => !row.snoozed)
+  const visible = listed
+  const snoozedCount = queue.rows.filter((row) => row.snoozed).length
   // The keyboard always has a row: the one picked, else the first.
   const current = visible.find((row) => row.key === selected) ?? visible[0] ?? null
   const select = (key: string) => {
@@ -125,7 +133,9 @@ export function QueueApp() {
     )
   }
   const heading =
-    route.name === 'project'
+    route.name === 'snoozed'
+      ? 'Snoozed'
+      : route.name === 'project'
       ? route.id === UNSORTED
         ? 'Unsorted'
         : (projects.find((p) => p.id === route.id)?.name ?? 'Project')
@@ -186,11 +196,22 @@ export function QueueApp() {
             Folded: {queue.counts.folded} bot MR{queue.counts.folded === 1 ? '' : 's'}
           </p>
           <p className="q-folded">Today's budget: ~{todaysBudget(queue.rows)} min</p>
+          {snoozedCount > 0 ? (
+            <a
+              href="#/snoozed"
+              className="q-bucket"
+              aria-current={route.name === 'snoozed' ? 'page' : undefined}
+            >
+              <span>Snoozed</span> <span className="q-count">{snoozedCount}</span>
+            </a>
+          ) : null}
         </nav>
         <nav aria-label="Projects">
           <p className="q-eyebrow">Projects</p>
           {projects.map((project) => {
-            const rows = queue.rows.filter((row) => row.bucket !== 'folded' && inProject(project.id)(row))
+            const rows = queue.rows.filter(
+              (row) => row.bucket !== 'folded' && !row.snoozed && inProject(project.id)(row),
+            )
             const needs = rows.filter(
               (row) => row.bucket === 'needs-you' || row.bucket === 'quick-wins',
             ).length
@@ -206,7 +227,9 @@ export function QueueApp() {
           {projectLink(
             UNSORTED,
             'Unsorted',
-            queue.rows.filter((row) => row.bucket !== 'folded' && inProject(UNSORTED)(row)).length,
+            queue.rows.filter(
+              (row) => row.bucket !== 'folded' && !row.snoozed && inProject(UNSORTED)(row),
+            ).length,
           )}
           {projects.length === 0 && queue.rows.length > 0 ? (
             <button
@@ -239,6 +262,7 @@ export function QueueApp() {
         </div>
       </aside>
       <main className="q-main-area">
+        <NoticeBar notice={actions.notice} onUndo={actions.undo} onDismiss={actions.dismiss} />
         {[...errors.entries()].map(([hostId, error]) => (
           <p key={hostId} className="hub-error">
             {error.host}: {describeHostError(error.code)}{' '}
@@ -279,6 +303,8 @@ export function QueueApp() {
                 key={current.key}
                 row={current}
                 onClose={() => setDrawerClosed(true)}
+                onApprove={() => actions.approve(current)}
+                onSnooze={() => actions.snooze(current)}
                 onOpen={() => markRowRead(current)}
                 request={request}
                 onRequestHandled={() => setRequest(null)}

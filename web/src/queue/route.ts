@@ -8,6 +8,7 @@ export type SiteRoute =
   | { name: 'project'; id: string }
   | { name: 'review'; target: ReviewTarget; noteId: number | null; since: boolean }
   | { name: 'settings' }
+  | { name: 'snoozed' }
 
 const SINCE = '/since'
 
@@ -21,6 +22,7 @@ export function reviewHash(
 export function parseSiteRoute(hash: string): SiteRoute {
   const path = hash.replace(/^#/, '')
   if (path === '/settings') return { name: 'settings' }
+  if (path === '/snoozed') return { name: 'snoozed' }
   const bucket = path.match(/^\/bucket\/([a-z-]+)$/)?.[1]
   if (bucket) {
     return {

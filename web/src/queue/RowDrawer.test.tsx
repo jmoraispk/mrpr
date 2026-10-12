@@ -65,8 +65,12 @@ const waitingReply: InboxItem = {
 }
 
 let fake: ReturnType<typeof createFakePlatform>
+const onApprove = vi.fn()
+const onSnooze = vi.fn()
 beforeEach(() => {
   Object.values(transport).forEach((fn) => fn.mockClear())
+  onApprove.mockClear()
+  onSnooze.mockClear()
   fake = createFakePlatform()
   installPlatform(fake)
 })
@@ -74,7 +78,7 @@ beforeEach(() => {
 const show = (value: QueueRow) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <RowDrawer row={value} onClose={() => {}} />
+      <RowDrawer row={value} onClose={() => {}} onApprove={onApprove} onSnooze={onSnooze} />
     </QueryClientProvider>,
   )
 
@@ -83,34 +87,6 @@ test('nudge and request-changes texts tag the right people', () => {
     "@john @li friendly nudge, this one's ready for your review whenever you have a moment.",
   )
   expect(requestChangesText('ana')).toBe('@ana Requesting changes: ')
-})
-
-test('approve counts as a look, then undo', async () => {
-  const user = userEvent.setup()
-  show(row())
-  await user.click(screen.getByRole('button', { name: 'Approve' }))
-  expect(transport.approve).toHaveBeenCalledOnce()
-  expect(transport.markLooked).toHaveBeenCalledWith('head-9')
-  await user.click(await screen.findByRole('button', { name: 'Undo' }))
-  expect(transport.unapprove).toHaveBeenCalledOnce()
-})
-
-test('a failed undo says so', async () => {
-  const user = userEvent.setup()
-  transport.unapprove.mockRejectedValueOnce(new Error('403'))
-  show(row())
-  await user.click(screen.getByRole('button', { name: 'Approve' }))
-  await user.click(await screen.findByRole('button', { name: 'Undo' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't undo the approval")
-})
-
-test('a failed approval says so and leaves the row as it was', async () => {
-  const user = userEvent.setup()
-  transport.approve.mockRejectedValueOnce(new Error('403'))
-  show(row())
-  await user.click(screen.getByRole('button', { name: 'Approve' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't approve")
-  expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
 })
 
 test('request changes opens a composer tagging the author, and posts it', async () => {
@@ -165,13 +141,6 @@ test('reply goes to the thread waiting on you, and marks it read', async () => {
   )
 })
 
-test('snooze hides the row until it changes', async () => {
-  const user = userEvent.setup()
-  show(row())
-  await user.click(screen.getByRole('button', { name: 'Snooze' }))
-  await expect(fake.store.get('snoozed')).resolves.toEqual({ 'h:1': '2026-10-11T10:00:00Z' })
-})
-
 test('move to a new project pins the MR there', async () => {
   const user = userEvent.setup()
   show(row())
@@ -180,4 +149,29 @@ test('move to a new project pins the MR there', async () => {
   await waitFor(async () =>
     expect(await fake.store.get('projects')).toMatchObject([{ name: 'Payments', pinned: ['h:1'] }]),
   )
+})
+
+test('reply goes to the newest thread waiting on you', async () => {
+  const user = userEvent.setup()
+  const older = { ...waitingReply, id: 'h:6', noteId: 6, discussionId: 'disc-6', createdAt: '2026-10-11T08:00:00Z' }
+  const newer = { ...waitingReply, createdAt: '2026-10-11T09:00:00Z' }
+  show(row({ items: [newer, older] }))
+  await user.click(screen.getByRole('button', { name: 'Reply' }))
+  await user.type(screen.getByRole('textbox'), 'ok')
+  await user.click(screen.getByRole('button', { name: 'Post' }))
+  expect(transport.replyToDiscussion).toHaveBeenCalledWith('disc-7', 'ok')
+})
+
+test('approve and snooze are handed to the queue, which can undo them', async () => {
+  const user = userEvent.setup()
+  show(row())
+  await user.click(screen.getByRole('button', { name: 'Approve' }))
+  await user.click(screen.getByRole('button', { name: 'Snooze' }))
+  expect(onApprove).toHaveBeenCalledOnce()
+  expect(onSnooze).toHaveBeenCalledOnce()
+})
+
+test('a row without facts cannot request changes from nobody', () => {
+  show(row({ mr: null }))
+  expect(screen.getByRole('button', { name: 'Request changes' })).toBeDisabled()
 })
