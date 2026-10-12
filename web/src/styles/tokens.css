@@ -1,0 +1,23 @@
+/* The landing page's design tokens, scoped to the queue: the review view's
+   own stylesheet (index.css) defines --ink, --muted and --accent on :root. */
+.q-shell {
+  --paper: #F4F4F0; --surface: #FFFFFF; --surface-2: #FAFAF7; --ink: #12161F;
+  --ink-2: #3D4452; --muted: #5B6170; --line: #DCDDD6; --line-2: #E6E7E1;
+  --line-3: #EFEFEA; --soft: #F0F0EB; --link: #1E4FD8; --hl: #FFF8F3;
+  --warm-bg: #FDEBDD; --warm-ink: #8A2E0A; --ok-bg: #E3F1E8; --ok-ink: #1F5C3C;
+  --ai-bg: #EEF2FD; --ai-line: #B9C6F2; --ai-ink: #1E3A9E; --plus: #1F6B45;
+  --minus: #A1361A; --accent: #C2410C; --accent-ink: #C2410C;
+  --font-display: 'Bricolage Grotesque Variable', 'Helvetica Neue', system-ui, sans-serif;
+  --font-body: 'Geist Variable', 'Helvetica Neue', Helvetica, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  color-scheme: light;
+}
+:root[data-theme='dark'] .q-shell {
+  --paper: #0F1218; --surface: #171B23; --surface-2: #1C212B; --ink: #ECEDE8;
+  --ink-2: #B9BEC9; --muted: #8E95A3; --line: #2A303C; --line-2: #262B36;
+  --line-3: #222731; --soft: #222731; --link: #8FB0FF; --hl: #2A1D14;
+  --warm-bg: #3A2214; --warm-ink: #F7A072; --ok-bg: #13291D; --ok-ink: #7FD1A3;
+  --ai-bg: #18213A; --ai-line: #34457A; --ai-ink: #A9C1FF; --plus: #6FCF97;
+  --minus: #F08A6E; --accent-ink: color-mix(in srgb, var(--accent) 62%, white);
+  color-scheme: dark;
+}

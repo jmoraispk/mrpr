@@ -51,6 +51,7 @@ beforeEach(() => {
       fake.sent.push(message)
       if (message.kind === 'delta/hub' && message.op === 'listHosts') return { ok: true, data: hosts }
       if (message.kind === 'delta/hub' && message.op === 'listInbox') return { ok: true, data: inbox }
+      if (message.kind === 'delta/hub' && message.op === 'listQueue') return { ok: true, data: [] }
       return { ok: true, data: null }
     },
   })
@@ -76,10 +77,10 @@ test('signed out, it offers to sign in to each configured host', async () => {
   expect(signIn).toHaveBeenCalledWith(SITE, expect.any(String), 'api')
 })
 
-test('signed in, it is the hub', async () => {
+test('signed in, it is the review queue', async () => {
   hosts = [HOST]
   renderSite()
-  expect(await screen.findByRole('heading', { name: 'Inbox' })).toBeInTheDocument()
+  expect(await screen.findByRole('navigation', { name: 'Queue' })).toBeInTheDocument()
 })
 
 test('a signed-out host offers to sign in again', async () => {
@@ -107,7 +108,7 @@ test('the page schedule runs only while signed in', async () => {
 
   hosts = [HOST]
   const view = renderSite()
-  await screen.findByRole('heading', { name: 'Inbox' })
+  await screen.findByRole('navigation', { name: 'Queue' })
   expect(schedule.startPageSchedule).toHaveBeenCalledWith({ poll: schedule.lockedPoll })
 
   view.unmount()

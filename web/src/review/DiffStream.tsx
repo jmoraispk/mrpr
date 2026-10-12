@@ -50,6 +50,8 @@ export interface DiffStreamProps {
   onInlineCountChange?: (count: number) => void
   onRequestShowComments?: () => void
   scrollRef: RefObject<HTMLElement | null>
+  /** Threads only, no new inline comments (the since-last-review diff). */
+  readOnly?: boolean
 }
 
 export function DiffStream({
@@ -63,6 +65,7 @@ export function DiffStream({
   onInlineCountChange,
   onRequestShowComments,
   scrollRef,
+  readOnly = false,
 }: DiffStreamProps) {
   const [theme, setTheme] = useState(preferredTheme)
   const [inlineCounts, setInlineCounts] = useState<Record<number, number>>({})
@@ -320,6 +323,7 @@ export function DiffStream({
                     reportInlineCount(item.index, count)
                   }
                   onRequestShowComments={onRequestShowComments}
+                  readOnly={readOnly}
                 />
               </div>
             )

@@ -1,0 +1,265 @@
+/* The review queue, in the landing page's visual system (tokens.css). */
+.q-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+.q-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 12px;
+  border-right: 1px solid var(--line-2);
+  background: var(--surface-2);
+}
+.q-brand {
+  padding: 0 10px;
+  color: var(--ink);
+  font: 800 22px/1 var(--font-display);
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+.q-eyebrow {
+  margin: 0;
+  padding: 0 10px 6px;
+  color: var(--muted);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.q-bucket {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: var(--ink-2);
+  font-size: 14px;
+  text-decoration: none;
+}
+.q-bucket:hover { background: var(--soft); }
+.q-bucket[aria-current='page'] { background: var(--ink); color: var(--paper); font-weight: 600; }
+.q-count { font-variant-numeric: tabular-nums; }
+.q-folded { margin: 6px 10px 0; color: var(--muted); font-size: 13px; }
+.q-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+.q-sidebar-foot { display: flex; gap: 8px; align-items: center; margin-top: auto; padding: 0 10px; font-size: 13px; }
+.q-sidebar-foot a { color: var(--ink-2); }
+.q-sidebar-foot button {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.q-main-area { min-width: 0; background: var(--surface); }
+.q-main-area > .hub-error { margin: 12px 20px 0; }
+.q-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line-2);
+}
+.q-list-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.q-sort { color: var(--muted); font: 12px var(--font-mono); }
+.q-group {
+  margin: 0;
+  padding: 14px 20px 6px;
+  color: var(--muted);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.q-row { display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line-3); cursor: pointer; }
+.q-row:hover, .q-row.is-selected { background: var(--hl); }
+.q-rank {
+  display: flex;
+  flex: 0 0 22px;
+  height: 22px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--accent);
+  border-radius: 11px;
+  color: var(--accent-ink);
+  font: 12px var(--font-mono);
+}
+.q-rank:empty { border: 0; }
+.q-rank.is-first { background: var(--accent); color: #fff; }
+.q-main { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 6px; }
+.q-title-line { display: flex; justify-content: space-between; gap: 12px; }
+.q-title { margin: 0; font-size: 15px; font-weight: 600; }
+.q-age, .q-ref { color: var(--muted); font: 12px var(--font-mono); }
+.q-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+.q-project { display: inline-flex; align-items: center; color: var(--ink-2); font-weight: 500; }
+.q-badges { display: contents; }
+.q-badge { padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--ink-2); }
+.q-badge-blocking { background: var(--ink); color: var(--paper); font-weight: 500; }
+.q-badge-commits-since, .q-badge-pipeline-failed { background: var(--warm-bg); color: var(--warm-ink); font-weight: 500; }
+.q-badge-ai-authored { border: 1px solid var(--ai-line); background: var(--ai-bg); color: var(--ai-ink); }
+.q-badge-changes-addressed, .q-badge-threads-waiting {
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 500;
+}
+.q-stats { font-family: var(--font-mono); }
+.q-plus { color: var(--plus); }
+.q-minus { color: var(--minus); }
+.q-empty { padding: 24px 20px; color: var(--muted); }
+.q-keys { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 20px; color: var(--muted); font-size: 12px; }
+.q-keys kbd, .q-help kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--ink);
+  font: 12px var(--font-mono);
+}
+@media (max-width: 760px) {
+  .q-shell { grid-template-columns: 1fr; }
+  .q-sidebar { border-right: 0; border-bottom: 1px solid var(--line-2); }
+}
+
+/* The row drawer: act on one MR without opening it. */
+.q-with-drawer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); }
+.q-with-drawer > .q-list:only-child { grid-column: 1 / -1; }
+.q-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-left: 1px solid var(--line-2);
+  background: var(--surface-2);
+}
+.q-drawer-head { display: flex; justify-content: space-between; gap: 8px; }
+.q-drawer-head h2 { margin: 0; font-size: 16px; }
+.q-drawer-head button { border: 0; background: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+.q-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.q-actions button,
+.q-actions a,
+.q-composer-actions button,
+.q-picker button,
+.q-dialog button {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.q-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
+.q-shell .q-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.q-excerpt {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.q-composer, .q-dialog { display: flex; flex-direction: column; gap: 8px; }
+.q-composer-label { color: var(--muted); font: 500 11px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.q-composer textarea, .q-picker input, .q-dialog input, .q-shell textarea {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 14px var(--font-body);
+}
+.q-signed { margin: 0; color: var(--muted); font-size: 12px; font-style: italic; }
+.q-composer-actions { display: flex; gap: 8px; }
+.q-picker { display: flex; flex-direction: column; gap: 6px; }
+.q-picker form { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.q-approved { color: var(--ok-ink); font-weight: 600; }
+.q-actions .q-approved button { padding: 2px 8px; }
+@media (max-width: 1000px) { .q-with-drawer { grid-template-columns: 1fr; } }
+
+/* The keyboard help. */
+.q-help {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10;
+  width: min(360px, calc(100vw - 48px));
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px -12px rgba(18, 22, 31, 0.35);
+}
+.q-help dl { display: grid; gap: 6px; margin: 0 0 12px; }
+.q-help dl > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.q-help dd { margin: 0; color: var(--ink-2); }
+.q-help button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Projects in the sidebar and in Settings. */
+.q-sidebar-action {
+  margin: 4px 10px 0;
+  padding: 6px 8px;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.q-sidebar .q-dialog { margin: 8px 10px 0; font-size: 13px; color: var(--muted); }
+.q-dialog label { display: flex; flex-direction: column; gap: 4px; }
+.q-projects-settings { padding: 0 20px 20px; }
+.q-projects-settings textarea { width: 100%; box-sizing: border-box; font-family: var(--font-mono); font-size: 12px; }
+
+/* index.css styles every h1/h2 for the review view; the queue sets its own. */
+.q-shell h2, .q-shell h3 { color: var(--ink); font-family: var(--font-body); letter-spacing: normal; }
+
+/* The last action, with Undo; it outlives the row it was about. */
+.q-notice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 14px;
+}
+.q-notice > span { flex: 1; }
+.q-notice.is-error { border-color: var(--warm-ink); background: var(--warm-bg); color: var(--warm-ink); }
+.q-notice button {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.q-notice button[aria-label='Dismiss'] { border: 0; background: none; color: var(--muted); font-size: 18px; }

@@ -8,6 +8,11 @@ export type ReviewOp =
   | 'createDiscussion'
   | 'replyToDiscussion'
   | 'setResolved'
+  | 'approve'
+  | 'unapprove'
+  | 'postComment'
+  | 'getDiffsSince'
+  | 'commitsSince'
 
 export type HubOp =
   | 'listHosts'
@@ -18,6 +23,7 @@ export type HubOp =
   | 'markRead'
   | 'markAllRead'
   | 'pollNow'
+  | 'listQueue'
 
 export type DeltaMessage =
   | {

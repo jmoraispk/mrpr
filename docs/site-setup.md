@@ -113,6 +113,33 @@ it shows. Add `https://mrpr.dev/app/` to the GitLab application's redirect URIs.
 Open http://localhost:5173/app/ and sign in. The landing page is at
 http://localhost:5173/.
 
+## Using the queue
+
+After signing in, the app is one review queue. Each merge request is one row;
+replies, mentions and comments on it are folded into that row rather than
+listed separately.
+
+- **Buckets:** Needs you (your review or a thread waiting on you), Quick wins
+  (the same, 30 changed lines or fewer), Returned to you (changes requested or
+  new comments on your MR, or new commits on one you reviewed), Waiting on
+  others (your MR still needing approvals), and Done. Bot-authored MRs are
+  folded into a count.
+- **Order:** who is blocked first (the author plus reviewers who already
+  approved), then age; drafts sink.
+- **Since your last review:** opening or approving an MR remembers its head
+  commit in this browser. Next time, `d` (or the toggle in the review) shows
+  only what changed since.
+- **Projects:** group MRs by repository, by label, or by moving them by hand
+  (`m`, or drag a row onto a project). Projects live in this browser; Settings
+  exports and imports them as JSON.
+- **Keys:** `j`/`k` move, `Enter` or `o` open, `a` approve, `r` reply, `x`
+  request changes, `n` nudge, `s` snooze until the MR changes, `m` move to a
+  project, `d` diff since your last review, `g n|r|w|q` jump to a bucket,
+  `g p` projects, `?` help.
+- **Comments are signed.** Replies, requests for changes (a comment tagging
+  the author) and nudges (a comment tagging the reviewers still waiting) end
+  with "*— via Mr. PR*". Turning the signature off is on the roadmap.
+
 ## Security notes
 
 - Tokens are stored in the visitor's browser (`localStorage`), last two hours,
