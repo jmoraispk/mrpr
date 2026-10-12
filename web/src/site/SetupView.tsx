@@ -8,7 +8,7 @@ import { validateApplicationId } from './applicationId'
 import { rememberHost } from './servers'
 
 function Copyable({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false)
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
   return (
     <span className="setup-copyable">
       <code>{value}</code>
@@ -16,10 +16,15 @@ function Copyable({ label, value }: { label: string; value: string }) {
         type="button"
         aria-label={`Copy ${label}`}
         onClick={() => {
-          void navigator.clipboard?.writeText(value).then(() => setCopied(true))
+          // A refused copy (permissions, insecure page) must not fail silently.
+          const copy = navigator.clipboard?.writeText(value) ?? Promise.reject(new Error('no clipboard'))
+          void copy.then(
+            () => setState('copied'),
+            () => setState('failed'),
+          )
         }}
       >
-        {copied ? 'Copied' : 'Copy'}
+        {state === 'copied' ? 'Copied' : state === 'failed' ? "Couldn't copy" : 'Copy'}
       </button>
     </span>
   )
@@ -30,11 +35,14 @@ const tutorial = (step: number) => `${import.meta.env.BASE_URL}tutorial/step-${s
 export function SetupView({
   server,
   replacing,
+  directoryDown = false,
   onBack,
 }: {
   server: Server
   /** The directory's broken id, when this setup replaces it. */
   replacing?: string
+  /** The directory could not be asked, so this may not be the first setup. */
+  directoryDown?: boolean
   onBack: () => void
 }) {
   const [value, setValue] = useState('')
@@ -68,12 +76,22 @@ export function SetupView({
         <h1>
           {replacing
             ? `The saved setup for ${server.host} no longer works`
-            : "Congratulations, you're the first person in your organization to use Mr. PR!"}
+            : directoryDown
+              ? `Set up Mr. PR for ${server.host}`
+              : "Congratulations, you're the first person in your organization to use Mr. PR!"}
         </h1>
-        <p>
-          To keep Mr. PR 100% private, add it as an application on your own
-          GitLab server. Three steps, under a minute.
-        </p>
+        {directoryDown ? (
+          <p>
+            We couldn't check whether someone at your organization already set
+            up Mr. PR. If a colleague did, ask them for the Application ID and
+            paste it in step 3; otherwise, three steps, under a minute.
+          </p>
+        ) : (
+          <p>
+            To keep Mr. PR 100% private, add it as an application on your own
+            GitLab server. Three steps, under a minute.
+          </p>
+        )}
       </header>
       <ol className="setup-steps">
         <li className="setup-step">
@@ -115,6 +133,10 @@ export function SetupView({
           </h2>
           <form className="setup-form" onSubmit={(event) => void submit(event)}>
             <label htmlFor="application-id">Application ID</label>
+            <p className="setup-hint">
+              It's at the top of GitLab's page, labelled "Application ID". The
+              Secret below it is not what Mr. PR needs.
+            </p>
             <input
               id="application-id"
               autoComplete="off"

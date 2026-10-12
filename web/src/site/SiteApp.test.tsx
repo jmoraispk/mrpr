@@ -150,7 +150,7 @@ test('a pasted link to a known server signs straight in', async () => {
 
 test('a pasted link to an unknown server opens the setup', async () => {
   const user = userEvent.setup()
-  server.use(http.get('/api/registry', () => HttpResponse.json({ error: 'unknown' }, { status: 404 })))
+  server.use(http.get('/api/registry/', () => HttpResponse.json({ error: 'unknown' }, { status: 404 })))
   renderSite()
   await user.type(
     await screen.findByLabelText('Paste a link to any merge request'),
@@ -180,4 +180,16 @@ test('a built-in server is not copied into this browser', async () => {
 
   // A copy would outlive a rotated build id and could never be fixed.
   await expect(fake.store.get('customHosts')).resolves.toBeUndefined()
+})
+
+test('a directory that is down still leads to the setup, without claiming first', async () => {
+  const user = userEvent.setup()
+  server.use(http.get('/api/registry/', () => HttpResponse.json({ error: 'x' }, { status: 503 })))
+  renderSite()
+  await user.type(
+    await screen.findByLabelText('Paste a link to any merge request'),
+    'https://gitlab.other.org/g/p/-/merge_requests/1',
+  )
+  await user.click(screen.getByRole('button', { name: 'Continue' }))
+  expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Set up Mr. PR for')
 })

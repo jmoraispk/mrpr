@@ -179,9 +179,11 @@ export async function completeSignIn(
   if (url.searchParams.has('error')) {
     throw new AuthError('cancelled', 'Sign-in was cancelled on GitLab.')
   }
-  const site =
-    config.hosts.find((value) => value.host === pending.host) ??
-    (pending.clientId ? { host: pending.host, clientId: pending.clientId } : undefined)
+  // The id the sign-in started with: the code was issued to it, even if this
+  // or another tab has since learned a different id for the same server.
+  const site = pending.clientId
+    ? { host: pending.host, clientId: pending.clientId }
+    : config.hosts.find((value) => value.host === pending.host)
   const code = url.searchParams.get('code')
   const result =
     site && code

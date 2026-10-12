@@ -104,3 +104,28 @@ test('setting up again fixes this browser only, and publishes nothing', async ()
     {},
   )
 })
+
+test('when the directory could not be checked, it does not claim they are first', () => {
+  render(<SetupView server={SERVER} directoryDown onBack={() => {}} />)
+
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Set up Mr. PR for gitlab.other.org')
+  expect(screen.getByText(/couldn't check whether someone at your organization/)).toBeInTheDocument()
+})
+
+test('a copy the browser refuses says so', async () => {
+  const user = userEvent.setup()
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText: vi.fn(async () => Promise.reject(new Error('denied'))) },
+    configurable: true,
+  })
+  render(<SetupView server={SERVER} onBack={() => {}} />)
+
+  await user.click(screen.getByRole('button', { name: 'Copy Name' }))
+
+  expect(await screen.findByRole('button', { name: 'Copy Name' })).toHaveTextContent("Couldn't copy")
+})
+
+test('step 3 says where the Application ID is, and that the Secret is not it', () => {
+  render(<SetupView server={SERVER} onBack={() => {}} />)
+  expect(screen.getByText(/top of GitLab's page, labelled "Application ID"/)).toBeInTheDocument()
+})

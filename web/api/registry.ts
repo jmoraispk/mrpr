@@ -1,7 +1,7 @@
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
-import { lookup, save, type RegistryEntry, type RegistryStore } from '../src/registry/core.ts'
+import { lookup, save, type RegistryEntry, type RegistryStore } from './_registry-core.js'
 
 // The Vercel Marketplace integration names these KV_REST_API_*; a manual
 // Upstash setup names them UPSTASH_REDIS_REST_*. Accept either.

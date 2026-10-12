@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from 'vitest'
 
-import { lookup, registryKey, save, type RegistryEntry, type RegistryStore } from './core'
+import { lookup, registryKey, save, type RegistryEntry, type RegistryStore } from './_registry-core.ts'
 
 const ID_A = 'a'.repeat(64)
 const ID_B = 'b'.repeat(64)
