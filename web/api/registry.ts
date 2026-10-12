@@ -17,15 +17,6 @@ const limiter = new Ratelimit({
   prefix: 'mrpr-registry-writes',
 })
 
-// Atomic compare-and-swap: overwrite only if the stored clientId is expected.
-const REPLACE_IF = `
-local current = redis.call('GET', KEYS[1])
-if current and cjson.decode(current).clientId == ARGV[1] then
-  redis.call('SET', KEYS[1], ARGV[2])
-  return 1
-end
-return 0`
-
 const store: RegistryStore = {
   async get(key) {
     const raw = await redis.get<string>(key)
@@ -33,9 +24,6 @@ const store: RegistryStore = {
   },
   async setIfAbsent(key, value) {
     return (await redis.set(key, JSON.stringify(value), { nx: true })) === 'OK'
-  },
-  async replaceIf(key, expected, value) {
-    return (await redis.eval(REPLACE_IF, [key], [expected, JSON.stringify(value)])) === 1
   },
 }
 
@@ -56,6 +44,11 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Requiring JSON forces a CORS preflight on cross-site requests, which this
+  // function never answers, so other sites cannot write through visitors.
+  if (!request.headers.get('content-type')?.startsWith('application/json')) {
+    return reply(415, { error: 'json_only' })
+  }
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
   if (!(await limiter.limit(ip)).success) return reply(429, { error: 'rate_limited' })
   let input: unknown

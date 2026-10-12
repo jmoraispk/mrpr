@@ -14,11 +14,6 @@ const store: RegistryStore = {
     data.set(key, value)
     return true
   },
-  replaceIf: async (key, expected, value) => {
-    if (data.get(key)?.clientId !== expected) return false
-    data.set(key, value)
-    return true
-  },
 }
 
 beforeEach(() => {
@@ -62,13 +57,22 @@ test('an existing entry is never overwritten without replaces', async () => {
   expect(data.get(registryKey('gitlab.example.com'))?.clientId).toBe(ID_A)
 })
 
-test('a broken entry is replaced only by someone who knew what it was', async () => {
+test('knowing the stored id does not let anyone replace it', async () => {
+  // The stored id is public (GET returns it), so it proves nothing.
   await save(store, { host: 'gitlab.example.com', clientId: ID_A }, NOW)
-
-  await save(store, { host: 'gitlab.example.com', clientId: ID_B, replaces: 'c'.repeat(64) }, NOW)
-  expect(data.get(registryKey('gitlab.example.com'))?.clientId).toBe(ID_A)
 
   await expect(
     save(store, { host: 'gitlab.example.com', clientId: ID_B, replaces: ID_A }, NOW),
-  ).resolves.toEqual({ status: 200, body: { clientId: ID_B } })
+  ).resolves.toEqual({ status: 200, body: { clientId: ID_A } })
+  expect(data.get(registryKey('gitlab.example.com'))?.clientId).toBe(ID_A)
+})
+
+test('shared public servers can never be claimed through the directory', async () => {
+  for (const host of ['gitlab.com', 'GitLab.com', 'salsa.debian.org', 'gitlab.gnome.org']) {
+    await expect(save(store, { host, clientId: ID_A }, NOW)).resolves.toEqual({
+      status: 403,
+      body: { error: 'operator_only' },
+    })
+  }
+  expect(data.size).toBe(0)
 })

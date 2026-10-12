@@ -42,9 +42,10 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
   // Servers built into this deployment can't be set up again from here.
   const builtIn = new Set(siteConfig().hosts.map((value) => value.host))
 
-  async function go(site: SiteHost) {
+  async function go(site: SiteHost, remember: boolean) {
     adoptSite(config, site)
-    await rememberHost(platform().store, site)
+    // Built-in ids stay in the build: a copy here would outlive a rotation.
+    if (remember) await rememberHost(platform().store, site)
     await signIn(site, returnTo(), config.scopes)
   }
 
@@ -59,7 +60,7 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
     setBusy(true)
     try {
       const resolved = await resolveServer(parsed.server, config)
-      if (resolved) await go(resolved.site)
+      if (resolved) await go(resolved.site, resolved.source !== 'config')
       else setView({ setup: parsed.server })
     } finally {
       setBusy(false)

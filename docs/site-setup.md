@@ -18,9 +18,24 @@ directory (`/api/registry`).
   the directory, so the next person from that server signs in with one click.
 
 The directory stores only `server address → Application ID`, both public by
-design. No tokens, users or merge requests. The first working ID for a server
-wins; it can be replaced only by someone who knew the old one (the "Sign-in not
-working? Set it up again" link).
+design. No tokens, users or merge requests.
+
+Trust model:
+
+- **The first ID published for a server is kept.** Nobody can replace it
+  through the API; the stored ID is public, so knowing it proves nothing.
+- **On a company's own GitLab, that means trusting the first colleague's
+  registration.** It lives in their personal account, so if they leave, the app
+  goes with them. A group- or instance-level application is sturdier; repair
+  the entry in the Upstash console when needed.
+- **"Sign-in not working? Set it up again"** fixes things for that one browser
+  only, without touching the directory.
+- **Shared public servers** (gitlab.com, salsa.debian.org, gitlab.gnome.org and
+  similar) can never be claimed through the directory, since anyone can
+  register an app there. Their IDs come only from this deployment's build
+  configuration.
+- The directory only accepts `application/json` posts, so other websites cannot
+  write to it through their visitors' browsers.
 
 The tutorial images in `web/site/public/tutorial/` are rendered from the raw
 screenshots in `docs/examples/` by `node web/scripts/annotate-tutorial.mjs`,

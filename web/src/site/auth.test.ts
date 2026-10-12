@@ -245,7 +245,7 @@ test('a refresh GitLab cannot answer keeps the session for the next try', async 
 
 test('a sign-in started from a pasted setup completes even if the config lacks it, and is published after success', async () => {
   const OTHER = { host: 'gitlab.other.org', clientId: 'd'.repeat(64) }
-  await signIn(OTHER, '#/', 'api', () => {}, { publish: { replaces: 'e'.repeat(64) } })
+  await signIn(OTHER, '#/', 'api', () => {}, { publish: {} })
   const { state } = JSON.parse(sessionStorage.getItem(PENDING_KEY)!)
   const published: unknown[] = []
   server.use(
@@ -265,7 +265,7 @@ test('a sign-in started from a pasted setup completes even if the config lacks i
   )
 
   await expect.poll(() => published).toEqual([
-    { host: 'gitlab.other.org', clientId: OTHER.clientId, replaces: 'e'.repeat(64) },
+    { host: 'gitlab.other.org', clientId: OTHER.clientId },
   ])
 })
 

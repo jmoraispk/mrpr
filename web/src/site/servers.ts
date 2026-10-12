@@ -37,16 +37,12 @@ export async function lookupDirectory(host: string): Promise<string | null> {
 }
 
 /** Share a working id with the next person from this server. Never throws. */
-export async function publishToDirectory(
-  host: string,
-  clientId: string,
-  replaces?: string,
-): Promise<void> {
+export async function publishToDirectory(host: string, clientId: string): Promise<void> {
   try {
     await fetch(REGISTRY, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(replaces ? { host, clientId, replaces } : { host, clientId }),
+      body: JSON.stringify({ host, clientId }),
     })
   } catch {
     // Sign-in already worked; the directory is a convenience for others.

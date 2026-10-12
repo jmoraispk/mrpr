@@ -20,7 +20,7 @@ export default defineConfig(({ command }) => ({
   },
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs', 'api/**/*.test.ts'],
     setupFiles: './src/test/setup.ts',
   },
 }))

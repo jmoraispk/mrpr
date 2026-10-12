@@ -167,3 +167,17 @@ test('a bad link explains itself', async () => {
   await user.click(screen.getByRole('button', { name: 'Continue' }))
   expect(screen.getByRole('alert')).toHaveTextContent('Paste a link to a merge request')
 })
+
+test('a built-in server is not copied into this browser', async () => {
+  const user = userEvent.setup()
+  renderSite()
+  await user.type(
+    await screen.findByLabelText('Paste a link to any merge request'),
+    'https://gitlab.example.com/g/p/-/merge_requests/1',
+  )
+  await user.click(screen.getByRole('button', { name: 'Continue' }))
+  await waitFor(() => expect(signIn).toHaveBeenCalled())
+
+  // A copy would outlive a rotated build id and could never be fixed.
+  await expect(fake.store.get('customHosts')).resolves.toBeUndefined()
+})

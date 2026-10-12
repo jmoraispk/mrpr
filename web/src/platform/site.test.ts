@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { beforeEach, expect, test } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
 
 import { createMemoryStore } from '../test/fakePlatform'
 import { server } from '../test/server'
@@ -60,4 +60,20 @@ test('unread items put a dot on the tab icon', async () => {
   )
   await platform().showUnread(0)
   expect(document.querySelector('link[rel="icon"]')?.getAttribute('href')).toBe('/favicon.svg')
+})
+
+test('sign in again goes to the server whose session ended, not the first one configured', async () => {
+  const OTHER = { host: 'gitlab.other.org', clientId: 'b'.repeat(64) }
+  installPlatform(createSitePlatform({ hosts: [SITE, OTHER], scopes: 'api' }, createMemoryStore()))
+  const assign = vi.fn()
+  vi.stubGlobal('location', { ...window.location, assign, hash: '#/', origin: window.location.origin })
+  await platform().store.set({
+    hosts: [{ ...HOST, id: OTHER.host, host: OTHER.host, apiBase: 'https://gitlab.other.org/api/v4' }],
+    auth: {},
+  })
+
+  await platform().reauthenticate?.()
+
+  expect(new URL(assign.mock.calls[0][0]).host).toBe('gitlab.other.org')
+  vi.unstubAllGlobals()
 })

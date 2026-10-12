@@ -28,7 +28,7 @@ interface Pending {
   verifier: string
   returnTo: string
   /** Set when the id was pasted in setup: share it once sign-in works. */
-  publish?: { replaces?: string }
+  publish?: Record<string, never>
 }
 
 export type AuthFailure = 'cancelled' | 'no_pending' | 'state_mismatch' | 'exchange_failed'
@@ -74,7 +74,7 @@ export async function signIn(
   returnTo: string,
   scopes = 'api',
   navigate: (url: string) => void = (url) => window.location.assign(url),
-  options: { publish?: { replaces?: string } } = {},
+  options: { publish?: Record<string, never> } = {},
 ): Promise<void> {
   const pending: Pending = {
     host: site.host,
@@ -211,7 +211,7 @@ export async function completeSignIn(
     username: user.username,
   })
   if (pending.publish) {
-    void publishToDirectory(site.host, site.clientId, pending.publish.replaces)
+    void publishToDirectory(site.host, site.clientId)
   }
   return { returnTo: pending.returnTo }
 }

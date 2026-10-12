@@ -73,6 +73,23 @@ test('the Secret is refused', async () => {
 
 test('a pasted id is remembered, then sign-in starts and will publish', async () => {
   const user = userEvent.setup()
+  render(<SetupView server={SERVER} onBack={() => {}} />)
+
+  await user.type(screen.getByLabelText('Application ID'), ID)
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  await expect(fake.store.get('customHosts')).resolves.toEqual({ 'gitlab.other.org': ID })
+  expect(signIn).toHaveBeenCalledWith(
+    { host: 'gitlab.other.org', clientId: ID },
+    expect.any(String),
+    'api',
+    undefined,
+    { publish: {} },
+  )
+})
+
+test('setting up again fixes this browser only, and publishes nothing', async () => {
+  const user = userEvent.setup()
   render(<SetupView server={SERVER} replacing={'b'.repeat(64)} onBack={() => {}} />)
 
   await user.type(screen.getByLabelText('Application ID'), ID)
@@ -84,6 +101,6 @@ test('a pasted id is remembered, then sign-in starts and will publish', async ()
     expect.any(String),
     'api',
     undefined,
-    { publish: { replaces: 'b'.repeat(64) } },
+    {},
   )
 })

@@ -51,9 +51,15 @@ export function SetupView({
     setError(null)
     const site = { host: server.host, clientId: result.clientId }
     await rememberHost(platform().store, site)
-    await signIn(site, window.location.hash || '#/', siteConfig().scopes, undefined, {
-      publish: replacing ? { replaces: replacing } : {},
-    })
+    // A fresh setup is shared once it works. Setting up again only fixes this
+    // browser: the directory entry is never replaced through the API.
+    await signIn(
+      site,
+      window.location.hash || '#/',
+      siteConfig().scopes,
+      undefined,
+      replacing ? {} : { publish: {} },
+    )
   }
 
   return (

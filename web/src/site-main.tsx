@@ -38,8 +38,12 @@ async function finishSignInIfReturning(): Promise<string | null> {
 }
 
 async function start(): Promise<void> {
-  // Servers set up in this browser join the ones built in.
-  for (const site of await loadCustomHosts(store)) adoptSite(config, site)
+  // Servers set up in this browser join the ones built in; never override a
+  // built-in id, which the operator may rotate.
+  const builtIn = new Set(config.hosts.map((site) => site.host))
+  for (const site of await loadCustomHosts(store)) {
+    if (!builtIn.has(site.host)) adoptSite(config, site)
+  }
   installPlatform(createSitePlatform(config, store))
   const notice = await finishSignInIfReturning()
   createRoot(document.getElementById('root')!).render(

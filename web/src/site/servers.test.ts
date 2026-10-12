@@ -73,8 +73,8 @@ test('publishing posts the host and id, and never throws', async () => {
     }),
   )
 
-  await expect(publishToDirectory('gitlab.example.com', ID, 'b'.repeat(64))).resolves.toBeUndefined()
-  expect(bodies).toEqual([{ host: 'gitlab.example.com', clientId: ID, replaces: 'b'.repeat(64) }])
+  await expect(publishToDirectory('gitlab.example.com', ID)).resolves.toBeUndefined()
+  expect(bodies).toEqual([{ host: 'gitlab.example.com', clientId: ID }])
 })
 
 test('using a site adds or replaces it in the config', () => {
