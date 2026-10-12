@@ -4,7 +4,7 @@ import { platform } from '../platform/platform'
 import { normalizeProjects, type Project } from './projects'
 
 /** A value in this browser's store, kept in sync across hook instances and tabs. */
-function useStored<T>(
+export function useStored<T>(
   key: string,
   fallback: T,
   // Whatever is stored passes through this first; a damaged value must not crash the app.
@@ -65,4 +65,9 @@ export function useSnoozed(): [
 /** `lookKeyFor(...)` → the head you last reviewed. */
 export function useLastLook(): Record<string, { headSha: string; at: string }> {
   return useStored<Record<string, { headSha: string; at: string }>>('lastLook', {})[0]
+}
+
+/** One read of a stored value, for callers that must not follow later writes. */
+export async function readStored<T>(key: string): Promise<T | undefined> {
+  return platform().store.get<T>(key)
 }
