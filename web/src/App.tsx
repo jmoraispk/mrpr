@@ -293,7 +293,7 @@ export function App({
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${chrome ? '' : ' is-embedded'}`}>
       {chrome ? (
       <header className="topbar">
         <a className="brand" href={mergeRequest.data.web_url}>

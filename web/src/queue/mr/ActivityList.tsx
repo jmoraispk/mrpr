@@ -33,12 +33,14 @@ export function ActivityList({
   onReveal,
   replyTo,
   onReplied,
+  focusNoteId = null,
 }: {
   activity: Activity
   target: ReviewTarget
   onReveal: () => void
   replyTo: string | null
   onReplied: () => void
+  focusNoteId?: number | null
 }) {
   // A reply asked for from the header: focus that thread's reply box.
   useEffect(() => {
@@ -51,6 +53,18 @@ export function ActivityList({
     box.scrollIntoView?.({ block: 'center' })
     onReplied()
   }, [replyTo, activity, onReplied])
+
+  // The thread a link pointed at: scrolled into view once and marked.
+  const focused = activity.items.find(
+    (item) => item.kind === 'thread' && item.discussion.notes.some((note) => note.id === focusNoteId),
+  )
+  const focusedId = focused?.kind === 'thread' ? focused.discussion.id : null
+  useEffect(() => {
+    if (!focusedId) return
+    document
+      .querySelector(`[data-discussion-id="${CSS.escape(focusedId)}"]`)
+      ?.scrollIntoView?.({ block: 'center' })
+  }, [focusedId])
 
   const hidden = hiddenSentence(activity.hidden)
   return (
@@ -69,7 +83,11 @@ export function ActivityList({
               {relativeTime(item.at)}
             </p>
           ) : (
-            <div className={`mr-thread${item.you ? ' is-yours' : ''}${item.isNew ? ' is-new' : ''}`}>
+            <div
+              className={`mr-thread${item.you ? ' is-yours' : ''}${item.isNew ? ' is-new' : ''}${
+                item.discussion.id === focusedId ? ' is-focused' : ''
+              }`}
+            >
               <p className="mr-thread-head">
                 {item.discussion.notes[0].position ? (
                   // An inline thread links to its line in Changes.

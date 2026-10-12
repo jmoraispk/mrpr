@@ -274,3 +274,11 @@ test('replying in a thread posts through the review op', async () => {
   await user.click(within(thread).getByRole('button', { name: 'Reply' }))
   expect(transport.replyToDiscussion).toHaveBeenCalledWith('open', 'On success only')
 })
+
+test('opening at a note brings its thread into view and marks it', () => {
+  show({ focusNoteId: 1 })
+  expect(
+    document.querySelector('.mr-thread.is-focused [data-discussion-id="open"]'),
+  ).not.toBeNull()
+  expect(document.querySelectorAll('.mr-thread.is-focused')).toHaveLength(1)
+})

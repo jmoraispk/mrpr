@@ -24,6 +24,7 @@ export function MrOverviewView({
   projectName,
   projectColor,
   rebase,
+  focusNoteId = null,
 }: {
   overview: MrOverview
   target: ReviewTarget
@@ -34,6 +35,8 @@ export function MrOverviewView({
   projectName: string | null
   projectColor: string | null
   rebase?: ReactNode
+  /** Open at this note's thread, as a link to a comment does. */
+  focusNoteId?: number | null
 }) {
   const settings = useActivityFilters(lookKeyFor(target.hostId, target.project, target.iid))
   const [showOpen, setShowOpen] = useState(false)
@@ -88,6 +91,7 @@ export function MrOverviewView({
             onReveal={() => setReveal(true)}
             replyTo={replyTo}
             onReplied={onReplied}
+            focusNoteId={focusNoteId}
           />
         </section>
       </div>

@@ -131,18 +131,22 @@ export function QueueApp() {
       },
       open: () => current && open(current),
       diffSince: () => current && open(current, 'since'),
+      // Escape and f read the address as it is now: a second key can land
+      // before the screen has caught up with the first.
       close() {
-        if (route.name !== 'review') return
-        window.location.hash = route.full
-          ? reviewHash(route.target, { tab: route.tab, noteId: route.noteId })
+        const now = parseSiteRoute(window.location.hash)
+        if (now.name !== 'review') return
+        window.location.hash = now.full
+          ? reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
           : listHash(listRoute)
       },
       full() {
-        if (route.name !== 'review') return
-        window.location.hash = reviewHash(route.target, {
-          tab: route.tab,
-          noteId: route.noteId,
-          full: !route.full,
+        const now = parseSiteRoute(window.location.hash)
+        if (now.name !== 'review') return
+        window.location.hash = reviewHash(now.target, {
+          tab: now.tab,
+          noteId: now.noteId,
+          full: !now.full,
         })
       },
       jump(bucket) {
@@ -392,6 +396,7 @@ export function QueueApp() {
                       projectName={project?.name ?? null}
                       projectColor={project?.color ?? null}
                       rebase={<RebaseControl overview={overview} target={route.target} />}
+                      focusNoteId={route.noteId}
                     />
                   )
                 }}

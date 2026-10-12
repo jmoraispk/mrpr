@@ -469,3 +469,12 @@ test('an MR that needs a rebase offers it in the details column', async () => {
   expect(within(details).getByText('Behind main')).toBeInTheDocument()
   expect(within(details).getByRole('button', { name: 'Rebase' })).toBeInTheDocument()
 })
+
+test('two quick Escapes leave full screen and then close, even before the screen catches up', async () => {
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1/full'
+  renderApp()
+  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  fireEvent.keyDown(window, { key: 'Escape' })
+  fireEvent.keyDown(window, { key: 'Escape' })
+  await waitFor(() => expect(window.location.hash).toBe('#/'))
+})
