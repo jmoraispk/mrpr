@@ -13,6 +13,8 @@ export type ReviewOp =
   | 'postComment'
   | 'getDiffsSince'
   | 'commitsSince'
+  | 'getOverview'
+  | 'rebase'
 
 export type HubOp =
   | 'listHosts'

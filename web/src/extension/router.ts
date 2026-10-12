@@ -8,12 +8,14 @@ import {
 } from '../gitlab/discussions'
 import { GitLabError } from '../gitlab/errors'
 import { listAuthored, listReviewRequested } from '../gitlab/mergeRequests'
+import { fetchMrOverview } from '../gitlab/mrOverview'
 import { fetchQueueMrs, type QueueHost } from '../gitlab/queueFacts'
 import {
   approve,
   commitsSince,
   diffsSince,
   postComment,
+  rebase,
   unapprove,
 } from '../gitlab/reviewActions'
 import { withSignature } from '../gitlab/signature'
@@ -102,6 +104,10 @@ async function runReview(
       }
       return diffsSince(client, project, from, mr.sha)
     }
+    case 'getOverview':
+      return fetchMrOverview(client, project, iid)
+    case 'rebase':
+      return rebase(client, project, iid).then(() => null)
     case 'commitsSince':
       return commitsSince(client, project, iid, (payload as { sha: string }).sha)
     case 'setResolved': {

@@ -1,3 +1,4 @@
+import type { MrOverview } from '../gitlab/mrOverview'
 import type {
   DeltaConfig,
   DiffFile,
@@ -42,4 +43,8 @@ export interface DeltaTransport {
   /** The head you last reviewed in this browser, if any. */
   lastLook?(): Promise<string | null>
   markLooked?(headSha: string): Promise<void>
+  /** The MR page's overview: description, people, status and every thread. */
+  getOverview?(signal?: AbortSignal): Promise<MrOverview>
+  /** Ask GitLab to rebase the source branch. */
+  rebase?(): Promise<void>
 }

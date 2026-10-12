@@ -69,3 +69,8 @@ export async function commitsSince(
   // Not found: history was rewritten since the last look, so everything is new.
   return index >= 0 ? index : Math.max(1, commits.length)
 }
+
+/** Ask GitLab to rebase the source branch onto the target. It runs in the background. */
+export async function rebase(client: GitLabClient, project: string, iid: number): Promise<void> {
+  await client.request('PUT', `${mergeRequestPath(project, iid)}/rebase`)
+}

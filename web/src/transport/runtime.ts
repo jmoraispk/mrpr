@@ -10,6 +10,7 @@ import type {
 } from '../api/types'
 import type { DeltaResponse, ReviewOp } from '../extension/messages'
 import { platform } from '../platform/platform'
+import type { MrOverview } from '../gitlab/mrOverview'
 import { lookKeyFor } from '../queue/model'
 import type { DeltaTransport, InlineCommentInput, ReviewTarget } from './types'
 
@@ -39,6 +40,7 @@ const RETRYABLE: ReadonlySet<ReviewOp> = new Set<ReviewOp>([
   // repeated post would comment twice.
   'approve',
   'unapprove',
+  'getOverview',
 ])
 
 const LAST_LOOK_KEY = 'lastLook'
@@ -119,6 +121,8 @@ export function createRuntimeTransport(target: ReviewTarget): DeltaTransport {
     postComment: (body: string) => send<Discussion>('postComment', target, { body }),
     getDiffsSince: (from: string) => send<DiffFile[]>('getDiffsSince', target, { from }),
     commitsSince: (sha: string) => send<number>('commitsSince', target, { sha }),
+    getOverview: () => send<MrOverview>('getOverview', target),
+    rebase: () => send<null>('rebase', target).then(() => undefined),
     lastLook: async () => (await looks())[lookKey]?.headSha ?? null,
     markLooked: async (headSha: string) => {
       await platform().store.set({

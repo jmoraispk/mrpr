@@ -307,3 +307,15 @@ test('every comment Mr. PR posts is signed once', async () => {
   })
   expect(bodies).toEqual(['@ana Requesting changes: x\n\n*— via Mr. PR*', 'ok\n\n*— via Mr. PR*'])
 })
+
+test('getOverview returns the MR overview for the target', async () => {
+  fake.granted.add('https://gitlab.example.com/*')
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(1, { project: 'p' }))
+  const response = await handleMessage({
+    kind: 'delta/review',
+    op: 'getOverview',
+    target: TARGET,
+  })
+  expect(response).toMatchObject({ ok: true, data: { iid: 1, title: 'MR 1' } })
+})
