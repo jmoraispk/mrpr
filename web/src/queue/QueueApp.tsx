@@ -93,7 +93,7 @@ export function QueueApp() {
     markRowRead(current)
     window.location.hash = reviewHash(
       { hostId: current.hostId, project: current.project, iid: current.iid },
-      { since, noteId: since ? null : focusNoteOf(current) },
+      { tab: since ? 'since' : 'overview', noteId: since ? null : focusNoteOf(current) },
     )
   }
   useQueueKeys(
@@ -128,7 +128,7 @@ export function QueueApp() {
         key={`${route.target.hostId}/${route.target.project}/${route.target.iid}`}
         transport={createRuntimeTransport(route.target)}
       >
-        <App focusNoteId={route.noteId} startSince={route.since} />
+        <App focusNoteId={route.noteId} startSince={route.tab === 'since'} />
       </TransportProvider>
     )
   }
