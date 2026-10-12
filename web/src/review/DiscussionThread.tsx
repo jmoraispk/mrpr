@@ -16,6 +16,8 @@ const rehypePlugins = [rehypeRaw, rehypeSanitize]
 interface DiscussionThreadProps {
   discussion: Discussion
   rangeLabel?: string
+  /** Called after a reply or resolve settles, for views that show the thread from other data. */
+  onChanged?: () => void
 }
 
 function updateCachedDiscussion(
@@ -31,6 +33,7 @@ function updateCachedDiscussion(
 export function DiscussionThread({
   discussion,
   rangeLabel,
+  onChanged,
 }: DiscussionThreadProps) {
   const queryClient = useQueryClient()
   const transport = useTransport()
@@ -81,7 +84,10 @@ export function DiscussionThread({
       )
       setDraft('')
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    onSettled: () => {
+      onChanged?.()
+      return queryClient.invalidateQueries({ queryKey })
+    },
   })
 
   const resolvableNote = current.notes.find((note) => note.resolvable)
@@ -111,7 +117,10 @@ export function DiscussionThread({
         queryClient.setQueryData(queryKey, context.snapshot)
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    onSettled: () => {
+      onChanged?.()
+      return queryClient.invalidateQueries({ queryKey })
+    },
   })
 
   function submitReply(event: FormEvent) {

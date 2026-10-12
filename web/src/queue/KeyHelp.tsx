@@ -7,9 +7,11 @@ const KEYS: [string, string][] = [
   ['n', 'nudge'],
   ['s', 'snooze until it changes'],
   ['m', 'move to project'],
-  ['d', 'diff since your last review'],
+  ['d', 'since last review'],
   ['g n / g r / g w / g q', 'jump to a bucket'],
   ['g p', 'go to projects'],
+  ['Esc', 'close the MR (or leave full screen)'],
+  ['f', 'full screen'],
   ['?', 'this help'],
 ]
 

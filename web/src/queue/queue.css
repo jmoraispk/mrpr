@@ -103,6 +103,7 @@
 .q-title { margin: 0; font-size: 15px; font-weight: 600; }
 .q-age, .q-ref { color: var(--muted); font: 12px var(--font-mono); }
 .q-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+.q-by { color: var(--ink-2); }
 .q-project { display: inline-flex; align-items: center; color: var(--ink-2); font-weight: 500; }
 .q-badges { display: contents; }
 .q-badge { padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--ink-2); }
@@ -133,27 +134,14 @@
   .q-sidebar { border-right: 0; border-bottom: 1px solid var(--line-2); }
 }
 
-/* The row drawer: act on one MR without opening it. */
-.q-with-drawer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); }
-.q-with-drawer > .q-list:only-child { grid-column: 1 / -1; }
-.q-drawer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 18px;
-  border-left: 1px solid var(--line-2);
-  background: var(--surface-2);
-}
-.q-drawer-head { display: flex; justify-content: space-between; gap: 8px; }
-.q-drawer-head h2 { margin: 0; font-size: 16px; }
-.q-drawer-head button { border: 0; background: none; color: var(--muted); font-size: 20px; cursor: pointer; }
-.q-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.q-actions button,
-.q-actions a,
+/* Composer, project picker and dialogs, shared by the MR header and the sidebar. */
 .q-composer-actions button,
 .q-picker button,
-.q-dialog button {
-  padding: 8px 12px;
+.q-dialog button,
+.mr-actions button,
+.mr-actions a,
+.mr-rebase button {
+  padding: 7px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -163,16 +151,8 @@
   text-decoration: none;
   cursor: pointer;
 }
-.q-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
+.mr-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
 .q-shell .q-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
-.q-excerpt {
-  margin: 0;
-  padding: 10px 12px;
-  border-left: 3px solid var(--accent);
-  background: var(--surface);
-  color: var(--ink-2);
-  font-size: 14px;
-}
 .q-composer, .q-dialog { display: flex; flex-direction: column; gap: 8px; }
 .q-composer-label { color: var(--muted); font: 500 11px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
 .q-composer textarea, .q-picker input, .q-dialog input, .q-shell textarea {
@@ -187,9 +167,6 @@
 .q-composer-actions { display: flex; gap: 8px; }
 .q-picker { display: flex; flex-direction: column; gap: 6px; }
 .q-picker form { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-.q-approved { color: var(--ok-ink); font-weight: 600; }
-.q-actions .q-approved button { padding: 2px 8px; }
-@media (max-width: 1000px) { .q-with-drawer { grid-template-columns: 1fr; } }
 
 /* The keyboard help. */
 .q-help {

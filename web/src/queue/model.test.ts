@@ -28,6 +28,7 @@ function mr(id: number, over: Partial<QueueMr> = {}): QueueMr {
     pipeline: 'SUCCESS',
     labels: [],
     headSha: 'h1',
+    needsRebase: false,
     ...over,
   }
 }
@@ -148,16 +149,33 @@ test('an MR you authored and review yourself is one row', () => {
   expect(rows).toHaveLength(1)
 })
 
-test('blocking counts the author and reviewers who already approved', () => {
+test('an approving co-reviewer ranks an MR higher, without a blocking badge', () => {
   const rows = run([
-    mr(1, {
+    mr(1),
+    mr(2, {
       reviewers: [
         { username: 'joao', name: 'J', state: 'UNREVIEWED' },
         { username: 'li', name: 'Li', state: 'APPROVED' },
       ],
     }),
   ])
-  expect(rows[0].badges).toEqual(expect.arrayContaining([{ kind: 'blocking', count: 2 }]))
+  expect(rows.map((row) => row.iid)).toEqual([2, 1])
+  expect(rows.flatMap((row) => row.badges).map((badge) => badge.kind)).not.toContain('blocking')
+})
+
+test('your own MR that needs a rebase says so; someone else’s does not', () => {
+  const rows = run([
+    mr(1, {
+      roles: ['author'],
+      author: { username: 'joao', name: 'J', avatarUrl: null, bot: false },
+      needsRebase: true,
+    }),
+    mr(2, { needsRebase: true }),
+  ])
+  expect(rows.find((r) => r.iid === 1)!.badges).toEqual(
+    expect.arrayContaining([{ kind: 'needs-rebase' }]),
+  )
+  expect(rows.find((r) => r.iid === 2)!.badges.map((b) => b.kind)).not.toContain('needs-rebase')
 })
 
 test('badges for size, drafts, failed pipelines and agent-written MRs', () => {

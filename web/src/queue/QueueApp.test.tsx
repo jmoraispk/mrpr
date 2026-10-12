@@ -3,13 +3,15 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
+import type { MrOverview } from '../gitlab/mrOverview'
 import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
 import type { InboxItem } from '../inbox/types'
 import { installPlatform } from '../platform/platform'
 import { createFakePlatform } from '../test/fakePlatform'
 import { QueueApp } from './QueueApp'
 
-// Every row action goes through the runtime transport.
+// Every row action goes through the runtime transport. The overview follows
+// whichever MR the panel opened.
 const transport = vi.hoisted(() => ({
   approve: vi.fn(async () => {}),
   unapprove: vi.fn(async () => {}),
@@ -17,8 +19,14 @@ const transport = vi.hoisted(() => ({
   replyToDiscussion: vi.fn(async () => ({ id: 1, body: '' })),
   commitsSince: vi.fn(async () => 0),
   markLooked: vi.fn(async () => {}),
+  getOverview: vi.fn(),
 }))
-vi.mock('../transport/runtime', () => ({ createRuntimeTransport: () => transport }))
+vi.mock('../transport/runtime', () => ({
+  createRuntimeTransport: (target: { iid: number }) => ({
+    ...transport,
+    getOverview: () => transport.getOverview(target),
+  }),
+}))
 
 const H = 'gitlab.example.com'
 const JOAO = { username: 'joao', name: 'Joao', avatarUrl: null, bot: false }
@@ -44,10 +52,24 @@ function mr(id: number, over: Partial<QueueMr> = {}): QueueMr {
     pipeline: 'SUCCESS',
     labels: [],
     headSha: 'h',
+    needsRebase: false,
     ...over,
   }
 }
 
+
+/** The least the MR panel needs to show an MR. */
+function overview(title: string): MrOverview {
+  return {
+    iid: 1, title, description: 'Adds a retry budget.', draft: false, state: 'opened',
+    createdAt: '2026-10-11T00:00:00Z', updatedAt: '2026-10-11T10:00:00Z',
+    sourceBranch: 'feature', targetBranch: 'main', webUrl: '', headSha: 'h', commitCount: 1,
+    author: { username: 'ana', name: 'Ana', avatarUrl: null, bot: false },
+    reviewers: [], approvedBy: [], approvalsRequired: 1, approvalsLeft: 1, pipeline: null,
+    labels: [], additions: 1, deletions: 0, files: 1,
+    shouldBeRebased: false, rebaseInProgress: false, canPush: true, discussions: [],
+  }
+}
 let hosts: QueueHost[]
 let items: InboxItem[] = []
 let fake: ReturnType<typeof createFakePlatform>
@@ -56,6 +78,9 @@ beforeEach(() => {
   window.location.hash = ''
   items = []
   Object.values(transport).forEach((fn) => fn.mockClear())
+  transport.getOverview.mockReset().mockImplementation(async (target: { iid: number }) =>
+    overview(hosts[0].mrs.find((value) => value.iid === target.iid)?.title ?? 'An MR'),
+  )
   hosts = [
     {
       hostId: H,
@@ -82,11 +107,19 @@ beforeEach(() => {
     send: async (message) => {
       fake.sent.push(message)
       if (message.kind !== 'delta/hub') return { ok: true, data: null }
-      if (message.op === 'listQueue') return { ok: true, data: hosts }
+      // A fresh copy, as a real hub sends: tests change `hosts` in place.
+      if (message.op === 'listQueue') return { ok: true, data: structuredClone(hosts) }
       if (message.op === 'listInbox') {
         return { ok: true, data: { hosts: [], items, unread: items.length } }
       }
       if (message.op === 'listHosts') return { ok: true, data: [] }
+      // Like the real hub: reading items updates the stored inbox, and the page re-reads it.
+      if (message.op === 'markRead') {
+        const { ids } = message.payload as { ids: string[] }
+        items = items.map((item) => (ids.includes(item.id) ? { ...item, read: true } : item))
+        await fake.store.set({ inbox: Date.now() })
+        return { ok: true, data: null }
+      }
       return { ok: true, data: null }
     },
   })
@@ -119,7 +152,8 @@ test('the queue lists rows in bucket order with their badges', async () => {
     'Fix flaky test',
     'Port billing',
   ])
-  expect(within(rows[0]).getByText('Blocking 1 person')).toBeInTheDocument()
+  expect(within(rows[0]).getByText('by Ana')).toBeInTheDocument()
+  expect(screen.queryByText(/Blocking/)).toBeNull()
   expect(within(rows[1]).getByText('Quick win · ~1 min')).toBeInTheDocument()
   expect(within(rows[2]).getByText(/Waiting on John/)).toBeInTheDocument()
 })
@@ -158,16 +192,6 @@ test('j moves the selection and a approves the selected row', async () => {
   fireEvent.keyDown(window, { key: 'a' })
   await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
   expect(document.querySelector('.q-row.is-selected')?.textContent).toContain('Fix flaky test')
-})
-
-test('x opens request changes for the selected row, and typing there is not a shortcut', async () => {
-  renderApp()
-  await screen.findAllByRole('article')
-  fireEvent.keyDown(window, { key: 'x' })
-  const box = await screen.findByRole('textbox')
-  expect(box).toHaveValue('@ana Requesting changes: ')
-  fireEvent.keyDown(box, { key: 'a' })
-  expect(transport.approve).not.toHaveBeenCalled()
 })
 
 test('d opens the selected review since your last look; Enter opens it plainly', async () => {
@@ -211,7 +235,7 @@ test('opening a review lands on the waiting thread and reads what was folded int
     },
   ]
   renderApp()
-  expect(await screen.findByText('@joao can you look?')).toBeInTheDocument()
+  await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'Enter' })
   await waitFor(() =>
     expect(fake.sent).toContainEqual({
@@ -345,4 +369,191 @@ test('approving counts as a look; a failed approval says so and keeps the row', 
   fireEvent.keyDown(window, { key: 'a' })
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't approve Fix flaky test")
   expect(screen.getAllByRole('article').map((r) => r.textContent).join()).toContain('Fix flaky test')
+})
+
+test('one click on a row opens the MR beside the list', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await user.click((await screen.findAllByRole('article'))[1])
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2')
+  const panel = await screen.findByRole('region', { name: 'Fix flaky test' })
+  expect(await within(panel).findByText('Adds a retry budget.')).toBeInTheDocument()
+  expect(screen.getAllByRole('article').length).toBeGreaterThan(1)
+})
+
+test('j moves to the next MR and the panel follows; Escape closes the panel', async () => {
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  fireEvent.keyDown(window, { key: 'j' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2'))
+  fireEvent.keyDown(window, { key: 'Escape' })
+  await waitFor(() => expect(window.location.hash).toBe('#/'))
+})
+
+test('f goes full screen and Escape comes back before closing', async () => {
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  fireEvent.keyDown(window, { key: 'f' })
+  await waitFor(() =>
+    expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1/full'),
+  )
+  expect(document.querySelector('.q-split')).toHaveClass('is-full')
+  fireEvent.keyDown(window, { key: 'Escape' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1'))
+})
+
+test('the panel returns to the list it was opened from', async () => {
+  const user = userEvent.setup()
+  window.location.hash = '#/bucket/waiting'
+  renderApp()
+  await user.click(await screen.findByRole('article'))
+  await screen.findByRole('region', { name: 'Port billing' })
+  fireEvent.keyDown(window, { key: 'Escape' })
+  await waitFor(() => expect(window.location.hash).toBe('#/bucket/waiting'))
+})
+
+test('a review link for an MR not in the list still opens', async () => {
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fother/77'
+  renderApp()
+  expect(await screen.findByRole('region', { name: 'An MR' })).toBeInTheDocument()
+  // With no row for this MR, j starts at the list's first row instead of jumping past it.
+  fireEvent.keyDown(window, { key: 'j' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1'))
+})
+
+test('a and s still work on the list without opening anything', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'a' })
+  await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
+  expect(window.location.hash).toBe('')
+  expect(await screen.findByRole('status')).toHaveTextContent('Approved Retry budget for webhooks')
+})
+
+test('approve from the panel header outlives the row moving, and Undo works', async () => {
+  const user = userEvent.setup()
+  transport.approve.mockImplementationOnce(async () => {
+    hosts[0].mrs[0] = {
+      ...hosts[0].mrs[0],
+      reviewers: [{ username: 'joao', name: 'Joao', state: 'APPROVED' }],
+    }
+  })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  await user.click(within(panel).getByRole('button', { name: 'Approve' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('Approved Retry budget for webhooks')
+  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+  await waitFor(() => expect(transport.unapprove).toHaveBeenCalledOnce())
+})
+
+test('x on the list opens the MR with request changes started', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'x' })
+  expect(await screen.findByRole('textbox')).toHaveValue('@ana Requesting changes: ')
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1')
+})
+
+test('approving an MR that is not in the queue still works and says so', async () => {
+  const user = userEvent.setup()
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fother/77'
+  renderApp()
+  const panel = await screen.findByRole('region', { name: 'An MR' })
+  await user.click(await within(panel).findByRole('button', { name: 'Approve' }))
+  expect(await screen.findByRole('status')).toHaveTextContent('Approved An MR')
+})
+
+test('an MR that needs a rebase offers it in the details column', async () => {
+  transport.getOverview.mockImplementation(async () => ({
+    ...overview('Retry budget for webhooks'),
+    shouldBeRebased: true,
+  }))
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  const details = await screen.findByRole('complementary', { name: 'Details' })
+  expect(within(details).getByText('Behind main')).toBeInTheDocument()
+  expect(within(details).getByRole('button', { name: 'Rebase' })).toBeInTheDocument()
+})
+
+test('two quick Escapes leave full screen and then close, even before the screen catches up', async () => {
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1/full'
+  renderApp()
+  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  fireEvent.keyDown(window, { key: 'Escape' })
+  fireEvent.keyDown(window, { key: 'Escape' })
+  await waitFor(() => expect(window.location.hash).toBe('#/'))
+})
+
+test('after opening an MR, Reply still reaches the thread waiting on you', async () => {
+  const user = userEvent.setup()
+  items = [
+    {
+      id: `${H}:55`, kind: 'mention', hostId: H, mrId: 1, project: 'g/sdk', iid: 1,
+      mrTitle: 'Retry budget for webhooks', discussionId: 'd1', noteId: 55, author: null,
+      excerpt: '@joao can you look?', createdAt: '2026-10-11T09:00:00Z', webUrl: '', read: false,
+    },
+  ]
+  transport.getOverview.mockImplementation(async () => ({
+    ...overview('Retry budget for webhooks'),
+    discussions: [
+      {
+        id: 'd1', resolvable: true, resolved: false,
+        notes: [{
+          id: 55, body: '@joao can you look?', system: false, icon: null,
+          createdAt: '2026-10-11T09:00:00Z',
+          author: { username: 'li', name: 'Li', avatarUrl: null, bot: false }, position: null,
+        }],
+      },
+    ],
+  }))
+  renderApp()
+  await user.click((await screen.findAllByRole('article'))[0])
+  const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  // Opening read the mention in the inbox.
+  await waitFor(() => expect(items[0].read).toBe(true))
+  const actions = await waitFor(() => panel.querySelector('.mr-actions') as HTMLElement)
+  await user.click(within(actions).getByRole('button', { name: 'Reply' }))
+  await waitFor(() =>
+    expect(document.querySelector('[data-discussion-id="d1"] textarea')).toHaveFocus(),
+  )
+})
+
+test('after the open MR leaves the list, j goes on to the next one, not back to the top', async () => {
+  const user = userEvent.setup()
+  transport.approve.mockImplementationOnce(async () => {
+    hosts[0].mrs[1] = {
+      ...hosts[0].mrs[1],
+      reviewers: [{ username: 'joao', name: 'Joao', state: 'APPROVED' }],
+    }
+  })
+  renderApp()
+  await user.click((await screen.findAllByRole('article'))[1])
+  const panel = await screen.findByRole('region', { name: 'Fix flaky test' })
+  const actions = await waitFor(() => panel.querySelector('.mr-actions') as HTMLElement)
+  await user.click(within(actions).getByRole('button', { name: 'Approve' }))
+  await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
+  // Approved, it moves to Done and out of this list.
+  await waitFor(() =>
+    expect(screen.getAllByRole('article').map((row) => row.textContent).join()).not.toContain(
+      'Fix flaky test',
+    ),
+  )
+  fireEvent.keyDown(window, { key: 'j' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/3'))
+})
+
+test('keys never act on a list row while an MR outside the queue is on screen', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'j' }) // picks row 2 on the list
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fother/77'
+  await screen.findByRole('region', { name: 'An MR' })
+  fireEvent.keyDown(window, { key: 'a' })
+  fireEvent.keyDown(window, { key: 's' })
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(transport.approve).not.toHaveBeenCalled()
+  expect(document.querySelector('.q-row.is-selected')).toBeNull()
 })

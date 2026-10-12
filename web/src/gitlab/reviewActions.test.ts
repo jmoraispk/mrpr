@@ -3,7 +3,14 @@ import { expect, test } from 'vitest'
 
 import { server } from '../test/server'
 import { GitLabClient } from './client'
-import { approve, commitsSince, diffsSince, postComment, unapprove } from './reviewActions'
+import {
+  approve,
+  commitsSince,
+  diffsSince,
+  postComment,
+  rebase,
+  unapprove,
+} from './reviewActions'
 import { withSignature } from './signature'
 
 const API = 'https://gitlab.example.com/api/v4'
@@ -81,4 +88,16 @@ test('commits since a sha are counted, newest first', async () => {
 test('a force-pushed head still counts as new', async () => {
   server.use(http.get(`${MR}/commits`, () => HttpResponse.json([{ id: 'x2' }, { id: 'x1' }])))
   await expect(commitsSince(client(), 'g/p', 1, 'gone')).resolves.toBe(2)
+})
+
+test('rebase asks GitLab to rebase the source branch', async () => {
+  let method = ''
+  server.use(
+    http.put(`${MR}/rebase`, ({ request }) => {
+      method = request.method
+      return HttpResponse.json({ rebase_in_progress: true })
+    }),
+  )
+  await rebase(client(), 'g/p', 1)
+  expect(method).toBe('PUT')
 })

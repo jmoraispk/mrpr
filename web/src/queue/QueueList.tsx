@@ -11,6 +11,7 @@ export function QueueList({
   onSelect,
   heading,
   grouped = false,
+  compact = false,
 }: {
   rows: Row[]
   projects: Project[]
@@ -19,6 +20,8 @@ export function QueueList({
   heading: string
   /** Label each bucket, for a project's view that spans them all. */
   grouped?: boolean
+  /** One-line rows, beside an open MR. */
+  compact?: boolean
 }) {
   // The caller decides what to list; snoozed rows appear only on their own list.
   const visible = rows
@@ -40,14 +43,17 @@ export function QueueList({
             project={projectOf(row, projects)}
             selected={row.key === selectedKey}
             onSelect={() => onSelect(row.key)}
+            compact={compact}
           />
         </Fragment>
       ))}
+      {compact ? null : (
       <p className="q-keys" aria-hidden="true">
         <kbd>j</kbd>/<kbd>k</kbd> move · <kbd>a</kbd> approve · <kbd>r</kbd> reply ·{' '}
-        <kbd>x</kbd> request changes · <kbd>d</kbd> diff since last · <kbd>s</kbd> snooze ·{' '}
-        <kbd>?</kbd> all keys
+        <kbd>x</kbd> request changes · <kbd>d</kbd> since last review · <kbd>s</kbd> snooze ·{' '}
+        <kbd>Enter</kbd> open · <kbd>?</kbd> all keys
       </p>
+      )}
     </section>
   )
 }

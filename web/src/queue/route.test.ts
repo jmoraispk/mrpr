@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { parseSiteRoute, reviewHash } from './route'
+import { listHash, parseSiteRoute, reviewHash } from './route'
 
 const T = { hostId: 'gitlab.example.com', project: 'g/p', iid: 5 }
 
@@ -13,23 +13,29 @@ test('queue, buckets, projects, settings', () => {
   expect(parseSiteRoute('#/snoozed')).toEqual({ name: 'snoozed' })
 })
 
-test('a review, a note in it, and its since-last view round-trip', () => {
-  expect(parseSiteRoute(reviewHash(T))).toEqual({
-    name: 'review',
-    target: T,
-    noteId: null,
-    since: false,
+
+test('a review, its tab, a note in it, and full screen round-trip', () => {
+  const base = { name: 'review', target: T, noteId: null, tab: 'overview', full: false }
+  expect(parseSiteRoute(reviewHash(T))).toEqual(base)
+  expect(reviewHash(T)).toBe('#/mr/gitlab.example.com/g%2Fp/5')
+  expect(parseSiteRoute(reviewHash(T, { tab: 'changes' }))).toEqual({ ...base, tab: 'changes' })
+  expect(parseSiteRoute(reviewHash(T, { tab: 'since', full: true }))).toEqual({
+    ...base,
+    tab: 'since',
+    full: true,
   })
-  expect(parseSiteRoute(reviewHash(T, { since: true }))).toEqual({
-    name: 'review',
-    target: T,
-    noteId: null,
-    since: true,
-  })
-  expect(parseSiteRoute(reviewHash(T, { noteId: 9 }))).toEqual({
-    name: 'review',
-    target: T,
+  expect(parseSiteRoute(reviewHash(T, { noteId: 9, tab: 'changes' }))).toEqual({
+    ...base,
     noteId: 9,
-    since: false,
+    tab: 'changes',
   })
+  // Links from before tabs existed still work.
+  expect(parseSiteRoute('#/mr/gitlab.example.com/g%2Fp/5/since')).toEqual({ ...base, tab: 'since' })
+})
+
+test('every list has its own address', () => {
+  expect(listHash({ name: 'queue', bucket: null })).toBe('#/')
+  expect(listHash({ name: 'queue', bucket: 'waiting' })).toBe('#/bucket/waiting')
+  expect(listHash({ name: 'project', id: 'abc' })).toBe('#/project/abc')
+  expect(listHash({ name: 'snoozed' })).toBe('#/snoozed')
 })

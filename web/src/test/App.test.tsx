@@ -500,7 +500,7 @@ test('since your last review shows only what changed after the last look', async
     }),
   })
 
-  await user.click(await screen.findByRole('button', { name: 'Since your last review' }))
+  await user.click(await screen.findByRole('button', { name: 'Since last review' }))
 
   expect(getDiffsSince).toHaveBeenCalledWith('head-1', expect.anything())
   expect(
@@ -517,7 +517,7 @@ test('without a previous look there is no since toggle', async () => {
     }),
   })
   await screen.findByText('Improve parser errors')
-  expect(screen.queryByRole('button', { name: 'Since your last review' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Since last review' })).toBeNull()
 })
 
 test('the review view can approve', async () => {
@@ -581,7 +581,7 @@ test('a second visit in the same session knows about the first look', async () =
   server.use(mrWithHead('head-2'))
 
   render(<App />, { wrapper: Wrapper })
-  expect(await screen.findByRole('button', { name: 'Since your last review' })).toBeVisible()
+  expect(await screen.findByRole('button', { name: 'Since last review' })).toBeVisible()
 })
 
 function mrWithHead(sha: string) {
@@ -619,7 +619,7 @@ test('since your last review is read-only for new inline comments', async () => 
       ],
     }),
   })
-  await user.click(await screen.findByRole('button', { name: 'Since your last review' }))
+  await user.click(await screen.findByRole('button', { name: 'Since last review' }))
   await screen.findByRole('region', { name: 'src/new.py' }, { timeout: 5_000 })
   expect(screen.queryByRole('button', { name: /Comment on (old|new) line/ })).toBeNull()
   expect(screen.getByText(/switch back to comment inline/i)).toBeInTheDocument()
@@ -638,6 +638,62 @@ test('with nothing new since your last review, there is no since view', async ()
   expect(
     (await screen.findAllByText('src/parser.py', undefined, { timeout: 5_000 }))[0],
   ).toBeVisible()
-  expect(screen.queryByRole('button', { name: 'Since your last review' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Since last review' })).toBeNull()
   expect(getDiffsSince).not.toHaveBeenCalled()
+})
+
+test('inside the MR panel: no top bar, and the parent decides what “since” means', async () => {
+  const getDiffsSince = vi.fn(async () => [
+    {
+      old_path: 'src/new.py',
+      new_path: 'src/new.py',
+      diff: '@@ -1 +1 @@\n-a\n+b',
+      new_file: false,
+      renamed_file: false,
+      deleted_file: false,
+      collapsed: false,
+      too_large: false,
+    },
+  ])
+  const lastLook = vi.fn(async () => 'stale')
+  const markLooked = vi.fn(async () => {})
+  server.use(mrWithHead('head-2'))
+  render(<App chrome={false} sinceFrom="head-1" showCommentsInitially />, {
+    wrapper: transportWrapper({ getDiffsSince, lastLook, markLooked, approve: async () => {} }),
+  })
+  expect(
+    await screen.findByRole('region', { name: 'src/new.py' }, { timeout: 5_000 }),
+  ).toBeVisible()
+  expect(getDiffsSince).toHaveBeenCalledWith('head-1', expect.anything())
+  expect(lastLook).not.toHaveBeenCalled()
+  expect(markLooked).not.toHaveBeenCalled()
+  expect(document.querySelector('.topbar')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Since last review' })).toBeNull()
+})
+
+test('the panel’s Changes tab shows inline comments from the start', async () => {
+  server.use(
+    http.get('/api/discussions', () =>
+      HttpResponse.json([
+        {
+          id: 'd1',
+          notes: [
+            {
+              id: 1,
+              body: 'Why this change?',
+              author: { name: 'Ana', username: 'ana' },
+              position: { new_path: 'src/parser.py', old_path: 'src/parser.py', new_line: 1, old_line: null },
+            },
+          ],
+        },
+      ]),
+    ),
+  )
+  render(<App chrome={false} sinceFrom={null} showCommentsInitially />, {
+    wrapper: TestProviders,
+  })
+  expect(
+    await screen.findByRole('button', { name: /Hide inline comments/ }, { timeout: 5_000 }),
+  ).toBeInTheDocument()
 })

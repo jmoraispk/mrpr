@@ -6,12 +6,12 @@ const SIZE_NAMES = { S: 'Small', M: 'Medium', L: 'Large' } as const
 /** A badge in words. "Quick win" is said only of rows in Quick wins. */
 export function badgeText(badge: Badge, bucket?: Bucket): string {
   switch (badge.kind) {
-    case 'blocking':
-      return `Blocking ${plural(badge.count, 'person', 'people')}`
     case 'commits-since':
       return `${plural(badge.count, 'commit')} since your review`
     case 'threads-waiting':
       return `${plural(badge.count, 'thread')} waiting on you`
+    case 'needs-rebase':
+      return 'Needs rebase'
     case 'pipeline-failed':
       return 'Pipeline failed'
     case 'draft':

@@ -20,11 +20,15 @@ export interface FakeNote {
   createdAt: string
   system?: boolean
   bot?: boolean
+  /** GitLab's systemNoteIconName, e.g. 'commit'. */
+  icon?: string
 }
 
 export interface FakeDiscussion {
   id: string
   notes: FakeNote[]
+  resolvable?: boolean
+  resolved?: boolean
 }
 
 export interface FakeMergeRequest {
@@ -48,6 +52,15 @@ export interface FakeMergeRequest {
     labels: string[]
     headSha: string
     createdAt: string
+    needsRebase: boolean
+  }>
+  /** What the MR page's MrOverview query reports. */
+  overview?: Partial<{
+    description: string
+    shouldBeRebased: boolean
+    rebaseInProgress: boolean
+    canPush: boolean
+    author: string
   }>
 }
 
@@ -174,10 +187,83 @@ export function createFakeGitLab() {
       headPipeline: f.pipeline ? { status: f.pipeline } : null,
       labels: { nodes: (f.labels ?? []).map((title) => ({ title })) },
       diffHeadSha: f.headSha ?? 'sha-head',
+      shouldBeRebased: f.needsRebase ?? false,
     }
   }
 
   server.use(
+    gitlab.query('MrOverview', ({ variables }) => {
+      calls.push('MrOverview')
+      const mr = [...mrs.values()].find(
+        (value) => value.project === variables.project && String(value.iid) === variables.iid,
+      )
+      if (!mr) return HttpResponse.json({ data: { project: { mergeRequest: null } } })
+      const o = mr.overview ?? {}
+      const author = o.author ?? 'ana'
+      const person = (username: string, bot = false) => ({
+        username,
+        name: username.toUpperCase(),
+        avatarUrl: null,
+        bot,
+      })
+      return HttpResponse.json({
+        data: {
+          project: {
+            mergeRequest: {
+              iid: String(mr.iid),
+              title: mr.title,
+              description: o.description ?? 'Adds a retry budget.',
+              draft: false,
+              state: mr.state,
+              createdAt: mr.updatedAt,
+              updatedAt: mr.updatedAt,
+              sourceBranch: 'feature',
+              targetBranch: 'main',
+              webUrl: webUrl(mr),
+              diffHeadSha: 'sha-head',
+              commitCount: 3,
+              author: person(author),
+              reviewers: {
+                nodes: [
+                  {
+                    ...person('joao'),
+                    mergeRequestInteraction: { reviewState: 'UNREVIEWED' },
+                  },
+                ],
+              },
+              approvedBy: { nodes: [] },
+              approvalsRequired: 1,
+              approvalsLeft: 1,
+              headPipeline: { status: 'SUCCESS', path: `/${mr.project}/-/pipelines/1` },
+              labels: { nodes: [{ title: 'agents', color: '#6699cc' }] },
+              diffStatsSummary: { additions: 10, deletions: 2, fileCount: 1 },
+              shouldBeRebased: o.shouldBeRebased ?? false,
+              rebaseInProgress: o.rebaseInProgress ?? false,
+              userPermissions: { pushToSourceBranch: o.canPush ?? true },
+              discussions: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: mr.discussions.map((discussion) => ({
+                  id: `gid://gitlab/Discussion/${discussion.id}`,
+                  resolvable: Boolean(discussion.resolvable),
+                  resolved: Boolean(discussion.resolved),
+                  notes: {
+                    nodes: discussion.notes.map((value) => ({
+                      id: `gid://gitlab/Note/${value.id}`,
+                      body: value.body,
+                      system: value.system ?? false,
+                      systemNoteIconName: value.icon ?? null,
+                      createdAt: value.createdAt,
+                      author: person(value.author, value.bot ?? false),
+                      position: null,
+                    })),
+                  },
+                })),
+              },
+            },
+          },
+        },
+      })
+    }),
     gitlab.query('Facts', () => {
       calls.push('Facts')
       const known = (ids: number[]) => ids.filter((id) => mrs.has(id)).map(factsNode)

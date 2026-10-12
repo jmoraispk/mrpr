@@ -126,19 +126,35 @@ listed separately.
   folded into a count.
 - **Order:** who is blocked first (the author plus reviewers who already
   approved), then age; drafts sink.
-- **Since your last review:** opening or approving an MR remembers its head
-  commit in this browser. Next time, `d` (or the toggle in the review) shows
-  only what changed since.
+- **Since last review:** opening or approving an MR remembers its head commit
+  in this browser. Next time, `d` (or the "Since last review" tab) shows only
+  what changed since.
 - **Projects:** group MRs by repository, by label, or by moving them by hand
   (`m`, or drag a row onto a project). Projects live in this browser; Settings
   exports and imports them as JSON.
 - **Keys:** `j`/`k` move, `Enter` or `o` open, `a` approve, `r` reply, `x`
   request changes, `n` nudge, `s` snooze until the MR changes, `m` move to a
-  project, `d` diff since your last review, `g n|r|w|q` jump to a bucket,
-  `g p` projects, `?` help.
+  project, `d` since last review, `f` full screen, `Esc` close (or leave full
+  screen), `g n|r|w|q` jump to a bucket, `g p` projects, `?` help.
 - **Comments are signed.** Replies, requests for changes (a comment tagging
   the author) and nudges (a comment tagging the reviewers still waiting) end
   with "*— via Mr. PR*". Turning the signature off is on the roadmap.
+
+### Opening an MR
+
+One click on a row opens the MR beside the list; `j`/`k` move to the next one
+and the panel follows. `f` makes it full screen and `Esc` steps back.
+
+- **Overview** (first): the description as GitLab would show it, and the
+  Activity: threads and events in time order, with a "New since last review"
+  divider, threads involving you outlined, and a reply box on each thread.
+  **⚙ Show** picks what Activity shows (unresolved and resolved threads, new
+  commits, bot comments, other activity), for this MR or for all MRs; anything
+  hidden is counted, with "Show them". On the right: reviewers, approvals,
+  pipeline, labels, project and commits, and **Rebase** when GitLab says the
+  branch needs it and you can push to it.
+- **Changes:** the code, with inline comments shown.
+- **Since last review:** only what changed since you last looked.
 
 ## Security notes
 
