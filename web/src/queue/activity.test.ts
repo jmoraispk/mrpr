@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 
 import type { OverviewDiscussion, OverviewNote } from '../gitlab/mrOverview'
-import { buildActivity, DEFAULT_FILTERS, toThreadDiscussion } from './activity'
+import { buildActivity, DEFAULT_FILTERS, toThreadDiscussion, waitingOnYou } from './activity'
 
 let n = 0
 function note(
@@ -162,4 +162,35 @@ test('a thread maps to the review view’s discussion shape, without system note
       }),
     ],
   })
+})
+
+test('a thread asked for by id stays shown whatever the filters say', () => {
+  const a = buildActivity(
+    [thread('done', [note('li', 'ok', '2026-10-11T08:00:00Z')], { resolved: true })],
+    { ...opts, show: new Set(['done']) },
+  )
+  expect(ids(a.items)).toEqual(['done'])
+  expect(a.hidden.resolved).toBe(0)
+})
+
+test('the same overview gives the same thread objects, so open threads keep their state', () => {
+  const discussions = [thread('t', [note('li', 'q', '2026-10-11T08:00:00Z')])]
+  const one = buildActivity(discussions, opts).items[0]
+  const two = buildActivity(discussions, { ...opts, filters: { ...DEFAULT_FILTERS } }).items[0]
+  expect(one.kind === 'thread' && two.kind === 'thread' && one.discussion === two.discussion).toBe(true)
+  expect(one.kind === 'thread' && toThreadDiscussion(one.discussion)).toBe(
+    two.kind === 'thread' && toThreadDiscussion(two.discussion),
+  )
+})
+
+test('the thread waiting on you: the newest open one that involves you and is not answered by you', () => {
+  const discussions = [
+    thread('old', [note('li', 'hey @joao', '2026-10-11T08:00:00Z')]),
+    thread('answered', [note('li', '@joao?', '2026-10-11T09:00:00Z'), note('joao', 'yes', '2026-10-11T09:05:00Z')]),
+    thread('new', [note('joao', 'q', '2026-10-11T07:00:00Z'), note('ana', 'a', '2026-10-11T10:00:00Z')]),
+    thread('closed', [note('li', '@joao', '2026-10-11T11:00:00Z')], { resolved: true }),
+    thread('not-mine', [note('li', 'x', '2026-10-11T12:00:00Z')]),
+  ]
+  expect(waitingOnYou(discussions, 'joao')).toBe('new')
+  expect(waitingOnYou([], 'joao')).toBeNull()
 })

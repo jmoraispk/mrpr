@@ -51,7 +51,15 @@ export function buildActivity(
     since,
     filters,
     reveal = false,
-  }: { me: string; since: string | null; filters: Filters; reveal?: boolean },
+    show,
+  }: {
+    me: string
+    since: string | null
+    filters: Filters
+    reveal?: boolean
+    /** Threads to show whatever the filters say: one you are replying in, or a link went to. */
+    show?: ReadonlySet<string>
+  },
 ): Activity {
   const all: ActivityItem[] = []
   for (const discussion of discussions) {
@@ -78,7 +86,8 @@ export function buildActivity(
           : 'unresolved'
     all.push({
       kind: 'thread',
-      discussion: { ...discussion, notes: people },
+      // The overview's own object, so the same data keeps the same thread.
+      discussion,
       category,
       at: people[0].createdAt,
       isNew: newer(people[people.length - 1].createdAt, since),
@@ -89,6 +98,7 @@ export function buildActivity(
   const hidden = { resolved: 0, bots: 0, commits: 0, other: 0 }
   const items = all.filter((item) => {
     if (reveal || filters[item.category]) return true
+    if (item.kind === 'thread' && show?.has(item.discussion.id)) return true
     if (item.category !== 'unresolved') hidden[item.category] += 1
     return false
   })
@@ -96,8 +106,45 @@ export function buildActivity(
   return { items, dividerBefore: first >= 0 ? first : null, hidden }
 }
 
-/** The review view's discussion shape, so Overview threads reuse DiscussionThread. */
+/** The first note a person wrote in a thread (system notes aside). */
+export function firstNote(discussion: OverviewDiscussion): OverviewNote | undefined {
+  return discussion.notes.find((n) => !n.system)
+}
+
+/**
+ * The thread waiting on you: the newest open one that involves you and whose
+ * last word isn't yours. Read from the MR itself, so it survives the inbox
+ * marking things read as you open the MR.
+ */
+export function waitingOnYou(discussions: OverviewDiscussion[], me: string): string | null {
+  let best: { id: string; at: number } | null = null
+  for (const discussion of discussions) {
+    if (discussion.resolvable && discussion.resolved) continue
+    const people = discussion.notes.filter((n) => !n.system)
+    const last = people[people.length - 1]
+    if (!last || last.author?.username === me || !involvement(people, me)) continue
+    const at = Date.parse(last.createdAt)
+    if (!best || at > best.at) best = { id: discussion.id, at }
+  }
+  return best?.id ?? null
+}
+
+const mapped = new WeakMap<OverviewDiscussion, Discussion>()
+
+/**
+ * The review view's discussion shape, so Overview threads reuse DiscussionThread.
+ * The same overview thread always maps to the same object: a new object would
+ * reset the thread's local state (a reply just posted) on every render.
+ */
 export function toThreadDiscussion(discussion: OverviewDiscussion): Discussion {
+  const known = mapped.get(discussion)
+  if (known) return known
+  const shaped = shape(discussion)
+  mapped.set(discussion, shaped)
+  return shaped
+}
+
+function shape(discussion: OverviewDiscussion): Discussion {
   const notes = discussion.notes.filter((n) => !n.system)
   return {
     id: discussion.id,

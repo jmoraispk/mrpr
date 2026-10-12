@@ -76,6 +76,7 @@ const OVERVIEW = {
   author: { username: 'ana', name: 'Ana Lima', avatarUrl: null, bot: false },
   reviewers: [{ username: 'john', name: 'John', avatarUrl: null, state: 'UNREVIEWED' }],
   approvalsLeft: 1,
+  discussions: [],
 } as unknown as MrOverview
 
 let fake: ReturnType<typeof createFakePlatform>
@@ -112,6 +113,7 @@ function header(
         onReply={onReply}
         request={request}
         onRequestHandled={onRequestHandled}
+        me="joao"
       />
     </QueryClientProvider>
   )
@@ -240,4 +242,33 @@ test('without a queue row the header still works from the overview alone', () =>
 test('with neither facts nor an overview, there is nobody to request changes from', () => {
   show(row({ mr: null }), null)
   expect(screen.getByRole('button', { name: 'Request changes' })).toBeDisabled()
+})
+
+test('reply finds the thread waiting on you from the MR itself, even once the inbox is read', async () => {
+  const user = userEvent.setup()
+  const withThread = {
+    ...OVERVIEW,
+    discussions: [
+      {
+        id: 'd9',
+        resolvable: true,
+        resolved: false,
+        notes: [
+          {
+            id: 90,
+            body: '@joao can you check the retry math?',
+            system: false,
+            icon: null,
+            createdAt: '2026-10-11T08:00:00Z',
+            author: { username: 'li', name: 'Li', avatarUrl: null, bot: false },
+            position: null,
+          },
+        ],
+      },
+    ],
+  } as MrOverview
+  // The row's inbox items were marked read when the MR opened.
+  show(row({ items: [{ ...waitingReply, read: true }] }), withThread)
+  await user.click(screen.getByRole('button', { name: 'Reply' }))
+  expect(onReply).toHaveBeenCalledWith('d9')
 })

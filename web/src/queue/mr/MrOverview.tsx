@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import type { MrOverview } from '../../gitlab/mrOverview'
 import type { ReviewTarget } from '../../transport/types'
@@ -42,13 +42,30 @@ export function MrOverviewView({
   const [showOpen, setShowOpen] = useState(false)
   const [reveal, setReveal] = useState(false)
   const [descriptionOpen, setDescriptionOpen] = useState(false)
-  // A reply aimed at a hidden thread shows everything, so the thread is there.
-  const revealing = reveal || Boolean(replyTo)
+  // Threads kept on screen whatever the filters say: the one a link pointed
+  // at, and any you are replying in. They stay after the request is used.
+  const [kept, setKept] = useState<ReadonlySet<string>>(() => {
+    const linked = overview.discussions.find((d) => d.notes.some((n) => n.id === focusNoteId))
+    return new Set(linked ? [linked.id] : [])
+  })
+  const keptNow = useMemo(
+    () => (replyTo && !kept.has(replyTo) ? new Set([...kept, replyTo]) : kept),
+    [kept, replyTo],
+  )
+  useEffect(() => {
+    if (keptNow !== kept) setKept(keptNow)
+  }, [keptNow, kept])
   const since = previous?.at ?? null
   const activity = useMemo(
     () =>
-      buildActivity(overview.discussions, { me, since, filters: settings.filters, reveal: revealing }),
-    [overview.discussions, me, since, settings.filters, revealing],
+      buildActivity(overview.discussions, {
+        me,
+        since,
+        filters: settings.filters,
+        reveal,
+        show: keptNow,
+      }),
+    [overview.discussions, me, since, settings.filters, reveal, keptNow],
   )
   const description = overview.description
   const long = description.split('\n').length > LONG_LINES || description.length > LONG_CHARS
@@ -92,6 +109,7 @@ export function MrOverviewView({
             replyTo={replyTo}
             onReplied={onReplied}
             focusNoteId={focusNoteId}
+            expanded={keptNow}
           />
         </section>
       </div>

@@ -107,11 +107,19 @@ beforeEach(() => {
     send: async (message) => {
       fake.sent.push(message)
       if (message.kind !== 'delta/hub') return { ok: true, data: null }
-      if (message.op === 'listQueue') return { ok: true, data: hosts }
+      // A fresh copy, as a real hub sends: tests change `hosts` in place.
+      if (message.op === 'listQueue') return { ok: true, data: structuredClone(hosts) }
       if (message.op === 'listInbox') {
         return { ok: true, data: { hosts: [], items, unread: items.length } }
       }
       if (message.op === 'listHosts') return { ok: true, data: [] }
+      // Like the real hub: reading items updates the stored inbox, and the page re-reads it.
+      if (message.op === 'markRead') {
+        const { ids } = message.payload as { ids: string[] }
+        items = items.map((item) => (ids.includes(item.id) ? { ...item, read: true } : item))
+        await fake.store.set({ inbox: Date.now() })
+        return { ok: true, data: null }
+      }
       return { ok: true, data: null }
     },
   })
@@ -477,4 +485,75 @@ test('two quick Escapes leave full screen and then close, even before the screen
   fireEvent.keyDown(window, { key: 'Escape' })
   fireEvent.keyDown(window, { key: 'Escape' })
   await waitFor(() => expect(window.location.hash).toBe('#/'))
+})
+
+test('after opening an MR, Reply still reaches the thread waiting on you', async () => {
+  const user = userEvent.setup()
+  items = [
+    {
+      id: `${H}:55`, kind: 'mention', hostId: H, mrId: 1, project: 'g/sdk', iid: 1,
+      mrTitle: 'Retry budget for webhooks', discussionId: 'd1', noteId: 55, author: null,
+      excerpt: '@joao can you look?', createdAt: '2026-10-11T09:00:00Z', webUrl: '', read: false,
+    },
+  ]
+  transport.getOverview.mockImplementation(async () => ({
+    ...overview('Retry budget for webhooks'),
+    discussions: [
+      {
+        id: 'd1', resolvable: true, resolved: false,
+        notes: [{
+          id: 55, body: '@joao can you look?', system: false, icon: null,
+          createdAt: '2026-10-11T09:00:00Z',
+          author: { username: 'li', name: 'Li', avatarUrl: null, bot: false }, position: null,
+        }],
+      },
+    ],
+  }))
+  renderApp()
+  await user.click((await screen.findAllByRole('article'))[0])
+  const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  // Opening read the mention in the inbox.
+  await waitFor(() => expect(items[0].read).toBe(true))
+  const actions = await waitFor(() => panel.querySelector('.mr-actions') as HTMLElement)
+  await user.click(within(actions).getByRole('button', { name: 'Reply' }))
+  await waitFor(() =>
+    expect(document.querySelector('[data-discussion-id="d1"] textarea')).toHaveFocus(),
+  )
+})
+
+test('after the open MR leaves the list, j goes on to the next one, not back to the top', async () => {
+  const user = userEvent.setup()
+  transport.approve.mockImplementationOnce(async () => {
+    hosts[0].mrs[1] = {
+      ...hosts[0].mrs[1],
+      reviewers: [{ username: 'joao', name: 'Joao', state: 'APPROVED' }],
+    }
+  })
+  renderApp()
+  await user.click((await screen.findAllByRole('article'))[1])
+  const panel = await screen.findByRole('region', { name: 'Fix flaky test' })
+  const actions = await waitFor(() => panel.querySelector('.mr-actions') as HTMLElement)
+  await user.click(within(actions).getByRole('button', { name: 'Approve' }))
+  await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
+  // Approved, it moves to Done and out of this list.
+  await waitFor(() =>
+    expect(screen.getAllByRole('article').map((row) => row.textContent).join()).not.toContain(
+      'Fix flaky test',
+    ),
+  )
+  fireEvent.keyDown(window, { key: 'j' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/3'))
+})
+
+test('keys never act on a list row while an MR outside the queue is on screen', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'j' }) // picks row 2 on the list
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fother/77'
+  await screen.findByRole('region', { name: 'An MR' })
+  fireEvent.keyDown(window, { key: 'a' })
+  fireEvent.keyDown(window, { key: 's' })
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(transport.approve).not.toHaveBeenCalled()
+  expect(document.querySelector('.q-row.is-selected')).toBeNull()
 })

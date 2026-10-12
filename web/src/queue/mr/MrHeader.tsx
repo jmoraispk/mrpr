@@ -10,6 +10,7 @@ import { nudgeText, requestChangesText } from '../commentText'
 import { Composer } from '../Composer'
 import type { QueueRow } from '../model'
 import { ProjectPicker } from '../ProjectPicker'
+import { waitingOnYou } from '../activity'
 import { latestWaiting } from '../readState'
 import { QUEUE_QUERY_KEY } from '../useQueue'
 
@@ -33,6 +34,7 @@ export function MrHeader({
   request,
   onRequestHandled,
   extraActions,
+  me,
 }: {
   target: ReviewTarget
   row: QueueRow | null
@@ -48,6 +50,8 @@ export function MrHeader({
   onRequestHandled: () => void
   /** More actions after the standard ones (Rebase). */
   extraActions?: ReactNode
+  /** Your username on this host, to find the thread waiting on you. */
+  me: string
 }) {
   const transport = useMemo(() => createRuntimeTransport(target), [target])
   const queryClient = useQueryClient()
@@ -55,7 +59,11 @@ export function MrHeader({
   const title = overview?.title ?? row?.title ?? `!${target.iid}`
   const author = overview?.author?.username ?? row?.mr?.author.username ?? null
   const authorName = overview?.author?.name ?? row?.mr?.author.name ?? null
-  const waitingThread = row ? latestWaiting(row) : undefined
+  // The thread waiting on you, from the MR itself: opening it marks the inbox read.
+  const waitingId =
+    (overview ? waitingOnYou(overview.discussions, me) : null) ??
+    (row ? latestWaiting(row)?.discussionId : null) ??
+    null
   const reviewers = row?.mr?.reviewers ?? overview?.reviewers ?? []
   const waitingReviewers = reviewers
     .filter((reviewer) => WAITING.has(reviewer.state))
@@ -74,7 +82,7 @@ export function MrHeader({
     if (!request) return
     onRequestHandled()
     if (request === 'reply') {
-      if (waitingThread?.discussionId) onReply(waitingThread.discussionId)
+      if (waitingId) onReply(waitingId)
     } else if (request === 'changes') {
       if (author) setMode('changes')
     } else if (request === 'nudge') {
@@ -113,8 +121,8 @@ export function MrHeader({
         </button>
         <button
           type="button"
-          onClick={() => waitingThread?.discussionId && onReply(waitingThread.discussionId)}
-          disabled={!waitingThread?.discussionId}
+          onClick={() => waitingId && onReply(waitingId)}
+          disabled={!waitingId}
         >
           Reply
         </button>

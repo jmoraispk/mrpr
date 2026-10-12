@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import type { MrOverview } from '../gitlab/mrOverview'
 import { hubRequest } from '../hub/api'
@@ -93,12 +93,19 @@ export function QueueApp() {
           row.iid === openTarget.iid,
       ) ?? null)
     : null
-  // The keyboard's row: the open MR, else the one picked, else the first.
-  // An open MR outside the list has no row, so j/k start from the top.
-  const current =
-    openRow ??
-    visible.find((row) => row.key === selected) ??
-    (openTarget ? null : (visible[0] ?? null))
+  // The keyboard's row: the open MR (none if it is outside the queue, so no
+  // key acts on a list row while another MR is on screen), else the one
+  // picked, else the first.
+  const current = openTarget
+    ? openRow
+    : (visible.find((row) => row.key === selected) ?? visible[0] ?? null)
+  // Where the open row sat in the list, so j/k carry on from there once it
+  // leaves (approved, snoozed, read).
+  const anchor = useRef<{ key: string; index: number } | null>(null)
+  useEffect(() => {
+    const index = current ? visible.indexOf(current) : -1
+    if (current && index >= 0) anchor.current = { key: current.key, index }
+  })
   const open = (row: QueueRow, tab: ReviewTab = 'overview') => {
     markRowRead(row)
     setSelected(row.key)
@@ -124,8 +131,15 @@ export function QueueApp() {
       move(delta) {
         if (!visible.length) return
         const index = current ? visible.indexOf(current) : -1
+        const last = visible.length - 1
+        const left = current && index < 0 && anchor.current?.key === current.key ? anchor.current : null
         const next =
-          visible[index < 0 ? 0 : Math.min(visible.length - 1, Math.max(0, index + delta))]
+          index >= 0
+            ? visible[Math.min(last, Math.max(0, index + delta))]
+            : left
+              ? // The rows after it moved up into its place.
+                visible[delta > 0 ? Math.min(left.index, last) : Math.max(left.index - 1, 0)]
+              : visible[0]
         if (route.name === 'review') open(next)
         else setSelected(next.key)
       },
@@ -361,6 +375,7 @@ export function QueueApp() {
                   return (
                     <MrHeader
                       target={target}
+                      me={me}
                       row={openRow}
                       overview={overview}
                       full={route.full}

@@ -1,10 +1,13 @@
-import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect } from 'react'
 
 import { relativeTime } from '../../hub/relativeTime'
 import { DiscussionThread } from '../../review/DiscussionThread'
 import type { ReviewTarget } from '../../transport/types'
-import { toThreadDiscussion, type Activity } from '../activity'
+import { firstNote, toThreadDiscussion, type Activity } from '../activity'
 import { reviewHash } from '../route'
+
+const EMPTY: ReadonlySet<string> = new Set()
 
 const YOU_TAGS = {
   mentioned: 'mentions you',
@@ -34,6 +37,7 @@ export function ActivityList({
   replyTo,
   onReplied,
   focusNoteId = null,
+  expanded = EMPTY,
 }: {
   activity: Activity
   target: ReviewTarget
@@ -41,7 +45,15 @@ export function ActivityList({
   replyTo: string | null
   onReplied: () => void
   focusNoteId?: number | null
+  /** Threads shown in full even when resolved: the one being replied in, or linked to. */
+  expanded?: ReadonlySet<string>
 }) {
+  const queryClient = useQueryClient()
+  // A reply or resolve changes the MR: read it again so Overview shows it.
+  const refresh = useCallback(
+    () => void queryClient.invalidateQueries({ queryKey: ['overview'] }),
+    [queryClient],
+  )
   // A reply asked for from the header: focus that thread's reply box.
   useEffect(() => {
     if (!replyTo) return
@@ -72,52 +84,59 @@ export function ActivityList({
       {activity.items.length === 0 ? (
         <p className="q-empty">Nothing to show with these settings.</p>
       ) : null}
-      {activity.items.map((item, index) => (
-        <div key={item.kind === 'thread' ? item.discussion.id : `e${item.note.id}`}>
-          {index === activity.dividerBefore ? (
-            <div className="mr-divider">New since last review</div>
-          ) : null}
-          {item.kind === 'event' ? (
-            <p className={`mr-event${item.isNew ? ' is-new' : ''}`}>
-              {item.note.author?.name ?? 'GitLab'} {item.note.body.split('\n')[0]} ·{' '}
-              {relativeTime(item.at)}
-            </p>
-          ) : (
-            <div
-              className={`mr-thread${item.you ? ' is-yours' : ''}${item.isNew ? ' is-new' : ''}${
-                item.discussion.id === focusedId ? ' is-focused' : ''
-              }`}
-            >
-              <p className="mr-thread-head">
-                {item.discussion.notes[0].position ? (
-                  // An inline thread links to its line in Changes.
-                  <a href={reviewHash(target, { tab: 'changes', noteId: item.discussion.notes[0].id })}>
-                    {item.discussion.notes[0].position.filePath} · line{' '}
-                    {item.discussion.notes[0].position.newLine ??
-                      item.discussion.notes[0].position.oldLine}
-                  </a>
-                ) : (
-                  'Overall'
-                )}
-                {item.category === 'resolved' ? ' · resolved' : ''}
-                {item.you ? <strong className="mr-you"> · {YOU_TAGS[item.you]}</strong> : null}
+      {activity.items.map((item, index) => {
+        const first = item.kind === 'thread' ? firstNote(item.discussion) : undefined
+        return (
+          <div key={item.kind === 'thread' ? item.discussion.id : `e${item.note.id}`}>
+            {index === activity.dividerBefore ? (
+              <div className="mr-divider">New since last review</div>
+            ) : null}
+            {item.kind === 'event' ? (
+              <p className={`mr-event${item.isNew ? ' is-new' : ''}`}>
+                {item.note.author?.name ?? 'GitLab'} {item.note.body.split('\n')[0]} ·{' '}
+                {relativeTime(item.at)}
               </p>
-              {item.category === 'resolved' && replyTo !== item.discussion.id ? (
-                // A shown resolved thread takes one line until opened.
-                <details className="mr-resolved">
-                  <summary>
-                    {item.discussion.notes[0].author?.name}:{' '}
-                    {item.discussion.notes[0].body.split('\n')[0].slice(0, 120)}
-                  </summary>
-                  <DiscussionThread discussion={toThreadDiscussion(item.discussion)} />
-                </details>
-              ) : (
-                <DiscussionThread discussion={toThreadDiscussion(item.discussion)} />
-              )}
-            </div>
-          )}
-        </div>
-      ))}
+            ) : (
+              <div
+                className={`mr-thread${item.you ? ' is-yours' : ''}${item.isNew ? ' is-new' : ''}${
+                  item.discussion.id === focusedId ? ' is-focused' : ''
+                }`}
+              >
+                <p className="mr-thread-head">
+                  {first?.position ? (
+                    // An inline thread links to its line in Changes.
+                    <a href={reviewHash(target, { tab: 'changes', noteId: first.id })}>
+                      {first.position.filePath} · line{' '}
+                      {first.position.newLine ?? first.position.oldLine}
+                    </a>
+                  ) : (
+                    'Overall'
+                  )}
+                  {item.category === 'resolved' ? ' · resolved' : ''}
+                  {item.you ? <strong className="mr-you"> · {YOU_TAGS[item.you]}</strong> : null}
+                </p>
+                {item.category === 'resolved' && !expanded.has(item.discussion.id) ? (
+                  // A shown resolved thread takes one line until opened.
+                  <details className="mr-resolved">
+                    <summary>
+                      {first?.author?.name}: {first?.body.split('\n')[0].slice(0, 120)}
+                    </summary>
+                    <DiscussionThread
+                      discussion={toThreadDiscussion(item.discussion)}
+                      onChanged={refresh}
+                    />
+                  </details>
+                ) : (
+                  <DiscussionThread
+                    discussion={toThreadDiscussion(item.discussion)}
+                    onChanged={refresh}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
       {hidden ? (
         <p className="mr-hidden">
           {hidden} ·{' '}

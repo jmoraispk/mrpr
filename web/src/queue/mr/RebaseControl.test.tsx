@@ -76,3 +76,35 @@ test('polling stops when the panel moves to another MR', async () => {
   await act(() => vi.advanceTimersByTimeAsync(9_000))
   expect(transport.getOverview.mock.calls.length).toBe(calls)
 })
+
+test('an MR that is already rebasing keeps checking until GitLab finishes', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  transport.getOverview.mockResolvedValueOnce(o({ shouldBeRebased: false, rebaseInProgress: false }))
+  render(control(o({ rebaseInProgress: true })))
+  expect(screen.getByText('Rebasing…')).toBeInTheDocument()
+  await act(() => vi.advanceTimersByTimeAsync(3_000))
+  expect(await screen.findByText('Rebased')).toBeInTheDocument()
+})
+
+test('asking for a rebase refreshes the MR at once, so coming back shows it', async () => {
+  const user = userEvent.setup()
+  transport.getOverview.mockResolvedValue(o({ rebaseInProgress: true }))
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
+  render(control(o()))
+  await user.click(screen.getByRole('button', { name: 'Rebase' }))
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['overview', 'h/g/p/1'] })
+})
+
+test('switching MRs while the request is still on its way never polls the old one', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  let finish: () => void = () => {}
+  transport.rebase.mockImplementationOnce(() => new Promise<void>((resolve) => (finish = resolve)))
+  transport.getOverview.mockResolvedValue(o({ rebaseInProgress: true }))
+  const view = render(control(o()))
+  await user.click(screen.getByRole('button', { name: 'Rebase' }))
+  view.rerender(control(o(), { ...T, iid: 2 }, 'two'))
+  await act(async () => finish())
+  await act(() => vi.advanceTimersByTimeAsync(9_000))
+  expect(transport.getOverview).not.toHaveBeenCalled()
+})

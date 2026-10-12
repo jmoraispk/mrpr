@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import type { MrOverview, OverviewNote } from '../../gitlab/mrOverview'
@@ -18,7 +19,11 @@ const transport = {
   getDiscussions: vi.fn(async () => []),
   createDiscussion: vi.fn(),
   setResolved: vi.fn(),
-  replyToDiscussion: vi.fn(async () => ({ id: 99, body: 'x' })),
+  replyToDiscussion: vi.fn(async (_id: string, body: string) => ({
+    id: 99,
+    body,
+    author: { name: 'Joao', username: 'joao' },
+  })),
 } as unknown as DeltaTransport
 
 const T = { hostId: 'gitlab.example.com', project: 'g/p', iid: 1 }
@@ -281,4 +286,63 @@ test('opening at a note brings its thread into view and marks it', () => {
     document.querySelector('.mr-thread.is-focused [data-discussion-id="open"]'),
   ).not.toBeNull()
   expect(document.querySelectorAll('.mr-thread.is-focused')).toHaveLength(1)
+})
+
+/** Like the queue: the reply request is cleared once the Overview has used it. */
+function StatefulReply({ start }: { start: string }) {
+  const [replyTo, setReplyTo] = useState<string | null>(start)
+  return (
+    <MrOverviewView
+      overview={OVERVIEW_ONCE}
+      target={T}
+      me="joao"
+      previous={null}
+      replyTo={replyTo}
+      onReplied={() => setReplyTo(null)}
+      projectName={null}
+      projectColor={null}
+    />
+  )
+}
+const OVERVIEW_ONCE = overview()
+
+test('a thread revealed for a reply stays shown, open and focused after the request is used', async () => {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <TransportProvider transport={transport}>
+        <StatefulReply start="done" />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-discussion-id="done"] textarea'),
+    ).toHaveFocus(),
+  )
+  // Settle any re-render from clearing the request.
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(document.querySelector('[data-discussion-id="done"] textarea')).toHaveFocus()
+  expect(screen.queryByText(/1 hidden by your Show settings/)).toBeNull()
+})
+
+test('a reply posted in Overview survives the page re-rendering', async () => {
+  const user = userEvent.setup()
+  const view = show({ overview: OVERVIEW_ONCE })
+  const thread = screen
+    .getByText('Should the budget reset?')
+    .closest('[data-discussion-id]') as HTMLElement
+  await user.type(within(thread).getByRole('textbox', { name: 'Reply' }), 'On success only')
+  await user.click(within(thread).getByRole('button', { name: 'Reply' }))
+  expect(await within(thread).findByText('On success only')).toBeInTheDocument()
+  // Anything that re-renders the page, e.g. opening ⚙ Show.
+  await user.click(screen.getByRole('button', { name: '⚙ Show' }))
+  view.rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <TransportProvider transport={transport}>
+        <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
+          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  expect(screen.getByText('On success only')).toBeInTheDocument()
 })
