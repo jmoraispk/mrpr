@@ -2200,7 +2200,7 @@ button.primary-action {
   border: 1px solid #dcddd6; border-radius: 16px; background: #fff;
 }
 .setup-step img {
-  display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: top;
+  display: block; width: 100%; height: auto; cursor: zoom-in;
   border: 1px solid #e6e7e1; border-radius: 10px;
 }
 .setup-step h2 { margin: 0; font-size: 17px; line-height: 1.35; font-weight: 600; }
