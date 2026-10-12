@@ -1,24 +1,22 @@
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
-import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 const webDir = fileURLToPath(new URL('.', import.meta.url))
 
 /** The app holds OAuth tokens, so nothing but our own code may run in it. */
-function appPolicy(host: string): string {
-  const gitlab = `https://${host}`
-  return [
-    "default-src 'self'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
-    "worker-src 'self' blob:",
-    `connect-src 'self' ${gitlab}`,
-    `img-src 'self' data: ${gitlab}`,
-    "object-src 'none'",
-    "base-uri 'none'",
-    `form-action ${gitlab}`,
-  ].join('; ')
-}
+const APP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "worker-src 'self' blob:",
+  // Any GitLab server a visitor brings, not one fixed at build time.
+  "connect-src 'self' https:",
+  "img-src 'self' data: https:",
+  "object-src 'none'",
+  "base-uri 'none'",
+  'form-action https:',
+].join('; ')
 
 /**
  * The landing page shares the app's origin, and with it the stored tokens, so
@@ -35,7 +33,7 @@ const LANDING_POLICY = [
   "form-action 'none'",
 ].join('; ')
 
-function contentSecurityPolicy(host: string): Plugin {
+function contentSecurityPolicy(): Plugin {
   return {
     name: 'mrpr-site-csp',
     // Dev serving injects inline scripts for hot reload; the policy is for
@@ -43,7 +41,7 @@ function contentSecurityPolicy(host: string): Plugin {
     apply: 'build',
     transformIndexHtml: (html, context) => {
       const policy = context.path.startsWith('/app/')
-        ? appPolicy(host)
+        ? APP_POLICY
         : LANDING_POLICY
       return html.replace(
         '<head>',
@@ -53,14 +51,12 @@ function contentSecurityPolicy(host: string): Plugin {
   }
 }
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, webDir, 'VITE_')
-  const host = env.VITE_GITLAB_HOST?.trim() || 'gitlab-master.nvidia.com'
+export default defineConfig(() => {
   return {
     root: `${webDir}site`,
     envDir: webDir,
     base: process.env.DELTA_SITE_BASE ?? '/',
-    plugins: [react(), contentSecurityPolicy(host)],
+    plugins: [react(), contentSecurityPolicy()],
     // DevReload references the extension's dev flag; the site never has it.
     define: { __DELTA_DEV__: 'false' },
     build: {
