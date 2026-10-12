@@ -457,3 +457,15 @@ test('approving an MR that is not in the queue still works and says so', async (
   await user.click(await within(panel).findByRole('button', { name: 'Approve' }))
   expect(await screen.findByRole('status')).toHaveTextContent('Approved An MR')
 })
+
+test('an MR that needs a rebase offers it in the details column', async () => {
+  transport.getOverview.mockImplementation(async () => ({
+    ...overview('Retry budget for webhooks'),
+    shouldBeRebased: true,
+  }))
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  const details = await screen.findByRole('complementary', { name: 'Details' })
+  expect(within(details).getByText('Behind main')).toBeInTheDocument()
+  expect(within(details).getByRole('button', { name: 'Rebase' })).toBeInTheDocument()
+})

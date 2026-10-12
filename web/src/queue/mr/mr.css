@@ -81,3 +81,8 @@
 .mr-muted { color: var(--muted); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 @media (max-width: 1200px) { .mr-overview { grid-template-columns: minmax(0, 1fr); } }
+
+/* Rebase, in the details column. */
+.mr-rebase button { border-color: var(--accent); color: var(--accent-ink); }
+.mr-rebase p { margin: 2px 0 6px; }
+.mr-rebasing, .mr-rebased { color: var(--muted); font-size: 13px; }

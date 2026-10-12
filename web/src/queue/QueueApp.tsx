@@ -19,6 +19,7 @@ import { focusNoteOf, markRowRead } from './readState'
 import { MrHeader, type HeaderRequest } from './mr/MrHeader'
 import { MrOverviewView } from './mr/MrOverview'
 import { MrPanel } from './mr/MrPanel'
+import { RebaseControl } from './mr/RebaseControl'
 import { listHash, parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
 import { useProjects } from './state'
 import { useTheme } from './theme'
@@ -390,6 +391,7 @@ export function QueueApp() {
                       onReplied={() => setReplyTo(null)}
                       projectName={project?.name ?? null}
                       projectColor={project?.color ?? null}
+                      rebase={<RebaseControl overview={overview} target={route.target} />}
                     />
                   )
                 }}
