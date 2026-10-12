@@ -14,8 +14,16 @@ test('every sign-in and connect button opens the app', () => {
   for (const link of entries) expect(link.getAttribute('href')).toBe('app/')
 })
 
-test('the landing page runs no script, so it can never reach a stored token', () => {
-  expect(page.querySelectorAll('script')).toHaveLength(0)
+test('the landing page runs only its own script file, never inline code', () => {
+  // It shares the app's origin and tokens; the policy allows 'self' scripts only.
+  const scripts = [...page.querySelectorAll('script')]
+  expect(scripts.map((script) => script.getAttribute('src'))).toEqual(['/landing.js'])
+  expect(scripts.every((script) => !script.textContent?.trim())).toBe(true)
+})
+
+test('the theme toggle is there for the script to drive', () => {
+  expect(page.getElementById('theme-toggle')).not.toBeNull()
+  expect(page.getElementById('page')).not.toBeNull()
 })
 
 test('it promises faster work on MRs, not read-only access', () => {

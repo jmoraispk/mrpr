@@ -172,7 +172,7 @@ test('the landing page leads to the app', async ({ page }) => {
   // The landing page loads web fonts; keep the test off the network.
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort())
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('The code got faster')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Coding got faster')
 
   await page.getByRole('link', { name: 'Sign in', exact: true }).click()
 
@@ -237,4 +237,20 @@ test('the next person from that server goes straight to GitLab', async ({ page }
   expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
   await expect(page.getByText('Congratulations')).toHaveCount(0)
   expect(posts).toEqual([])
+})
+
+test('the landing page theme toggle works under its security policy', async ({ page }) => {
+  await page.route(/fonts.(googleapis|gstatic).com/, (route) => route.abort())
+  const blocked: string[] = []
+  page.on('console', (message) => {
+    if (/Content Security Policy/i.test(message.text())) blocked.push(message.text())
+  })
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.goto('/')
+  await expect(page.locator('#page')).toHaveAttribute('data-theme', 'light')
+
+  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+
+  await expect(page.locator('#page')).toHaveAttribute('data-theme', 'dark')
+  expect(blocked).toEqual([])
 })

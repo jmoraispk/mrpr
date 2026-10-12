@@ -10,263 +10,393 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
 <style>
 body{margin:0;-webkit-font-smoothing:antialiased}
-a{color:#1E4FD8}a:hover{color:#163BA6}
+a{color:var(--link)}a:hover{color:var(--link-hover)}
 summary{cursor:pointer;list-style:none}
 summary::-webkit-details-marker{display:none}
 details[open] .faq-plus{transform:rotate(45deg)}
-input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid #1E4FD8;outline-offset:2px}
+input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 @media (max-width:760px){.nav-links{display:none !important}}
+.tip{position:relative;display:inline;cursor:help;text-decoration:underline dotted var(--tip-line);text-decoration-thickness:1.5px;text-underline-offset:4px;border-radius:3px}
+.tip:hover,.tip:focus{color:var(--ink);text-decoration-color:var(--ink);outline:none}
+.tip:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.tip-body{display:none;position:absolute;bottom:calc(100% + 8px);left:0;width:260px;max-width:calc(100vw - 64px);padding:10px 12px;border-radius:8px;background:var(--ink);color:var(--paper);font-size:13px;line-height:1.45;z-index:5;box-shadow:0 8px 24px -8px rgba(18,22,31,0.45);cursor:default}
+.tip:hover .tip-body,.tip:focus .tip-body{display:block}
+.page{--paper:#F4F4F0;--surface:#FFFFFF;--surface-2:#FAFAF7;--ink:#12161F;--ink-2:#3D4452;--muted:#5B6170;--line:#DCDDD6;--line-2:#E6E7E1;--line-3:#EFEFEA;--line-4:#C9CBC2;--soft:#F0F0EB;--link:#1E4FD8;--link-hover:#163BA6;--tip-line:#A7ADBA;--band:#12161F;--hl:#FFF8F3;--warm-bg:#FDEBDD;--warm-ink:#8A2E0A;--ok-bg:#E3F1E8;--ok-ink:#1F5C3C;--del-bg:#FBE9E4;--del-ink:#8A2414;--ai-bg:#EEF2FD;--ai-line:#B9C6F2;--ai-ink:#1E3A9E;--plus:#1F6B45;--minus:#A1361A;--accent-ink:var(--accent);color-scheme:light;transition:background-color .2s,color .2s}
+.page[data-theme="dark"]{--paper:#0F1218;--surface:#171B23;--surface-2:#1C212B;--ink:#ECEDE8;--ink-2:#B9BEC9;--muted:#8E95A3;--line:#2A303C;--line-2:#262B36;--line-3:#222731;--line-4:#3A404D;--soft:#222731;--link:#8FB0FF;--link-hover:#B5CBFF;--tip-line:#5B6170;--band:#1A1F29;--hl:#2A1D14;--warm-bg:#3A2214;--warm-ink:#F7A072;--ok-bg:#13291D;--ok-ink:#7FD1A3;--del-bg:#3A1A16;--del-ink:#F2A090;--ai-bg:#18213A;--ai-line:#34457A;--ai-ink:#A9C1FF;--plus:#6FCF97;--minus:#F08A6E;--accent-ink:color-mix(in srgb, var(--accent) 62%, white);color-scheme:dark}
+.page .i-sun{display:none}
+.page[data-theme="dark"] .i-sun{display:block}
+.page[data-theme="dark"] .i-moon{display:none}
 </style>
-<style>html{scroll-behavior:smooth}</style>
+<style>html{scroll-behavior:smooth}body{margin:0}</style>
 </head>
 <body>
 
 
-<div style="position: relative; background: #F4F4F0; color: #12161F; font-family: 'Geist', 'Helvetica Neue', Helvetica, sans-serif; font-size: 17px; line-height: 1.55; overflow: hidden">
+<div style="--accent: #C2410C">
+<div class="page" data-theme="light" id="page" style="position: relative; background: var(--paper); color: var(--ink); font-family: 'Geist', 'Helvetica Neue', Helvetica, sans-serif; font-size: 17px; line-height: 1.55; overflow: hidden">
 
   <!-- the margin line -->
-  <div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: clamp(10px, 3vw, 48px); width: 2px; background: #C2410C; opacity: 0.5"></div>
+  <div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: clamp(10px, 3vw, 48px); width: 2px; background: var(--accent); opacity: 0.5"></div>
 
   <!-- NAV -->
-  <header style="padding: 20px clamp(24px, 7vw, 112px); display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; border-bottom: 1px solid #DCDDD6">
-    <a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #12161F">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="7" fill="#12161F"></rect><line x1="9.5" y1="6" x2="9.5" y2="24" stroke="#C2410C" stroke-width="2.2"></line><line x1="14" y1="11" x2="23" y2="11" stroke="#F4F4F0" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="15.5" x2="21" y2="15.5" stroke="#F4F4F0" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="20" x2="19" y2="20" stroke="#F4F4F0" stroke-width="2.2" stroke-linecap="round"></line></svg>
+  <header style="padding: 20px clamp(24px, 7vw, 112px); display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; border-bottom: 1px solid var(--line)">
+    <a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink)">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="7" style="fill: var(--ink)"></rect><line x1="9.5" y1="6" x2="9.5" y2="24" stroke="#C2410C" stroke-width="2.2"></line><line x1="14" y1="11" x2="23" y2="11" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="15.5" x2="21" y2="15.5" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="20" x2="19" y2="20" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line></svg>
       <span style="font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 800; font-size: 23px; letter-spacing: -0.02em">Mr. PR</span>
     </a>
     <nav class="nav-links" aria-label="Main" style="display: flex; gap: 32px; font-size: 15px; font-weight: 500">
-      <a href="#how" style="color: #3D4452; text-decoration: none">How it works</a>
-      <a href="#features" style="color: #3D4452; text-decoration: none">Features</a>
-      <a href="#pricing" style="color: #3D4452; text-decoration: none">Pricing</a>
-      <a href="#faq" style="color: #3D4452; text-decoration: none">FAQ</a>
+      <a href="#how" style="color: var(--ink-2); text-decoration: none">How it works</a>
+      <a href="#features" style="color: var(--ink-2); text-decoration: none">Features</a>
+      <a href="#pricing" style="color: var(--ink-2); text-decoration: none">Pricing</a>
+      <a href="#faq" style="color: var(--ink-2); text-decoration: none">FAQ</a>
     </nav>
     <div style="display: flex; gap: 12px; align-items: center">
-      <a href="app/" style="color: #12161F; text-decoration: none; font-size: 15px; font-weight: 500; padding: 12px 8px">Sign in</a>
-      <a href="app/" style="background: #12161F; color: #F4F4F0; text-decoration: none; font-size: 15px; font-weight: 600; padding: 12px 18px; border-radius: 8px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center">Connect GitLab</a>
+      <button type="button" id="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer"><svg class="i-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg><svg class="i-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.9 4.9 1.4 1.4"></path><path d="m17.7 17.7 1.4 1.4"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m4.9 19.1 1.4-1.4"></path><path d="m17.7 6.3 1.4-1.4"></path></svg></button>
+      <a href="app/" style="color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 500; padding: 12px 8px">Sign in</a>
+      <a href="app/" style="background: var(--ink); color: var(--paper); text-decoration: none; font-size: 15px; font-weight: 600; padding: 12px 18px; border-radius: 8px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center">Connect GitLab</a>
     </div>
   </header>
 
   <!-- HERO -->
   <section id="top" style="padding: clamp(56px, 8vw, 112px) clamp(24px, 7vw, 112px) 48px; display: flex; flex-wrap: wrap; gap: 56px; align-items: center">
     <div style="flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; gap: 28px">
-      <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #3D4452">Your MRs and PRs, handled</p>
-      <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 800; font-size: clamp(44px, 6.2vw, 84px); line-height: 0.98; letter-spacing: -0.035em">The code got faster.<br>The reviewer <span style="color: #C2410C">didn't.</span></h1>
-      <p style="margin: 0; font-size: clamp(18px, 1.6vw, 21px); line-height: 1.5; color: #3D4452; max-width: 34em">Mr. PR is one inbox for every merge request waiting on you, on GitLab today and GitHub next. It ranks what's blocking people, mutes the bots, shows only what changed since you last looked, and lets you approve or reply without opening forty tabs.</p>
+      <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2)">A tool for humans in the age of AI</p>
+      <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 800; font-size: clamp(44px, 6.2vw, 84px); line-height: 0.98; letter-spacing: -0.035em">Coding got faster.<br>Reviewing <span style="color: var(--accent-ink)">didn't.</span></h1>
+      <p style="margin: 0; font-size: clamp(18px, 1.6vw, 21px); line-height: 1.5; color: var(--ink-2); max-width: 34em">Mr. PR is one inbox for every merge request waiting on you. It ranks what's blocking people, shows only what changed since you last looked, and lets you approve or reply without opening forty tabs.</p>
       <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
-        <a href="app/" style="background: #C2410C; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 17px; padding: 15px 24px; border-radius: 10px; min-height: 52px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 10px">
+        <a href="app/" style="background: var(--accent); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 17px; padding: 15px 24px; border-radius: 10px; min-height: 52px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 10px">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"></path><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"></path></svg>
           Connect GitLab — free
         </a>
-        <a href="#waitlist" style="color: #12161F; text-decoration: none; font-weight: 600; font-size: 17px; padding: 15px 22px; border-radius: 10px; border: 1.5px solid #12161F; min-height: 52px; box-sizing: border-box; display: inline-flex; align-items: center">GitHub? Join the waitlist</a>
+        <a href="#waitlist" style="color: var(--ink); text-decoration: none; font-weight: 600; font-size: 17px; padding: 15px 22px; border-radius: 10px; border: 1.5px solid var(--ink); min-height: 52px; box-sizing: border-box; display: inline-flex; align-items: center">GitHub? Join the waitlist</a>
       </div>
-      <p style="margin: 0; font-size: 14px; color: #5B6170">Works with gitlab.com and self-managed GitLab. Act on your MRs faster from the dashboard.</p>
+      <p style="margin: 0; font-size: 14px; color: var(--muted)">Works with gitlab.com and self-managed GitLab. Act on your MRs faster from the dashboard.</p>
     </div>
 
     <!-- product mockup -->
     <div style="flex: 1 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
-      <div style="overflow-x: auto; border-radius: 14px; box-shadow: 0 1px 0 #DCDDD6, 0 24px 48px -24px rgba(18,22,31,0.28)">
-        <div role="img" aria-label="The Mr. PR inbox, showing merge requests ranked by urgency" style="min-width: 660px; background: #FFFFFF; border: 1px solid #DCDDD6; border-radius: 14px; display: flex; overflow: hidden; font-size: 14px">
+      <div style="overflow-x: auto; border-radius: 14px; box-shadow: 0 1px 0 var(--line), 0 24px 48px -24px rgba(18,22,31,0.28)">
+        <div role="img" aria-label="The Mr. PR inbox, showing merge requests ranked by urgency" style="min-width: 660px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; display: flex; overflow: hidden; font-size: 14px">
           <!-- sidebar -->
-          <div style="flex: 0 0 176px; background: #FAFAF7; border-right: 1px solid #E6E7E1; padding: 18px 12px; display: flex; flex-direction: column; gap: 4px">
-            <div style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6170; padding: 0 10px 8px">Queue</div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 7px; background: #12161F; color: #F4F4F0; font-weight: 600"><span>Needs you</span><span>7</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: #3D4452"><span>Returned to you</span><span>3</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: #3D4452"><span>Waiting on others</span><span>12</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: #3D4452"><span>Quick wins</span><span>4</span></div>
-            <div style="height: 1px; background: #E6E7E1; margin: 10px 4px"></div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: #5B6170"><span>Muted bots</span><span>41</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: #5B6170"><span>CI noise</span><span>88</span></div>
-            <div style="margin-top: auto; padding: 14px 10px 0; font-size: 12px; color: #5B6170; line-height: 1.4">Today's budget<div style="margin-top: 8px; height: 6px; border-radius: 3px; background: #E6E7E1; overflow: hidden"><div style="width: 55%; height: 100%; background: #C2410C"></div></div><div style="margin-top: 6px">55 of 100 min</div></div>
+          <div style="flex: 0 0 176px; background: var(--surface-2); border-right: 1px solid var(--line-2); padding: 18px 12px; display: flex; flex-direction: column; gap: 4px">
+            <div style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 10px 8px">Queue</div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 7px; background: var(--ink); color: var(--paper); font-weight: 600"><span>Needs you</span><span>7</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: var(--ink-2)"><span>Returned to you</span><span>3</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: var(--ink-2)"><span>Waiting on others</span><span>12</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: var(--ink-2)"><span>Quick wins</span><span>4</span></div>
+            <div style="height: 1px; background: var(--line-2); margin: 10px 4px"></div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: var(--muted)"><span>Muted bots</span><span>41</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 10px; color: var(--muted)"><span>CI noise</span><span>88</span></div>
+            <div style="margin-top: auto; padding: 14px 10px 0; font-size: 12px; color: var(--muted); line-height: 1.4">Today's budget<div style="margin-top: 8px; height: 6px; border-radius: 3px; background: var(--line-2); overflow: hidden"><div style="width: 55%; height: 100%; background: var(--accent)"></div></div><div style="margin-top: 6px">55 of 100 min</div></div>
           </div>
           <!-- list -->
           <div style="flex: 1 1 auto; min-width: 0">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #E6E7E1">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line-2)">
               <div style="font-weight: 600; font-size: 15px">Morning. 7 reviews need you.</div>
-              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">sorted by: who's blocked</div>
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">sorted by: who's blocked</div>
             </div>
 
-            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid #EFEFEA; background: #FFF8F3">
-              <div style="flex: 0 0 22px; height: 22px; border-radius: 11px; background: #C2410C; color: #FFFFFF; font-family: 'Geist Mono', monospace; font-size: 12px; display: flex; align-items: center; justify-content: center">1</div>
+            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line-3); background: var(--hl)">
+              <div style="flex: 0 0 22px; height: 22px; border-radius: 11px; background: var(--accent); color: #FFFFFF; font-family: 'Geist Mono', monospace; font-size: 12px; display: flex; align-items: center; justify-content: center">1</div>
               <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px">
-                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Retry budget for outbound webhooks</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">2h</span></div>
+                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Retry budget for outbound webhooks</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">2h</span></div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px">
-                  <span style="font-family: 'Geist Mono', monospace; color: #5B6170">payments/api !482</span>
-                  <span style="padding: 2px 8px; border-radius: 99px; background: #12161F; color: #F4F4F0; font-weight: 500">Blocking 2 people</span>
-                  <span style="padding: 2px 8px; border-radius: 99px; border: 1px solid #B9C6F2; color: #1E3A9E; background: #EEF2FD">AI-authored</span>
-                  <span style="font-family: 'Geist Mono', monospace; color: #1F6B45">+214</span><span style="font-family: 'Geist Mono', monospace; color: #A1361A">−37</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--muted)">payments/api !482</span>
+                  <span style="padding: 2px 8px; border-radius: 99px; background: var(--ink); color: var(--paper); font-weight: 500">Blocking 2 people</span>
+                  <span style="padding: 2px 8px; border-radius: 99px; border: 1px solid var(--ai-line); color: var(--ai-ink); background: var(--ai-bg)">AI-authored</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--plus)">+214</span><span style="font-family: 'Geist Mono', monospace; color: var(--minus)">−37</span>
                 </div>
               </div>
             </div>
 
-            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid #EFEFEA">
-              <div style="flex: 0 0 22px; height: 22px; border-radius: 11px; border: 1.5px solid #C2410C; color: #C2410C; box-sizing: border-box; font-family: 'Geist Mono', monospace; font-size: 12px; display: flex; align-items: center; justify-content: center">2</div>
+            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line-3)">
+              <div style="flex: 0 0 22px; height: 22px; border-radius: 11px; border: 1.5px solid var(--accent-ink); color: var(--accent-ink); box-sizing: border-box; font-family: 'Geist Mono', monospace; font-size: 12px; display: flex; align-items: center; justify-content: center">2</div>
               <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px">
-                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Pagination for the audit log endpoint</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">5h</span></div>
+                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Pagination for the audit log endpoint</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">5h</span></div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px">
-                  <span style="font-family: 'Geist Mono', monospace; color: #5B6170">platform/audit !215</span>
-                  <span style="padding: 2px 8px; border-radius: 99px; background: #FDEBDD; color: #8A2E0A; font-weight: 500">4 commits since your review</span>
-                  <span style="font-family: 'Geist Mono', monospace; color: #1F6B45">+98</span><span style="font-family: 'Geist Mono', monospace; color: #A1361A">−20</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--muted)">platform/audit !215</span>
+                  <span style="padding: 2px 8px; border-radius: 99px; background: var(--warm-bg); color: var(--warm-ink); font-weight: 500">4 commits since your review</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--plus)">+98</span><span style="font-family: 'Geist Mono', monospace; color: var(--minus)">−20</span>
                 </div>
               </div>
             </div>
 
-            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid #EFEFEA">
-              <div style="flex: 0 0 22px; height: 22px; border-radius: 11px; border: 1.5px solid #C2410C; color: #C2410C; box-sizing: border-box; font-family: 'Geist Mono', monospace; font-size: 12px; display: flex; align-items: center; justify-content: center">3</div>
+            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line-3)">
+              <div style="flex: 0 0 22px; height: 22px; border-radius: 11px; border: 1.5px solid var(--accent-ink); color: var(--accent-ink); box-sizing: border-box; font-family: 'Geist Mono', monospace; font-size: 12px; display: flex; align-items: center; justify-content: center">3</div>
               <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px">
-                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Migrate session store to Redis 7</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">1d</span></div>
+                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Migrate session store to Redis 7</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">1d</span></div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px">
-                  <span style="font-family: 'Geist Mono', monospace; color: #5B6170">platform/auth !77</span>
-                  <span style="padding: 2px 8px; border-radius: 99px; border: 1px solid #12161F; color: #12161F; font-weight: 500">Touches auth</span>
-                  <span style="padding: 2px 8px; border-radius: 99px; background: #F0F0EB; color: #3D4452">Large · ~40 min</span>
-                  <span style="font-family: 'Geist Mono', monospace; color: #1F6B45">+580</span><span style="font-family: 'Geist Mono', monospace; color: #A1361A">−412</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--muted)">platform/auth !77</span>
+                  <span style="padding: 2px 8px; border-radius: 99px; border: 1px solid var(--ink); color: var(--ink); font-weight: 500">Touches auth</span>
+                  <span style="padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--ink-2)">Large · ~40 min</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--plus)">+580</span><span style="font-family: 'Geist Mono', monospace; color: var(--minus)">−412</span>
                 </div>
               </div>
             </div>
 
-            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid #EFEFEA">
+            <div style="display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line-3)">
               <div style="flex: 0 0 22px; height: 22px"></div>
               <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px">
-                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Fix flaky timezone test in reports</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">20m</span></div>
+                <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-weight: 600">Fix flaky timezone test in reports</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">20m</span></div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px">
-                  <span style="font-family: 'Geist Mono', monospace; color: #5B6170">data/reports !1290</span>
-                  <span style="padding: 2px 8px; border-radius: 99px; background: #E3F1E8; color: #1F5C3C; font-weight: 500">Quick win · ~2 min</span>
-                  <span style="font-family: 'Geist Mono', monospace; color: #1F6B45">+6</span><span style="font-family: 'Geist Mono', monospace; color: #A1361A">−2</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--muted)">data/reports !1290</span>
+                  <span style="padding: 2px 8px; border-radius: 99px; background: var(--ok-bg); color: var(--ok-ink); font-weight: 500">Quick win · ~2 min</span>
+                  <span style="font-family: 'Geist Mono', monospace; color: var(--plus)">+6</span><span style="font-family: 'Geist Mono', monospace; color: var(--minus)">−2</span>
                 </div>
               </div>
             </div>
 
-            <div style="display: flex; gap: 8px; padding: 14px 20px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #5B6170">
-              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid #DCDDD6; border-bottom-width: 2px; border-radius: 5px; color: #12161F">a</span><span>approve</span>
-              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid #DCDDD6; border-bottom-width: 2px; border-radius: 5px; color: #12161F; margin-left: 10px">r</span><span>reply</span>
-              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid #DCDDD6; border-bottom-width: 2px; border-radius: 5px; color: #12161F; margin-left: 10px">d</span><span>diff since last</span>
-              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid #DCDDD6; border-bottom-width: 2px; border-radius: 5px; color: #12161F; margin-left: 10px">s</span><span>snooze</span>
+            <div style="display: flex; gap: 8px; padding: 14px 20px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted)">
+              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; color: var(--ink)">a</span><span>approve</span>
+              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; color: var(--ink); margin-left: 10px">r</span><span>reply</span>
+              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; color: var(--ink); margin-left: 10px">d</span><span>diff since last</span>
+              <span style="font-family: 'Geist Mono', monospace; padding: 3px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; color: var(--ink); margin-left: 10px">s</span><span>snooze</span>
             </div>
           </div>
         </div>
       </div>
       <!-- margin notes -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; font-size: 14px; color: #3D4452; line-height: 1.45">
-        <div style="display: flex; gap: 10px"><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: #C2410C; font-weight: 500">①</span><span>Ranked by who's waiting on you, not by what was updated last.</span></div>
-        <div style="display: flex; gap: 10px"><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: #C2410C; font-weight: 500">②</span><span>Back for round two? See only the commits you haven't seen.</span></div>
-        <div style="display: flex; gap: 10px"><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: #C2410C; font-weight: 500">③</span><span>Risky paths and big diffs are flagged before you open them.</span></div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; font-size: 14px; color: var(--ink-2); line-height: 1.45">
+        <div style="display: flex; gap: 10px"><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent-ink); font-weight: 500">①</span><span>Ranked by who's waiting on you, not by what was updated last.</span></div>
+        <div style="display: flex; gap: 10px"><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent-ink); font-weight: 500">②</span><span>Back for round two? See only the commits you haven't seen.</span></div>
+        <div style="display: flex; gap: 10px"><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent-ink); font-weight: 500">③</span><span>Risky paths and big diffs are flagged before you open them.</span></div>
       </div>
     </div>
   </section>
 
-  <!-- FEATURES -->
-  <section id="features" style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); border-top: 1px solid #DCDDD6">
-    <div style="max-width: 1200px; display: flex; flex-direction: column; gap: 56px">
+  <!-- BEFORE / AFTER -->
+  <section id="compare" style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); border-top: 1px solid var(--line)">
+    <div style="max-width: 1200px; display: flex; flex-direction: column; gap: 48px">
+      <div style="display: flex; flex-direction: column; gap: 14px; max-width: 900px">
+        <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink)">Same morning, two inboxes</p>
+        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 700; font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.03em">147 notifications. Only 3 need you.</h2>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch">
+
+        <!-- before -->
+        <div style="flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line-2); background: var(--surface-2)">
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted)">Before</span><span style="font-weight: 600">GitLab notifications</span></div>
+            <span style="padding: 3px 10px; border-radius: 99px; background: var(--line-2); color: var(--ink-2); font-size: 13px; font-weight: 600">147 unread</span>
+          </div>
+          <div style="position: relative; display: flex; flex-direction: column; font-size: 13.5px; color: var(--ink-2)">
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">gitlab-ci</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pipeline #88213 failed for main</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">9:02</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">renovate</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Update dependency eslint to v9.2.1</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">9:01</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">gitlab</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Label ~backend added to !1290</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:58</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">gitlab-ci</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pipeline #88212 passed for !77</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:57</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3); color: var(--ink)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Sam Ortiz</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Review requested: !482 Retry budget for outbound webhooks</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:55</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">coverage-bot</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Coverage report for !1301: 81.4%</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:54</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">renovate</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Update dependency typescript to v5.6.3</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:52</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">gitlab-ci</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pipeline #88209 failed for !215</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:50</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">gitlab</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Milestone changed to 26.4 on !640</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:49</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3); color: var(--ink)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Priya Nair</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Re: !215 Pagination for audit log endpoint</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:47</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">gitlab-ci</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pipeline #88207 passed for main</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:45</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">renovate</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Update dependency vitest to v2.1.4</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:44</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line-3)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">gitlab</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Approval rule updated on !512</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:41</span></div>
+            <div style="display: flex; gap: 12px; padding: 9px 18px; color: var(--ink)"><span style="flex: 0 0 96px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Lee Chen</span><span style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Review requested: !512 Null check in invoice export</span><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">8:40</span></div>
+            <div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(to bottom, transparent, var(--surface) 85%)"></div>
+          </div>
+          <div style="margin-top: auto; padding: 14px 18px; border-top: 1px solid var(--line-2); font-size: 14px; color: var(--muted)">+ 133 more. Can you spot the three that matter?</div>
+        </div>
+
+        <!-- after -->
+        <div style="flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; background: var(--surface); border: 1.5px solid var(--ink); border-radius: 16px; overflow: hidden; box-shadow: 0 24px 48px -28px rgba(18,22,31,0.35)">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line-2); background: var(--surface-2)">
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink)">After</span><span style="font-weight: 600">Mr. PR</span></div>
+            <span style="padding: 3px 10px; border-radius: 99px; background: var(--accent); color: #FFFFFF; font-size: 13px; font-weight: 600">7 MRs</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 18px; padding: 18px; font-size: 14px">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'Geist Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted)"><span>Needs you</span><span>3</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--hl)"><span style="min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Retry budget for outbound webhooks</span><span style="flex: 0 0 auto; padding: 2px 8px; border-radius: 99px; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 500">Blocking 2 people</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px"><span style="min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Null check in invoice export</span><span style="flex: 0 0 auto; padding: 2px 8px; border-radius: 99px; background: var(--ok-bg); color: var(--ok-ink); font-size: 12px; font-weight: 500">Quick win</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px"><span style="min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pagination for audit log endpoint</span><span style="flex: 0 0 auto; padding: 2px 8px; border-radius: 99px; background: var(--warm-bg); color: var(--warm-ink); font-size: 12px; font-weight: 500">4 new commits</span></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'Geist Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted)"><span>Returned to you</span><span>1</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px"><span style="min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Migrate session store to Redis 7</span><span style="flex: 0 0 auto; font-size: 12px; color: var(--muted)">Changes addressed</span></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'Geist Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted)"><span>Waiting on others</span><span>3</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 8px 8px 8px 12px; border: 1px solid var(--line-2); border-radius: 8px"><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Port billing service to the new SDK</span><span style="font-size: 12px; color: var(--muted)">Waiting on John for 2 days</span></div><span style="flex: 0 0 auto; padding: 6px 12px; border-radius: 7px; border: 1.5px solid var(--accent-ink); color: var(--accent-ink); font-size: 13px; font-weight: 600">Nudge</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px"><span style="min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Fix flaky timezone test</span><span style="flex: 0 0 auto; font-size: 12px; color: var(--muted)">Waiting on Priya</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px"><span style="min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Bump retry limits for exports</span><span style="flex: 0 0 auto; font-size: 12px; color: var(--muted)">Waiting on Sam</span></div>
+            </div>
+          </div>
+          <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line-2); font-size: 14px; color: var(--muted); background: var(--surface-2)"><span>140 bot, pipeline and label updates, folded away</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES (interactive) -->
+  <section id="features" style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); background: var(--surface); border-top: 1px solid var(--line)">
+    <div style="max-width: 1200px; display: flex; flex-direction: column; gap: 48px">
       <div style="display: flex; flex-direction: column; gap: 14px; max-width: 760px">
-        <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #C2410C">Features</p>
-        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 700; font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.03em">Built around the scarcest thing on your team: reviewer attention.</h2>
+        <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink)">Built around the scarcest thing: reviewer attention</p>
+        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 700; font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.03em">Everything that needs you. Nothing that doesn't.</h2>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px">
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
 
-        <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid #DCDDD6; border-radius: 16px; background: #FFFFFF">
-          <h3 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em">Know what to review first</h3>
-          <p style="margin: 0; color: #3D4452">Your inbox opens ranked by who's waiting on you, not by what changed last. The two-line fix blocking two teammates beats the big refactor nobody's waiting for.</p>
-          <div style="margin-top: auto; padding: 14px; border-radius: 10px; background: #F4F4F0; display: flex; flex-direction: column; gap: 8px; font-size: 14px">
-            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; background: #FFFFFF; border: 1px solid #E6E7E1; border-radius: 8px">
-              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Null check in invoice export</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">billing/export !512 <span style="color: #1F6B45">+4</span> <span style="color: #A1361A">−1</span></span></div>
-              <span style="flex: 0 0 auto; padding: 2px 8px; border-radius: 99px; background: #12161F; color: #F4F4F0; font-size: 12px; font-weight: 500">Blocking 2 people</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px dashed #DCDDD6; border-radius: 8px; color: #5B6170">
-              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Refactor reporting pipeline</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px">data/reports !1301 +1,240 −980</span></div>
-              <span style="flex: 0 0 auto; font-size: 12px">Nobody waiting</span>
-            </div>
-          </div>
+        <div role="group" aria-label="Features" style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <button type="button" data-feature="p1" aria-pressed="true" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: inherit; cursor: pointer"><span style="font-size: 16px; font-weight: 600">Know what to review first</span><span data-desc style="display: block; font-size: 14px; color: var(--ink-2); line-height: 1.45">Ranked by who's waiting on you, not by what changed last.</span></button>
+          <button type="button" data-feature="p2" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span style="font-size: 16px; font-weight: 600">Nudge in one click</span><span style="padding: 0 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px">Pro</span></span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">A friendly reminder in the MR thread, without the awkward message.</span></button>
+          <button type="button" data-feature="p3" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="font-size: 16px; font-weight: 600">Pick up where you left off</span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">Only the commits and threads that are new since your last review.</span></button>
+          <button type="button" data-feature="p4" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="font-size: 16px; font-weight: 600">Bots folded away</span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">A pipeline only reaches you when it's blocking your merge.</span></button>
+          <button type="button" data-feature="p5" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="font-size: 16px; font-weight: 600">Approve and reply from the inbox</span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">Approve, comment or request changes without opening GitLab.</span></button>
+          <button type="button" data-feature="p6" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span style="font-size: 16px; font-weight: 600">Every account, one inbox</span><span style="padding: 0 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px">Pro</span></span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">gitlab.com, your work instance and a client's, sorted together.</span></button>
+          <button type="button" data-feature="p7" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span style="font-size: 16px; font-weight: 600">Rules for agent-written MRs</span><span style="padding: 0 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px">Team</span></span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">Label what agents wrote, and decide how closely it gets read.</span></button>
+          <button type="button" data-feature="p8" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span style="font-size: 16px; font-weight: 600">A daily digest for the team</span><span style="padding: 0 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px">Team</span></span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">What's waiting on whom, in Slack or Teams every morning.</span></button>
+          <button type="button" data-feature="p9" aria-pressed="false" style="display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 44px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: var(--ink); font: inherit; cursor: pointer"><span style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span style="font-size: 16px; font-weight: 600">Open the giant MR</span><span style="padding: 0 7px; border-radius: 99px; border: 1.5px solid var(--accent-ink); color: var(--accent-ink); font-size: 11px; font-weight: 600; line-height: 18px">Coming soon</span></span><span data-desc style="display: none; font-size: 14px; color: var(--ink-2); line-height: 1.45">Every file of a 300-file MR, listed and grouped by folder.</span></button>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid #DCDDD6; border-radius: 16px; background: #FFFFFF">
-          <h3 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em">Nudge a reviewer in one click</h3>
-          <p style="margin: 0; color: #3D4452">Your MR has been waiting on someone for two days. Send a polite reminder straight from your inbox. Mr. PR posts it in the thread and mentions them, so you never have to write the awkward message yourself.</p>
-          <div style="margin-top: auto; padding: 14px; border-radius: 10px; background: #F4F4F0; display: flex; flex-direction: column; gap: 10px; font-size: 14px">
-            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 12px; background: #FFFFFF; border: 1px solid #E6E7E1; border-radius: 8px">
-              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Pagination for audit log</span><span style="font-size: 12px; color: #5B6170">Waiting on Priya for 2 days</span></div>
-              <button type="button" style="flex: 0 0 auto; min-height: 44px; padding: 10px 16px; border: none; border-radius: 8px; background: #C2410C; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">Send reminder</button>
-            </div>
-            <div style="padding: 10px 12px; border-radius: 8px; border: 1px solid #E6E7E1; background: #FFFFFF; font-size: 13px; color: #3D4452"><span style="font-weight: 600; color: #12161F">Posted to !215:</span> @priya friendly nudge, this one's ready for your review whenever you have a moment.</div>
+        <div style="flex: 2 1 540px; min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 24px 48px -28px rgba(18,22,31,0.3)">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--surface)">
+            <svg width="20" height="20" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="7" style="fill: var(--ink)"></rect><line x1="9.5" y1="6" x2="9.5" y2="24" stroke="#C2410C" stroke-width="2.2"></line><line x1="14" y1="11" x2="23" y2="11" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="15.5" x2="21" y2="15.5" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="20" x2="19" y2="20" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line></svg>
+            <span style="font-weight: 600; font-size: 14px">Mr. PR</span>
           </div>
-        </div>
+          <div style="min-height: 420px; font-size: 14px">
 
-        <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid #DCDDD6; border-radius: 16px; background: #FFFFFF">
-          <h3 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em">Pick up where you left off</h3>
-          <p style="margin: 0; color: #3D4452">Back for round two? See only the commits pushed since you last reviewed, and the threads still waiting on your reply. No rereading the whole diff.</p>
-          <div style="margin-top: auto; padding: 14px; border-radius: 10px; background: #F4F4F0; display: flex; flex-direction: column; gap: 10px; font-size: 14px">
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px"><span style="padding: 2px 8px; border-radius: 99px; background: #FDEBDD; color: #8A2E0A; font-weight: 500">4 commits since your approval</span><span style="padding: 2px 8px; border-radius: 99px; border: 1px solid #12161F; color: #12161F; font-weight: 500">2 threads waiting on you</span></div>
-            <div style="font-family: 'Geist Mono', monospace; font-size: 12.5px; line-height: 1.7; background: #FFFFFF; border: 1px solid #E6E7E1; border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre"><span style="color: #5B6170">  if (page.hasNext) {</span>
-<span style="display: block; background: #FBE9E4; color: #8A2414">-   cursor = page.lastId</span><span style="display: block; background: #E3F1E8; color: #1F5C3C">+   cursor = encodeCursor(page.lastId)</span><span style="color: #5B6170">  }</span></div>
-          </div>
-        </div>
+            <div data-pane="p1" style="display: flex; flex-direction: column; gap: 10px; padding: 22px">
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">Needs you, sorted by who's waiting</div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Null check in invoice export</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">billing/export !512 <span style="color: var(--plus)">+4</span> <span style="color: var(--minus)">−1</span></span></div><span style="flex: 0 0 auto; padding: 3px 10px; border-radius: 99px; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 500">Blocking 2 people</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Retry budget for outbound webhooks</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">payments/api !482 <span style="color: var(--plus)">+214</span> <span style="color: var(--minus)">−37</span></span></div><span style="flex: 0 0 auto; padding: 3px 10px; border-radius: 99px; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 500">Blocking 1 person</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; border: 1px dashed var(--line-4); border-radius: 10px; color: var(--muted)"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Refactor reporting pipeline</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px">data/reports !1301 +1,240 −980</span></div><span style="flex: 0 0 auto; font-size: 12px">Nobody waiting</span></div>
+            </div>
 
-        <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid #DCDDD6; border-radius: 16px; background: #FFFFFF">
-          <h3 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em">Never open a bot email again</h3>
-          <p style="margin: 0; color: #3D4452">Dependency bumps, pipeline chatter and automated review comments are folded away. A pipeline only reaches you when it's blocking your merge.</p>
-          <div style="margin-top: auto; padding: 14px; border-radius: 10px; background: #F4F4F0; display: flex; flex-direction: column; gap: 8px; font-size: 14px">
-            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; background: #FFFFFF; border: 1px solid #E6E7E1; border-radius: 8px">
-              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Pipeline failed on your MR</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">payments/api !482</span></div>
-              <span style="flex: 0 0 auto; padding: 2px 8px; border-radius: 99px; background: #FDEBDD; color: #8A2E0A; font-size: 12px; font-weight: 500">Blocks merge</span>
+            <div data-pane="p2" style="display: none; flex-direction: column; gap: 12px; padding: 22px">
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">Waiting on others</div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 12px 12px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Port billing service to the new SDK</span><span style="font-size: 12px; color: var(--muted)">Waiting on John for 2 days</span></div><span style="flex: 0 0 auto; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #FFFFFF; font-size: 14px; font-weight: 600">Send nudge</span></div>
+              <div style="display: flex; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px">
+                <div aria-hidden="true" style="flex: 0 0 32px; height: 32px; border-radius: 16px; background: var(--ink); color: var(--paper); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">PR</div>
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-size: 13px; color: var(--muted)"><span style="font-weight: 600; color: var(--ink)">Mr. PR nudged John</span> in !640, just now</span><span style="color: var(--ink-2)">@john friendly nudge, this one's ready for your review whenever you have a moment.</span></div>
+              </div>
+              <div style="padding: 10px 16px; font-size: 13px; color: var(--muted)">Posted in the MR thread, on your behalf. No awkward message to write.</div>
             </div>
-            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 8px; color: #5B6170; font-size: 13px">
-              <span>41 bot updates and 88 pipeline emails, hidden</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
-            </div>
-          </div>
-        </div>
 
-        <div style="grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; padding: 28px; border: 1.5px solid #12161F; border-radius: 16px; background: #FFFFFF">
-          <div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-            <span style="align-self: flex-start; padding: 3px 10px; border-radius: 99px; border: 1.5px solid #C2410C; color: #C2410C; font-size: 13px; font-weight: 600">Coming soon</span>
-            <h3 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2">Open the 10,000-line MR. All of it.</h3>
-            <p style="margin: 0; color: #3D4452">Agents don't write small diffs. Once an MR touches a few hundred files, GitLab stops showing every change. Mr. PR's diff viewer is built for that size: every file listed, loaded as you scroll, with generated and lock files folded out of the way.</p>
-          </div>
-          <div style="flex: 1 1 440px; min-width: 0; padding: 14px; border-radius: 10px; background: #F4F4F0; display: flex; flex-direction: column; gap: 8px; font-size: 14px">
-            <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; padding: 4px 4px 8px">
-              <span style="font-weight: 600">Port billing service to the new SDK</span>
-              <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5B6170">318 files <span style="color: #1F6B45">+14,208</span> <span style="color: #A1361A">−3,977</span></span>
+            <div data-pane="p3" style="display: none; flex-direction: column; gap: 12px; padding: 22px">
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">Pagination for audit log endpoint, round two</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px"><span style="padding: 3px 10px; border-radius: 99px; background: var(--warm-bg); color: var(--warm-ink); font-weight: 500">4 commits since your approval</span><span style="padding: 3px 10px; border-radius: 99px; border: 1px solid var(--ink); color: var(--ink); font-weight: 500">2 threads waiting on you</span></div>
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12.5px; line-height: 1.7; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; padding: 12px 14px; overflow-x: auto; white-space: pre"><span style="color: var(--muted)">  if (page.hasNext) {</span>
+<span style="display: block; background: var(--del-bg); color: var(--del-ink)">-   cursor = page.lastId</span><span style="display: block; background: var(--ok-bg); color: var(--ok-ink)">+   cursor = encodeCursor(page.lastId)</span><span style="color: var(--muted)">  }</span></div>
+              <div style="display: flex; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; font-size: 13px; color: var(--ink-2)"><span style="font-weight: 600; color: var(--ink)">Priya:</span> Switched to opaque cursors like you suggested. Good now?</div>
             </div>
-            <div style="background: #FFFFFF; border: 1px solid #E6E7E1; border-radius: 8px; font-family: 'Geist Mono', monospace; font-size: 12.5px; overflow-x: auto">
-              <div style="display: flex; justify-content: space-between; gap: 16px; padding: 8px 12px; border-bottom: 1px solid #EFEFEA"><span>src/billing/client.ts</span><span><span style="color: #1F6B45">+412</span> <span style="color: #A1361A">−388</span></span></div>
-              <div style="display: flex; justify-content: space-between; gap: 16px; padding: 8px 12px; border-bottom: 1px solid #EFEFEA"><span>src/billing/invoices/render.ts</span><span><span style="color: #1F6B45">+267</span> <span style="color: #A1361A">−140</span></span></div>
-              <div style="display: flex; justify-content: space-between; gap: 16px; padding: 8px 12px; border-bottom: 1px solid #EFEFEA"><span>src/billing/webhooks/retry.ts</span><span><span style="color: #1F6B45">+198</span> <span style="color: #A1361A">−61</span></span></div>
-              <div style="padding: 8px 12px; border-bottom: 1px solid #EFEFEA; color: #5B6170">+ 303 more files, loaded as you scroll</div>
-              <div style="display: flex; justify-content: space-between; gap: 16px; padding: 8px 12px; color: #5B6170; background: #FAFAF7"><span>12 generated and lock files, folded</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></div>
+
+            <div data-pane="p4" style="display: none; flex-direction: column; gap: 12px; padding: 22px">
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">Reaches you</div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Pipeline failed on your MR</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">payments/api !482</span></div><span style="flex: 0 0 auto; padding: 3px 10px; border-radius: 99px; background: var(--warm-bg); color: var(--warm-ink); font-size: 12px; font-weight: 500">Blocks merge</span></div>
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 8px">Folded away today</div>
+              <div style="display: flex; flex-direction: column; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface-2); color: var(--muted)">
+                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line-3)"><span>gitlab-ci, passing and unrelated pipelines</span><span style="font-family: 'Geist Mono', monospace">88</span></div>
+                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line-3)"><span>renovate, dependency bumps</span><span style="font-family: 'Geist Mono', monospace">41</span></div>
+                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px"><span>coverage-bot and label changes</span><span style="font-family: 'Geist Mono', monospace">11</span></div>
+              </div>
             </div>
+
+            <div data-pane="p5" style="display: none; flex-direction: column; gap: 12px; padding: 22px">
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">billing/export !512</div>
+              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px">
+                <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline"><span style="font-weight: 600">Null check in invoice export</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px"><span style="color: var(--plus)">+4</span> <span style="color: var(--minus)">−1</span></span></div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                  <span style="padding: 8px 14px; border-radius: 8px; background: var(--ink); color: var(--paper); font-size: 13px; font-weight: 600">Approve</span>
+                  <span style="padding: 8px 14px; border-radius: 8px; border: 1.5px solid var(--ink); color: var(--ink); font-size: 13px; font-weight: 600">Reply</span>
+                  <span style="padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink-2); font-size: 13px; font-weight: 600">Request changes</span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; background: var(--surface); border: 1.5px solid var(--ink); border-radius: 10px">
+                <span style="color: var(--ink-2)">Looks good. One nit: the error message should include the invoice ID.</span>
+                <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted)"><span>Posts to GitLab as you</span><span><span style="font-family: 'Geist Mono', monospace; padding: 2px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; color: var(--ink)">a</span> approve <span style="font-family: 'Geist Mono', monospace; padding: 2px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; color: var(--ink); margin-left: 6px">r</span> reply</span></div>
+              </div>
+            </div>
+
+            <div data-pane="p6" style="display: none; flex-direction: column; gap: 10px; padding: 22px">
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">Connected accounts</div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">gitlab.com</span><span style="font-size: 12px; color: var(--muted)">Personal</span></div><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 13px">3 MRs</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">gitlab.acme.dev</span><span style="font-size: 12px; color: var(--muted)">Work, self-managed</span></div><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 13px">9 MRs</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">code.northwind.io</span><span style="font-size: 12px; color: var(--muted)">Client</span></div><span style="flex: 0 0 auto; font-family: 'Geist Mono', monospace; font-size: 13px">2 MRs</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; border: 1px dashed var(--line-4); border-radius: 10px; color: var(--muted)"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">github.com</span><span style="font-size: 12px">Coming next</span></div></div>
+              <div style="padding: 6px 4px 0; font-size: 13px; color: var(--muted)">14 MRs from three accounts, in one queue.</div>
+            </div>
+
+            <div data-pane="p7" style="display: none; flex-direction: column; gap: 12px; padding: 22px">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px"><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-weight: 600">Retry budget for outbound webhooks</span><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">payments/api !482 <span style="color: var(--plus)">+214</span> <span style="color: var(--minus)">−37</span></span></div><span style="flex: 0 0 auto; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--ai-line); background: var(--ai-bg); color: var(--ai-ink); font-size: 12px; font-weight: 500">Agent-written</span></div>
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 6px">Your rules</div>
+              <div style="display: flex; flex-direction: column; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface)">
+                <div style="display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-3)"><span>Over 500 lines? Require a second human reviewer.</span><span aria-hidden="true" style="flex: 0 0 auto; position: relative; display: inline-block; width: 34px; height: 20px; border-radius: 10px; background: var(--ink)"><span style="position: absolute; top: 3px; left: 17px; width: 14px; height: 14px; border-radius: 7px; background: var(--paper)"></span></span></div>
+                <div style="display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-3)"><span>Fold agent-written dependency bumps.</span><span aria-hidden="true" style="flex: 0 0 auto; position: relative; display: inline-block; width: 34px; height: 20px; border-radius: 10px; background: var(--ink)"><span style="position: absolute; top: 3px; left: 17px; width: 14px; height: 14px; border-radius: 7px; background: var(--paper)"></span></span></div>
+                <div style="display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 12px 16px; color: var(--muted)"><span>Rank agent-written MRs below human ones.</span><span aria-hidden="true" style="flex: 0 0 auto; position: relative; display: inline-block; width: 34px; height: 20px; border-radius: 10px; background: var(--line-4)"><span style="position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 7px; background: var(--surface)"></span></span></div>
+              </div>
+            </div>
+
+            <div data-pane="p8" style="display: none; flex-direction: column; gap: 12px; padding: 22px">
+              <div style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">#payments-team</div>
+              <div style="display: flex; gap: 12px; padding: 16px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px">
+                <div aria-hidden="true" style="flex: 0 0 32px; height: 32px; border-radius: 8px; background: var(--ink); color: var(--paper); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">PR</div>
+                <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+                  <span style="font-size: 13px; color: var(--muted)"><span style="font-weight: 600; color: var(--ink)">Mr. PR</span> 9:00 AM</span>
+                  <span>Good morning. 6 MRs are waiting on reviews today.</span>
+                  <div style="display: flex; flex-direction: column; border: 1px solid var(--line-3); border-radius: 8px">
+                    <div style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; border-bottom: 1px solid var(--line-3)"><span style="font-weight: 600">John</span><span style="color: var(--ink-2)">3 waiting, oldest 2 days</span></div>
+                    <div style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; border-bottom: 1px solid var(--line-3)"><span style="font-weight: 600">Priya</span><span style="color: var(--ink-2)">1 waiting</span></div>
+                    <div style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; border-bottom: 1px solid var(--line-3)"><span style="font-weight: 600">Sam</span><span style="color: var(--muted)">All clear</span></div>
+                    <div style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; background: var(--hl)"><span style="font-weight: 600">No reviewer yet</span><span style="color: var(--warm-ink)">2 MRs</span></div>
+                  </div>
+                </div>
+              </div>
+              <div style="padding: 0 4px; font-size: 13px; color: var(--muted)">Posted every weekday at 9:00, to the channel you choose.</div>
+            </div>
+
+            <div data-pane="p9" style="display: none; flex-direction: column; gap: 12px; padding: 22px">
+              <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline">
+                <span style="font-weight: 600">Port billing service to the new SDK</span>
+                <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted)">318 files <span style="color: var(--plus)">+14,208</span> <span style="color: var(--minus)">−3,977</span></span>
+              </div>
+              <div style="background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; font-family: 'Geist Mono', monospace; font-size: 12.5px; overflow-x: auto">
+                <div style="display: flex; justify-content: space-between; gap: 16px; padding: 10px 14px; border-bottom: 1px solid var(--line-3); font-weight: 500"><span>src/billing/ (42 files)</span><span><span style="color: var(--plus)">+3,904</span> <span style="color: var(--minus)">−1,210</span></span></div>
+                <div style="display: flex; justify-content: space-between; gap: 16px; padding: 8px 14px 8px 30px; border-bottom: 1px solid var(--line-3)"><span>client.ts</span><span><span style="color: var(--plus)">+412</span> <span style="color: var(--minus)">−388</span></span></div>
+                <div style="display: flex; justify-content: space-between; gap: 16px; padding: 8px 14px 8px 30px; border-bottom: 1px solid var(--line-3)"><span>invoices/render.ts</span><span><span style="color: var(--plus)">+267</span> <span style="color: var(--minus)">−140</span></span></div>
+                <div style="display: flex; justify-content: space-between; gap: 16px; padding: 10px 14px; border-bottom: 1px solid var(--line-3); font-weight: 500"><span>src/webhooks/ (19 files)</span><span><span style="color: var(--plus)">+1,120</span> <span style="color: var(--minus)">−431</span></span></div>
+                <div style="padding: 10px 14px; border-bottom: 1px solid var(--line-3); color: var(--muted)">+ 12 more folders, 245 files</div>
+                <div style="display: flex; justify-content: space-between; gap: 16px; padding: 10px 14px; color: var(--muted); background: var(--surface-2)"><span>12 generated and lock files, folded</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
-      <p style="margin: 0; color: #3D4452; font-size: 17px"><span style="font-weight: 600; color: #12161F">Also:</span> agent-written MRs are labeled, every GitLab instance shares one inbox, and there's a keyboard shortcut for everything.</p>
     </div>
   </section>
 
   <!-- HOW IT WORKS -->
-  <section id="how" style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); background: #FFFFFF; border-top: 1px solid #DCDDD6; border-bottom: 1px solid #DCDDD6">
-    <div style="max-width: 1200px; display: flex; flex-direction: column; gap: 48px">
-      <div style="display: flex; flex-direction: column; gap: 14px">
-        <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #C2410C">How it works</p>
-        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 700; font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.03em">Set up in the time it takes to review a typo fix.</h2>
+  <section id="how" style="padding: clamp(48px, 6vw, 80px) clamp(24px, 7vw, 112px); background: var(--paper); border-top: 1px solid var(--line)">
+    <div style="max-width: 1200px; display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start">
+      <div style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+        <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink)">How it works</p>
+        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 700; font-size: clamp(28px, 3vw, 40px); line-height: 1.08; letter-spacing: -0.03em">One sign-in. That's the setup.</h2>
+        <p style="margin: 0; color: var(--muted); font-size: 15px">Runs in your browser. Nothing to install.</p>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px">
-        <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid #DCDDD6; border-radius: 14px; background: #F4F4F0">
-          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; color: #C2410C">01</span>
-          <h3 style="margin: 0; font-size: 21px; font-weight: 600">Connect your account</h3>
-          <p style="margin: 0; color: #3D4452">Sign in with GitLab OAuth, or paste a token for a self-managed instance. Add as many instances as you work across.</p>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid #DCDDD6; border-radius: 14px; background: #F4F4F0">
-          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; color: #C2410C">02</span>
-          <h3 style="margin: 0; font-size: 21px; font-weight: 600">Mr. PR sorts the pile</h3>
-          <p style="margin: 0; color: #3D4452">Notifications and to-dos are grouped by merge request, ranked by urgency, and stripped of bot and pipeline noise.</p>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid #DCDDD6; border-radius: 14px; background: #F4F4F0">
-          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; color: #C2410C">03</span>
-          <h3 style="margin: 0; font-size: 21px; font-weight: 600">You work the queue</h3>
-          <p style="margin: 0; color: #3D4452">Approve, reply, request changes or snooze from one screen. Everything you do lands back in GitLab, where it belongs.</p>
-        </div>
-      </div>
+      <ol style="flex: 2 1 560px; min-width: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 24px">
+        <li style="display: flex; flex-direction: column; gap: 8px; padding-top: 18px; border-top: 2px solid var(--ink)">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--accent-ink); font-weight: 500">01</span>
+          <span style="font-size: 18px; font-weight: 600">Sign in with GitLab</span>
+          <span style="color: var(--ink-2); font-size: 15px">OAuth or a token.</span>
+        </li>
+        <li style="display: flex; flex-direction: column; gap: 8px; padding-top: 18px; border-top: 2px solid var(--ink)">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--accent-ink); font-weight: 500">02</span>
+          <span style="font-size: 18px; font-weight: 600">Your queue sorts itself</span>
+          <span style="color: var(--ink-2); font-size: 15px">Ranked, grouped, and free of bot noise.</span>
+        </li>
+        <li style="display: flex; flex-direction: column; gap: 8px; padding-top: 18px; border-top: 2px solid var(--ink)">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--accent-ink); font-weight: 500">03</span>
+          <span style="font-size: 18px; font-weight: 600">Start reviewing</span>
+          <span style="color: var(--ink-2); font-size: 15px">Approve, reply and nudge from one screen.</span>
+        </li>
+      </ol>
     </div>
   </section>
 
   <!-- KEYBOARD (dark band) -->
-  <section style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); background: #12161F; color: #F4F4F0">
+  <section style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); background: var(--band); color: #F4F4F0">
     <div style="max-width: 1200px; display: flex; flex-wrap: wrap; gap: 56px; align-items: center">
       <div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
         <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #F7A072">Keyboard first</p>
@@ -285,31 +415,31 @@ input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{o
   </section>
 
   <!-- PRICING -->
-  <section id="pricing" style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); background: #FFFFFF; border-top: 1px solid #DCDDD6; border-bottom: 1px solid #DCDDD6">
+  <section id="pricing" style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px); background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line)">
     <div style="max-width: 1200px; display: flex; flex-direction: column; gap: 48px">
       <div style="display: flex; flex-direction: column; gap: 14px">
-        <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #C2410C">Pricing</p>
+        <p style="margin: 0; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink)">Pricing</p>
         <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 700; font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.03em">Free for you. Fair for your team.</h2>
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: stretch">
-        <div style="display: flex; flex-direction: column; gap: 22px; padding: 32px; border: 1px solid #DCDDD6; border-radius: 16px; background: #F4F4F0">
-          <div style="display: flex; flex-direction: column; gap: 6px"><h3 style="margin: 0; font-size: 20px; font-weight: 600">Personal</h3><p style="margin: 0; color: #3D4452; font-size: 15px">For one reviewer and their inbox.</p></div>
+        <div style="display: flex; flex-direction: column; gap: 22px; padding: 32px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper)">
+          <div style="display: flex; flex-direction: column; gap: 6px"><h3 style="margin: 0; font-size: 20px; font-weight: 600">Personal</h3><p style="margin: 0; color: var(--ink-2); font-size: 15px">For one reviewer and their inbox.</p></div>
           <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 48px; line-height: 1; letter-spacing: -0.03em">$0</div>
-          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #3D4452"><span>✓ One GitLab account</span><span>✓ Triage queue and noise filters</span><span>✓ Diff since last review</span><span>✓ Keyboard shortcuts</span></div>
-          <a href="app/" style="margin-top: auto; text-align: center; text-decoration: none; color: #12161F; font-weight: 600; padding: 14px 20px; border: 1.5px solid #12161F; border-radius: 10px; min-height: 48px; box-sizing: border-box">Connect GitLab</a>
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: var(--ink-2)"><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-p1">One GitLab account (20 open MRs)<span role="tooltip" id="tip-p1" class="tip-body">Connect one gitlab.com or self-managed account. Mr. PR organizes up to 20 open MRs at a time.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-p2">Approve and reply from the inbox<span role="tooltip" id="tip-p2" class="tip-body">Approve, comment or request changes without opening GitLab. Everything posts back to the MR.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-p3">Diff since last review<span role="tooltip" id="tip-p3" class="tip-body">See only the commits pushed since you last reviewed, plus the threads still waiting on you.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-p4">Triage queue and noise filters<span role="tooltip" id="tip-p4" class="tip-body">Every MR sorted into Needs you, Returned to you or Waiting on others, with bot and CI chatter folded away.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-p5">Keyboard shortcuts<span role="tooltip" id="tip-p5" class="tip-body">Move, approve, reply and snooze with single keys.</span></span></span></div>
+          <a href="app/" style="margin-top: auto; text-align: center; text-decoration: none; color: var(--ink); font-weight: 600; padding: 14px 20px; border: 1.5px solid var(--ink); border-radius: 10px; min-height: 48px; box-sizing: border-box">Connect GitLab</a>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 22px; padding: 32px; border: 2px solid #12161F; border-radius: 16px; background: #FFFFFF; position: relative">
-          <span style="position: absolute; top: -13px; left: 32px; background: #C2410C; color: #FFFFFF; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 99px">Most popular</span>
-          <div style="display: flex; flex-direction: column; gap: 6px"><h3 style="margin: 0; font-size: 20px; font-weight: 600">Pro</h3><p style="margin: 0; color: #3D4452; font-size: 15px">For people who review across projects and instances.</p></div>
-          <div style="display: flex; align-items: baseline; gap: 6px"><span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 48px; line-height: 1; letter-spacing: -0.03em">[PRICE]</span><span style="color: #5B6170">/ month</span></div>
-          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #3D4452"><span>✓ Everything in Personal</span><span>✓ Unlimited instances, incl. self-managed</span><span>✓ Approve and reply from the inbox</span><span>✓ Review budget and estimates</span><span>✓ Agent-authored labels and rules</span></div>
-          <a href="app/" style="margin-top: auto; text-align: center; text-decoration: none; color: #FFFFFF; background: #12161F; font-weight: 600; padding: 14px 20px; border-radius: 10px; min-height: 48px; box-sizing: border-box">Start free trial</a>
+        <div style="display: flex; flex-direction: column; gap: 22px; padding: 32px; border: 2px solid var(--ink); border-radius: 16px; background: var(--surface); position: relative">
+          <span style="position: absolute; top: -13px; left: 32px; background: var(--accent); color: #FFFFFF; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 99px">Most popular</span>
+          <div style="display: flex; flex-direction: column; gap: 6px"><h3 style="margin: 0; font-size: 20px; font-weight: 600">Pro</h3><p style="margin: 0; color: var(--ink-2); font-size: 15px">For people who review across projects and accounts.</p></div>
+          <div style="display: flex; align-items: baseline; gap: 6px"><span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 48px; line-height: 1; letter-spacing: -0.03em">$10</span><span style="color: var(--muted)">/ month</span></div>
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: var(--ink-2)"><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-r1">Everything in Personal<span role="tooltip" id="tip-r1" class="tip-body">All five Personal features, with no limit on open MRs.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-r2">Unlimited MRs and accounts<span role="tooltip" id="tip-r2" class="tip-body">gitlab.com, your work instance and a client's, side by side in one inbox.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-r3">One-click nudges<span role="tooltip" id="tip-r3" class="tip-body">“Mr. PR nudged John.” A friendly reminder posted in the MR thread, so you never have to write the awkward message.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-r4">Review budget and estimates<span role="tooltip" id="tip-r4" class="tip-body">Tell Mr. PR how much time you have today, and it picks the MRs that unblock the most people.</span></span></span></div>
+          <a href="app/" style="margin-top: auto; text-align: center; text-decoration: none; color: #FFFFFF; background: var(--ink); font-weight: 600; padding: 14px 20px; border-radius: 10px; min-height: 48px; box-sizing: border-box">Start free trial</a>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 22px; padding: 32px; border: 1px solid #DCDDD6; border-radius: 16px; background: #F4F4F0">
-          <div style="display: flex; flex-direction: column; gap: 6px"><h3 style="margin: 0; font-size: 20px; font-weight: 600">Team</h3><p style="margin: 0; color: #3D4452; font-size: 15px">For leads who want review load to be visible and fair.</p></div>
-          <div style="display: flex; align-items: baseline; gap: 6px"><span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 48px; line-height: 1; letter-spacing: -0.03em">[PRICE]</span><span style="color: #5B6170">/ seat / month</span></div>
-          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #3D4452"><span>✓ Everything in Pro</span><span>✓ Team review-load view</span><span>✓ Shared triage rules</span><span>✓ SSO and self-hosting</span></div>
-          <a href="#contact" style="margin-top: auto; text-align: center; text-decoration: none; color: #12161F; font-weight: 600; padding: 14px 20px; border: 1.5px solid #12161F; border-radius: 10px; min-height: 48px; box-sizing: border-box">Talk to us</a>
+        <div style="display: flex; flex-direction: column; gap: 22px; padding: 32px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper)">
+          <div style="display: flex; flex-direction: column; gap: 6px"><h3 style="margin: 0; font-size: 20px; font-weight: 600">Team</h3><p style="margin: 0; color: var(--ink-2); font-size: 15px">For leads who want review load to be visible and fair.</p></div>
+          <div style="display: flex; align-items: baseline; gap: 6px"><span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 48px; line-height: 1; letter-spacing: -0.03em">Soon</span></div>
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: var(--ink-2)"><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-t1">Everything in Pro<span role="tooltip" id="tip-t1" class="tip-body">Every Pro feature, for every seat on your team.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-t2">Daily Slack or Teams digest<span role="tooltip" id="tip-t2" class="tip-body">A daily summary of what's waiting on whom.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-t3">Shared triage rules<span role="tooltip" id="tip-t3" class="tip-body">The whole team mutes the same bots and handles agent-written MRs the same way.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-t4">Team load and turnaround reports<span role="tooltip" id="tip-t4" class="tip-body">See who's overloaded, what's aging, and how review turnaround changes over time.</span></span></span><span>✓ <span class="tip" tabindex="0" aria-describedby="tip-t5">Agent-authored labels and rules<span role="tooltip" id="tip-t5" class="tip-body">MRs written by coding agents get a label, and your team sets shared rules for them, like always requiring a second human reviewer.</span></span></span></div>
+          <a href="#waitlist" style="margin-top: auto; text-align: center; text-decoration: none; color: var(--ink); font-weight: 600; padding: 14px 20px; border: 1.5px solid var(--ink); border-radius: 10px; min-height: 48px; box-sizing: border-box">Join the waitlist</a>
         </div>
       </div>
     </div>
@@ -319,26 +449,26 @@ input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{o
   <section id="faq" style="padding: clamp(64px, 8vw, 112px) clamp(24px, 7vw, 112px)">
     <div style="max-width: 880px; display: flex; flex-direction: column; gap: 36px">
       <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 700; font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.03em">Questions</h2>
-      <div style="display: flex; flex-direction: column; border-top: 1px solid #12161F">
-        <details style="border-bottom: 1px solid #DCDDD6; padding: 22px 0">
+      <div style="display: flex; flex-direction: column; border-top: 1px solid var(--ink)">
+        <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
           <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>Is Mr. PR an AI code reviewer?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
-          <p style="margin: 14px 0 0; color: #3D4452; max-width: 40em">No. Mr. PR is for the human reviewer. It works alongside whatever AI review bots your team already runs, and folds their comments away until you want them.</p>
+          <p style="margin: 14px 0 0; color: var(--ink-2); max-width: 40em">No. Mr. PR is an inbox for the human reviewer. It works alongside any AI review bots your team already runs.</p>
         </details>
-        <details style="border-bottom: 1px solid #DCDDD6; padding: 22px 0">
-          <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>GitLab already has a merge request homepage. Why this?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
-          <p style="margin: 14px 0 0; color: #3D4452; max-width: 40em">It's a good list of where each MR stands. Mr. PR adds what a list can't: ranking by who's blocked, diffs since your last review, noise filtering, actions from the inbox, and one view across several GitLab instances.</p>
+        <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
+          <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>GitLab and GitHub already have merge request pages. Why this?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
+          <p style="margin: 14px 0 0; color: var(--ink-2); max-width: 40em">GitLab and GitHub simply list your merge requests. Mr. PR helps you organize them and get them closed.</p>
         </details>
-        <details style="border-bottom: 1px solid #DCDDD6; padding: 22px 0">
+        <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
           <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>When is GitHub support coming?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
-          <p style="margin: 14px 0 0; color: #3D4452; max-width: 40em">GitHub is next on the roadmap. Join the waitlist and you'll get access first. [TIMELINE]</p>
+          <p style="margin: 14px 0 0; color: var(--ink-2); max-width: 40em">GitHub is next on the roadmap. Join the waitlist and you'll be the first to know when it's ready.</p>
         </details>
-        <details style="border-bottom: 1px solid #DCDDD6; padding: 22px 0">
+        <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
           <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>Does it work with self-managed GitLab?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
-          <p style="margin: 14px 0 0; color: #3D4452; max-width: 40em">Yes. Add your instance URL and a personal access token, or register Mr. PR as an OAuth application on your instance. [MINIMUM GITLAB VERSION]</p>
+          <p style="margin: 14px 0 0; color: var(--ink-2); max-width: 40em">Yes. Sign in with OAuth or a personal access token. Because Mr. PR talks to GitLab straight from your browser, it works with any instance your browser can reach, even one behind your company VPN.</p>
         </details>
-        <details style="border-bottom: 1px solid #DCDDD6; padding: 22px 0">
+        <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
           <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>Do you store my source code?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
-          <p style="margin: 14px 0 0; color: #3D4452; max-width: 40em">[YOUR DATA POLICY — e.g. which metadata is cached, for how long, and whether diffs are ever persisted.]</p>
+          <p style="margin: 14px 0 0; color: var(--ink-2); max-width: 40em">No. Mr. PR runs in your browser and talks to GitLab directly. Your access token stays on your device, and your code and comments never pass through our servers. Private by design.</p>
         </details>
       </div>
     </div>
@@ -346,13 +476,13 @@ input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{o
 
   <!-- FINAL CTA -->
   <section id="waitlist" style="padding: 0 clamp(24px, 7vw, 112px) clamp(64px, 8vw, 112px)">
-    <div style="max-width: 1200px; box-sizing: border-box; background: #12161F; color: #F4F4F0; border-radius: 20px; padding: clamp(36px, 6vw, 72px); display: flex; flex-wrap: wrap; gap: 40px; align-items: center; justify-content: space-between">
+    <div style="max-width: 1200px; box-sizing: border-box; background: var(--band); color: #F4F4F0; border-radius: 20px; padding: clamp(36px, 6vw, 72px); display: flex; flex-wrap: wrap; gap: 40px; align-items: center; justify-content: space-between">
       <div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
         <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Helvetica Neue', sans-serif; font-weight: 800; font-size: clamp(34px, 4.4vw, 58px); line-height: 1; letter-spacing: -0.035em">Be the bottleneck that keeps up.</h2>
         <p style="margin: 0; color: #B7BCC7; font-size: 18px">Connect GitLab now, or leave your email for GitHub access.</p>
       </div>
       <div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-        <a href="app/" style="background: #C2410C; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 17px; padding: 15px 24px; border-radius: 10px; min-height: 52px; box-sizing: border-box; display: flex; align-items: center; justify-content: center">Connect GitLab — free</a>
+        <a href="app/" style="background: var(--accent); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 17px; padding: 15px 24px; border-radius: 10px; min-height: 52px; box-sizing: border-box; display: flex; align-items: center; justify-content: center">Connect GitLab — free</a>
         <div style="display: flex; flex-direction: column; gap: 8px">
           <label for="waitlist-email" style="font-size: 14px; color: #B7BCC7">Email for the GitHub waitlist</label>
           <div style="display: flex; gap: 8px; flex-wrap: wrap">
@@ -365,19 +495,21 @@ input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{o
   </section>
 
   <!-- FOOTER -->
-  <footer style="padding: 32px clamp(24px, 7vw, 112px) 48px; border-top: 1px solid #DCDDD6; display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; align-items: center; font-size: 14px; color: #5B6170">
+  <footer style="padding: 32px clamp(24px, 7vw, 112px) 48px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted)">
     <div style="display: flex; align-items: center; gap: 10px">
-      <svg width="22" height="22" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="7" fill="#12161F"></rect><line x1="9.5" y1="6" x2="9.5" y2="24" stroke="#C2410C" stroke-width="2.2"></line><line x1="14" y1="11" x2="23" y2="11" stroke="#F4F4F0" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="15.5" x2="21" y2="15.5" stroke="#F4F4F0" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="20" x2="19" y2="20" stroke="#F4F4F0" stroke-width="2.2" stroke-linecap="round"></line></svg>
+      <svg width="22" height="22" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="7" style="fill: var(--ink)"></rect><line x1="9.5" y1="6" x2="9.5" y2="24" stroke="#C2410C" stroke-width="2.2"></line><line x1="14" y1="11" x2="23" y2="11" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="15.5" x2="21" y2="15.5" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line><line x1="14" y1="20" x2="19" y2="20" style="stroke: var(--paper)" stroke-width="2.2" stroke-linecap="round"></line></svg>
       <span>© 2026 Mr. PR. Not affiliated with GitLab Inc. or GitHub, Inc.</span>
     </div>
     <nav aria-label="Footer" style="display: flex; flex-wrap: wrap; gap: 24px">
-      <a href="#docs" style="color: #3D4452; text-decoration: none">Docs</a>
-      <a href="#changelog" style="color: #3D4452; text-decoration: none">Changelog</a>
-      <a href="#privacy" style="color: #3D4452; text-decoration: none">Privacy</a>
-      <a href="#terms" style="color: #3D4452; text-decoration: none">Terms</a>
-      <a href="#contact" style="color: #3D4452; text-decoration: none">Contact</a>
+      <a href="#docs" style="color: var(--ink-2); text-decoration: none">Docs</a>
+      <a href="#changelog" style="color: var(--ink-2); text-decoration: none">Changelog</a>
+      <a href="#privacy" style="color: var(--ink-2); text-decoration: none">Privacy</a>
+      <a href="#terms" style="color: var(--ink-2); text-decoration: none">Terms</a>
+      <a href="#contact" style="color: var(--ink-2); text-decoration: none">Contact</a>
     </nav>
   </footer>
 </div>
+</div>
+<script src="/landing.js"></script>
 </body>
 </html>
