@@ -31,4 +31,15 @@ export interface DeltaTransport {
     body: string,
   ): Promise<DiscussionNote>
   setResolved(discussionId: string, resolved: boolean): Promise<Discussion>
+  /** Queue actions; only the GitLab-backed transport has them. */
+  approve?(): Promise<void>
+  unapprove?(): Promise<void>
+  /** A new MR-level discussion (request changes, nudge). */
+  postComment?(body: string): Promise<Discussion>
+  /** The diff from `from` to the MR's current head. */
+  getDiffsSince?(from: string, signal?: AbortSignal): Promise<DiffFile[]>
+  commitsSince?(sha: string): Promise<number>
+  /** The head you last reviewed in this browser, if any. */
+  lastLook?(): Promise<string | null>
+  markLooked?(headSha: string): Promise<void>
 }

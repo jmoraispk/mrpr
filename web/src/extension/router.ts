@@ -9,6 +9,14 @@ import {
 import { GitLabError } from '../gitlab/errors'
 import { listAuthored, listReviewRequested } from '../gitlab/mergeRequests'
 import { fetchQueueMrs, type QueueHost } from '../gitlab/queueFacts'
+import {
+  approve,
+  commitsSince,
+  diffsSince,
+  postComment,
+  unapprove,
+} from '../gitlab/reviewActions'
+import { withSignature } from '../gitlab/signature'
 import { pollAll } from '../inbox/poller'
 import {
   inboxView,
@@ -68,17 +76,34 @@ async function runReview(
       return getDiffs(client, project, iid)
     case 'getDiscussions':
       return getDiscussions(client, project, iid)
+    // Every comment Mr. PR posts is signed here, in one place.
     case 'createDiscussion': {
       const { body, ...selection } = payload as InlineCommentInput
-      return createInline(client, project, iid, selection, body)
+      return createInline(client, project, iid, selection, withSignature(body))
     }
     case 'replyToDiscussion': {
       const { discussionId, body } = payload as {
         discussionId: string
         body: string
       }
-      return reply(client, project, iid, discussionId, body)
+      return reply(client, project, iid, discussionId, withSignature(body))
     }
+    case 'postComment':
+      return postComment(client, project, iid, withSignature((payload as { body: string }).body))
+    case 'approve':
+      return approve(client, project, iid).then(() => null)
+    case 'unapprove':
+      return unapprove(client, project, iid).then(() => null)
+    case 'getDiffsSince': {
+      const { from } = payload as { from: string }
+      const mr = await getMergeRequest(client, project, iid)
+      if (!mr.sha) {
+        throw new RouterError(409, 'This merge request has no commits to compare', 'no_head')
+      }
+      return diffsSince(client, project, from, mr.sha)
+    }
+    case 'commitsSince':
+      return commitsSince(client, project, iid, (payload as { sha: string }).sha)
     case 'setResolved': {
       const { discussionId, resolved } = payload as {
         discussionId: string

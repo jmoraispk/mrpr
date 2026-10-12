@@ -116,3 +116,29 @@ test('createDiscussion flattens the selection and body', async () => {
     payload: { new_path: 'a.py', body: 'hi' },
   })
 })
+
+test('the last look is remembered per merge request', async () => {
+  const one = createRuntimeTransport(TARGET)
+  const other = createRuntimeTransport({ ...TARGET, iid: 43 })
+  await expect(one.lastLook!()).resolves.toBeNull()
+  await one.markLooked!('head-2')
+  await expect(one.lastLook!()).resolves.toBe('head-2')
+  await expect(other.lastLook!()).resolves.toBeNull()
+})
+
+test('approve is retried after a torn-down worker; a comment never is', async () => {
+  let calls = 0
+  reply = async () => {
+    calls += 1
+    if (calls === 1) throw new Error('The message port closed before a response was received.')
+    return { ok: true, data: null }
+  }
+  await expect(createRuntimeTransport(TARGET).approve!()).resolves.toBeUndefined()
+  expect(calls).toBe(2)
+
+  calls = 0
+  await expect(createRuntimeTransport(TARGET).postComment!('hi')).rejects.toMatchObject({
+    code: 'extension_unavailable',
+  })
+  expect(calls).toBe(1)
+})

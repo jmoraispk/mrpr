@@ -8,6 +8,11 @@ export type ReviewOp =
   | 'createDiscussion'
   | 'replyToDiscussion'
   | 'setResolved'
+  | 'approve'
+  | 'unapprove'
+  | 'postComment'
+  | 'getDiffsSince'
+  | 'commitsSince'
 
 export type HubOp =
   | 'listHosts'

@@ -11,6 +11,8 @@ export interface MergeRequest {
   state: string
   source_branch: string
   target_branch: string
+  /** The head commit; absent from the CLI's own API. */
+  sha?: string
 }
 
 export interface DiffFile {

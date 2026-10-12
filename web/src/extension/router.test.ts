@@ -276,3 +276,34 @@ test('listQueue returns each host’s MRs with facts, or its error', async () =>
     ],
   })
 })
+
+test('every comment Mr. PR posts is signed once', async () => {
+  fake.granted.add('https://gitlab.example.com/*')
+  const bodies: string[] = []
+  server.use(
+    http.post(`${BASE}/projects/p/merge_requests/1/discussions`, async ({ request }) => {
+      bodies.push(((await request.json()) as { body: string }).body)
+      return HttpResponse.json({ id: 'd', notes: [] })
+    }),
+    http.post(
+      `${BASE}/projects/p/merge_requests/1/discussions/d/notes`,
+      async ({ request }) => {
+        bodies.push(((await request.json()) as { body: string }).body)
+        return HttpResponse.json({ id: 2, body: '' })
+      },
+    ),
+  )
+  await handleMessage({
+    kind: 'delta/review',
+    op: 'postComment',
+    target: TARGET,
+    payload: { body: '@ana Requesting changes: x' },
+  })
+  await handleMessage({
+    kind: 'delta/review',
+    op: 'replyToDiscussion',
+    target: TARGET,
+    payload: { discussionId: 'd', body: 'ok' },
+  })
+  expect(bodies).toEqual(['@ana Requesting changes: x\n\n*— via Mr. PR*', 'ok\n\n*— via Mr. PR*'])
+})

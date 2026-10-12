@@ -10,6 +10,7 @@ import type {
 } from '../api/types'
 import type { DeltaResponse, ReviewOp } from '../extension/messages'
 import { platform } from '../platform/platform'
+import { lookKeyFor } from '../queue/model'
 import type { DeltaTransport, InlineCommentInput, ReviewTarget } from './types'
 
 /** Chrome and Firefox phrase a torn-down worker differently. */
@@ -34,7 +35,14 @@ const RETRYABLE: ReadonlySet<ReviewOp> = new Set<ReviewOp>([
   'getDiffs',
   'getDiscussions',
   'setResolved',
+  // Approving twice lands on the same state. postComment is never here: a
+  // repeated post would comment twice.
+  'approve',
+  'unapprove',
 ])
+
+const LAST_LOOK_KEY = 'lastLook'
+type LastLooks = Record<string, { headSha: string; at: string }>
 
 /**
  * One code for both paths — exhausted retry and refused retry — so the page
@@ -88,6 +96,9 @@ async function send<T>(
 }
 
 export function createRuntimeTransport(target: ReviewTarget): DeltaTransport {
+  const lookKey = lookKeyFor(target.hostId, target.project, target.iid)
+  const looks = async () =>
+    (await platform().store.get<LastLooks>(LAST_LOOK_KEY)) ?? {}
   return {
     targetKey: `${target.hostId}/${target.project}/${target.iid}`,
     getConfig: () => send<DeltaConfig>('getConfig', target),
@@ -103,5 +114,19 @@ export function createRuntimeTransport(target: ReviewTarget): DeltaTransport {
       }),
     setResolved: (discussionId, resolved) =>
       send<Discussion>('setResolved', target, { discussionId, resolved }),
+    approve: () => send<null>('approve', target).then(() => undefined),
+    unapprove: () => send<null>('unapprove', target).then(() => undefined),
+    postComment: (body: string) => send<Discussion>('postComment', target, { body }),
+    getDiffsSince: (from: string) => send<DiffFile[]>('getDiffsSince', target, { from }),
+    commitsSince: (sha: string) => send<number>('commitsSince', target, { sha }),
+    lastLook: async () => (await looks())[lookKey]?.headSha ?? null,
+    markLooked: async (headSha: string) => {
+      await platform().store.set({
+        [LAST_LOOK_KEY]: {
+          ...(await looks()),
+          [lookKey]: { headSha, at: new Date().toISOString() },
+        },
+      })
+    },
   }
 }
