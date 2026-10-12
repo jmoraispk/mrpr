@@ -33,9 +33,25 @@ export interface AppProps {
   focusNoteId?: number | null
   /** Open showing only what changed since your last review, when there was one. */
   startSince?: boolean
+  /** False inside the MR panel: no top bar, since toggle or Approve (the panel has them). */
+  chrome?: boolean
+  /**
+   * Set (even to null) when the parent owns the last look: the view then neither reads
+   * nor writes it, and shows the diff since this commit when it is one.
+   */
+  sinceFrom?: string | null
+  /** Start with inline comments shown, as the MR panel does. */
+  showCommentsInitially?: boolean
 }
 
-export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
+export function App({
+  focusNoteId = null,
+  startSince = false,
+  chrome = true,
+  sinceFrom,
+  showCommentsInitially = false,
+}: AppProps = {}) {
+  const managed = sinceFrom !== undefined
   const queryClient = useQueryClient()
   const transport = useTransport()
   const [requestedFileIndex, setRequestedFileIndex] = useState(0)
@@ -47,7 +63,7 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
   const [mode, setMode] = useState<DiffMode>(() =>
     localStorage.getItem(MODE_KEY) === 'split' ? 'split' : 'unified',
   )
-  const [showComments, setShowComments] = useState(false)
+  const [showComments, setShowComments] = useState(showCommentsInitially)
   const [inlineCount, setInlineCount] = useState(0)
   const [showGeneralDiscussions, setShowGeneralDiscussions] =
     useState(false)
@@ -75,9 +91,9 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
     queryFn: async () => (await transport.lastLook?.()) ?? null,
     staleTime: Infinity,
     refetchOnMount: 'always',
-    enabled: Boolean(transport.lastLook),
+    enabled: Boolean(transport.lastLook) && !managed,
   })
-  const lastLookReady = !transport.lastLook || lastLook.isFetchedAfterMount
+  const lastLookReady = managed || !transport.lastLook || lastLook.isFetchedAfterMount
   const [sinceChosen, setSince] = useState(startSince)
   // This visit's head, never a cached one from an earlier visit.
   const headSha = mergeRequest.isFetchedAfterMount ? mergeRequest.data?.sha : undefined
@@ -85,12 +101,16 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
   const sinceAvailable = Boolean(
     lastLook.data && transport.getDiffsSince && headSha && lastLook.data !== headSha,
   )
-  const sinceFrom = sinceChosen && sinceAvailable ? lastLook.data! : null
+  const diffSince = managed
+    ? (sinceFrom ?? null)
+    : sinceChosen && sinceAvailable
+      ? lastLook.data!
+      : null
   const diffs = useQuery({
-    queryKey: ['diffs', transport.targetKey, sinceFrom ?? 'all'],
+    queryKey: ['diffs', transport.targetKey, diffSince ?? 'all'],
     queryFn: ({ signal }) =>
-      sinceFrom
-        ? transport.getDiffsSince!(sinceFrom, signal)
+      diffSince
+        ? transport.getDiffsSince!(diffSince, signal)
         : transport.getDiffs(signal),
     // Toggling "since" swaps the file list in place, not behind a loading screen.
     placeholderData: keepPreviousData,
@@ -104,10 +124,10 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
   const [approveError, setApproveError] = useState<string | null>(null)
   const looked = useRef(false)
   useEffect(() => {
-    if (looked.current || !headSha || !transport.markLooked || !lastLookReady) return
+    if (managed || looked.current || !headSha || !transport.markLooked || !lastLookReady) return
     looked.current = true
     void transport.markLooked(headSha)
-  }, [headSha, transport, lastLookReady])
+  }, [managed, headSha, transport, lastLookReady])
   const discussions = useQuery({
     queryKey: discussionsQueryKey(transport.targetKey),
     queryFn: async ({ signal }) =>
@@ -274,6 +294,7 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
 
   return (
     <div className="app-shell">
+      {chrome ? (
       <header className="topbar">
         <a className="brand" href={mergeRequest.data.web_url}>
           <span className="brand-mark" aria-hidden="true" />
@@ -309,6 +330,7 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
           <span>{config.data.host}</span>
         </div>
       </header>
+      ) : null}
 
       <div className="review-workspace">
         <aside className="file-rail" aria-label="Changed files">
@@ -391,22 +413,22 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
               >
                 {updateState === 'updating' ? 'Updating…' : 'Update'}
               </button>
-              {sinceAvailable ? (
+              {chrome && !managed && sinceAvailable ? (
                 <button
                   className="review-since"
-                  aria-pressed={Boolean(sinceFrom)}
+                  aria-pressed={Boolean(diffSince)}
                   type="button"
                   onClick={() => setSince((value) => !value)}
                 >
-                  Since your last review
+                  Since last review
                 </button>
               ) : null}
-              {sinceFrom ? (
+              {chrome && diffSince ? (
                 <span className="update-status">
-                  Only what changed since your last review; switch back to comment inline.
+                  Only what changed since last review; switch back to comment inline.
                 </span>
               ) : null}
-              {transport.approve ? (
+              {chrome && transport.approve ? (
                 approved ? (
                   <span className="review-approved">Approved</span>
                 ) : (
@@ -509,7 +531,7 @@ export function App({ focusNoteId = null, startSince = false }: AppProps = {}) {
                 onActiveIndexChange={setRequestedFileIndex}
                 onInlineCountChange={setInlineCount}
                 onRequestShowComments={() => setShowComments(true)}
-                readOnly={Boolean(sinceFrom)}
+                readOnly={Boolean(diffSince)}
               />
             </Suspense>
           ) : (

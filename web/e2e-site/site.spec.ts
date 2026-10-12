@@ -287,7 +287,7 @@ test('d shows only what changed since your last review', async ({ page }) => {
   gitlab.state.reviewHead = 'head-2'
   await page.keyboard.press('d')
 
-  await expect(page.getByRole('button', { name: 'Since your last review' })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Since last review' })).toHaveAttribute(
     'aria-pressed',
     'true',
   )
