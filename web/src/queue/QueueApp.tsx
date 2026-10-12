@@ -17,6 +17,7 @@ import { NoticeBar } from './NoticeBar'
 import { QueueList } from './QueueList'
 import { focusNoteOf, markRowRead } from './readState'
 import { MrHeader, type HeaderRequest } from './mr/MrHeader'
+import { MrOverviewView } from './mr/MrOverview'
 import { MrPanel } from './mr/MrPanel'
 import { listHash, parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
 import { useProjects } from './state'
@@ -110,7 +111,7 @@ export function QueueApp() {
     )
   }
   const [headerRequest, setHeaderRequest] = useState<HeaderRequest | null>(null)
-  const [, setReplyTo] = useState<string | null>(null)
+  const [replyTo, setReplyTo] = useState<string | null>(null)
   // r, x, n and m start their action in the MR header, opening the MR first.
   const askHeader = (request: HeaderRequest) => {
     if (!current) return
@@ -377,7 +378,21 @@ export function QueueApp() {
                     />
                   )
                 }}
-                overview={(overview) => <p>{overview.description}</p>}
+                overview={(overview, previous) => {
+                  const project = openRow ? projectOf(openRow, projects) : null
+                  return (
+                    <MrOverviewView
+                      overview={overview}
+                      target={route.target}
+                      me={me}
+                      previous={previous}
+                      replyTo={replyTo}
+                      onReplied={() => setReplyTo(null)}
+                      projectName={project?.name ?? null}
+                      projectColor={project?.color ?? null}
+                    />
+                  )
+                }}
               />
             ) : null}
           </div>
