@@ -1,8 +1,30 @@
 # Hosting Mr. PR
 
-The site is static files: the landing page at `/` and the app at `/app/`.
-Each visitor signs in with GitLab and their browser talks to GitLab directly;
-the host never sees a token or a merge request.
+The site is the landing page at `/`, the app at `/app/`, and one small
+function, `/api/registry`. Each visitor signs in with GitLab and their browser
+talks to GitLab directly; the host never sees a token or a merge request.
+
+## How visitors sign in
+
+A visitor pastes a link to any merge request. Mr. PR reads the GitLab server
+from it and looks for that server's Application ID: first the servers built
+into this deployment, then the ones this browser has set up, then the shared
+directory (`/api/registry`).
+
+- **Known server:** straight to GitLab's Authorize screen.
+- **Unknown server:** the visitor is the first from their organisation. A
+  three-step, illustrated setup has them register Mr. PR on their own GitLab
+  and paste the Application ID. Once a sign-in with that ID works, it goes into
+  the directory, so the next person from that server signs in with one click.
+
+The directory stores only `server address → Application ID`, both public by
+design. No tokens, users or merge requests. The first working ID for a server
+wins; it can be replaced only by someone who knew the old one (the "Sign-in not
+working? Set it up again" link).
+
+The tutorial images in `web/site/public/tutorial/` are rendered from the raw
+screenshots in `docs/examples/` by `node web/scripts/annotate-tutorial.mjs`,
+with personal details blurred. Only the renders are published.
 
 ## Why the site needs an origin of its own
 
@@ -52,7 +74,17 @@ In the Vercel project: Settings → Environment Variables:
 Then Deployments → Redeploy. Vite reads these at build time, so a redeploy is
 needed after changing them.
 
-## 4. Connect mrpr.dev
+## 4. Connect the shared directory (Upstash Redis)
+
+Vercel project → Storage → Create Database → **Upstash for Redis** (the free
+plan is plenty) → connect it to this project. That sets `KV_REST_API_URL` and
+`KV_REST_API_TOKEN`; `web/api/registry.ts` also accepts
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`. Redeploy.
+
+Without it, everything still works: the directory answers "unknown", so every
+newcomer from an unknown server sees the setup.
+
+## 5. Connect mrpr.dev
 
 Vercel project → Settings → Domains → add `mrpr.dev`, and set the DNS records
 it shows. Add `https://mrpr.dev/app/` to the GitLab application's redirect URIs.

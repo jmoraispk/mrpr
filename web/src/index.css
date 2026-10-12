@@ -2102,7 +2102,8 @@ button.primary-action {
   gap: 10px;
 }
 
-.signin .signin-button {
+.signin .signin-button,
+.setup .signin-button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2118,11 +2119,13 @@ button.primary-action {
   cursor: pointer;
 }
 
-.signin .signin-button:hover {
+.signin .signin-button:hover,
+.setup .signin-button:hover {
   background: #a3370a;
 }
 
-.signin .signin-button:focus-visible {
+.signin .signin-button:focus-visible,
+.setup .signin-button:focus-visible {
   outline: 2px solid #1e4fd8;
   outline-offset: 2px;
 }
@@ -2228,6 +2231,7 @@ button.primary-action {
 .setup-form label { font-size: 14px; font-weight: 600; }
 .setup-form input {
   padding: 12px 14px; border: 1px solid #dcddd6; border-radius: 10px;
+  background: #fff; color: #12161f;
   font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px;
 }
 .setup .setup-back { display: block; margin: 28px auto 0; padding: 8px 14px; }
