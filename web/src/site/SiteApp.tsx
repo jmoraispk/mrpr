@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { HostConfig } from '../extension/hosts'
-import { Hub } from '../hub/Hub'
+import { QueueApp } from '../queue/QueueApp'
 import { hubRequest } from '../hub/api'
 import { lockedPoll, startPageSchedule } from '../inbox/pageSchedule'
 import { platform } from '../platform/platform'
@@ -14,7 +14,7 @@ import { SetupView } from './SetupView'
 
 function SignedIn() {
   useEffect(() => startPageSchedule({ poll: lockedPoll }), [])
-  return <Hub />
+  return <QueueApp />
 }
 
 /** The mark from the landing page: a ruled page with the margin line. */

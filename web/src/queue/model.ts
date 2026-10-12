@@ -51,6 +51,15 @@ export const BUCKET_ORDER: Bucket[] = [
   'done',
   'folded',
 ]
+export const BUCKET_LABELS: Record<Bucket, string> = {
+  'needs-you': 'Needs you',
+  'quick-wins': 'Quick wins',
+  returned: 'Returned to you',
+  waiting: 'Waiting on others',
+  done: 'Done',
+  folded: 'Folded',
+}
+
 const QUICK_WIN_LINES = 30
 const PENDING: ReadonlySet<string> = new Set(['UNREVIEWED', 'REVIEW_STARTED', 'UNAPPROVED'])
 const AGENT_LABEL = /agent|\bai\b|bot/i

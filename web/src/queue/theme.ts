@@ -15,17 +15,23 @@ export function applyTheme(theme: 'light' | 'dark'): void {
   document.documentElement.dataset.theme = theme
 }
 
+/** Null where the environment cannot say (no matchMedia): light by default. */
+function darkQuery(): MediaQueryList | null {
+  return typeof matchMedia === 'function' ? matchMedia(DARK_QUERY) : null
+}
+
 /** The site's light/dark preference: system by default, remembered per browser. */
 export function useTheme() {
   const [choice, setChoiceState] = useState<ThemeChoice>('system')
-  const [prefersDark, setPrefersDark] = useState(() => matchMedia(DARK_QUERY).matches)
+  const [prefersDark, setPrefersDark] = useState(() => darkQuery()?.matches ?? false)
   useEffect(() => {
     void platform()
       .store.get<ThemeChoice>(THEME_KEY)
       .then((stored) => {
         if (stored) setChoiceState(stored)
       })
-    const media = matchMedia(DARK_QUERY)
+    const media = darkQuery()
+    if (!media) return
     const onChange = (event: MediaQueryListEvent) => setPrefersDark(event.matches)
     media.addEventListener('change', onChange)
     return () => media.removeEventListener('change', onChange)
