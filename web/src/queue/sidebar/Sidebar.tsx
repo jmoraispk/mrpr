@@ -1,0 +1,220 @@
+import { useEffect, useRef, useState } from 'react'
+
+import { toggleTag } from '../listSettings'
+import { todaysBudget, type QueueRow } from '../model'
+import type { HeaderRequest } from '../mr/MrHeader'
+import { SORTS, SORT_LABELS, type ListFilters, type SortBy } from '../order'
+import { ProjectDialog } from '../ProjectDialog'
+import { moveRow } from '../projects'
+import { useProjects } from '../state'
+import { useTheme } from '../theme'
+import { MrGroup } from './MrGroup'
+import { MrRow } from './MrRow'
+import { RowPreview } from './RowPreview'
+import { TagBar } from './TagBar'
+import type { SidebarList } from './useSidebarList'
+
+export interface SidebarProps {
+  /** Every row, for the header and footer counts. */
+  rows: QueueRow[]
+  list: SidebarList
+  loading: boolean
+  /** Your username on a host. */
+  meFor: (hostId: string) => string
+  selectedKey: string | null
+  expandedKey: string | null
+  /** The row of the MR open on the right. */
+  openKey: string | null
+  onToggleRow: (row: QueueRow) => void
+  onOpenRow: (row: QueueRow) => void
+  onApprove: (row: QueueRow) => void
+  onSnooze: (row: QueueRow) => void
+  /** An action from the keyboard for the expanded row. */
+  previewRequest: HeaderRequest | null
+  onPreviewRequestHandled: () => void
+  /** Changes each time `/` asks for the search box. */
+  searchFocus: number
+}
+
+const FILTER_LABELS: [keyof ListFilters, string][] = [
+  ['needsMeOnly', 'Needs me only'],
+  ['hideDrafts', 'Hide drafts'],
+  ['showDone', 'Show done'],
+]
+
+/** Every MR, grouped by project, with the filters, sort and tag chips that order them. */
+export function Sidebar({
+  rows,
+  list,
+  loading,
+  meFor,
+  selectedKey,
+  expandedKey,
+  openKey,
+  onToggleRow,
+  onOpenRow,
+  onApprove,
+  onSnooze,
+  previewRequest,
+  onPreviewRequestHandled,
+  searchFocus,
+}: SidebarProps) {
+  const [projects, setProjects] = useProjects()
+  const theme = useTheme()
+  const [newProjectOpen, setNewProjectOpen] = useState(false)
+  const search = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (searchFocus) search.current?.focus()
+  }, [searchFocus])
+
+  const live = rows.filter((row) => !row.folded && !row.snoozed)
+  const needsYou = live.filter((row) => row.attention === 'needs-you').length
+  const hiddenDone = live.filter((row) => row.attention === 'done').length
+  const folded = rows.filter((row) => row.folded).length
+  const snoozed = rows.filter((row) => row.snoozed && !row.folded).length
+
+  let body
+  if (loading) body = <p className="sb-empty">Loading your queue…</p>
+  else if (list.groups.length > 0) {
+    body = list.groups.map((group) => (
+      <MrGroup
+        key={group.id}
+        group={group}
+        collapsed={list.collapsed.includes(group.id)}
+        onToggle={() => list.toggleGroup(group.id)}
+        onDropRow={(key) => setProjects(moveRow(projects, key, group.projectId))}
+      >
+        {group.rows.map((row) => (
+          <MrRow
+            key={row.key}
+            row={row}
+            order={list.order.tags}
+            selected={row.key === selectedKey}
+            expanded={row.key === expandedKey}
+            current={row.key === openKey}
+            onToggle={() => onToggleRow(row)}
+            onOpen={() => onOpenRow(row)}
+          >
+            <RowPreview
+              row={row}
+              me={meFor(row.hostId)}
+              order={list.order.tags}
+              onApprove={onApprove}
+              onSnooze={onSnooze}
+              onOpen={() => onOpenRow(row)}
+              request={previewRequest}
+              onRequestHandled={onPreviewRequestHandled}
+            />
+          </MrRow>
+        ))}
+      </MrGroup>
+    ))
+  } else if (list.narrowed) {
+    body = (
+      <p className="sb-empty">
+        No MRs match ·{' '}
+        <button type="button" onClick={list.clear}>
+          Clear filters
+        </button>
+      </p>
+    )
+  } else {
+    body = (
+      <p className="sb-empty">
+        Nothing waiting on you.
+        {!list.filters.showDone && hiddenDone ? (
+          <>
+            {' '}
+            <button type="button" onClick={() => list.setFilters({ ...list.filters, showDone: true })}>
+              Show {hiddenDone} done
+            </button>
+          </>
+        ) : null}
+      </p>
+    )
+  }
+
+  return (
+    <aside className="sb" aria-label="Merge requests">
+      <header className="sb-head">
+        <a className="q-brand" href="#/">
+          Mr. PR
+        </a>
+        <p className="sb-need">
+          {needsYou} need{needsYou === 1 ? 's' : ''} you
+        </p>
+        <p className="sb-budget">~{todaysBudget(rows)} min today</p>
+      </header>
+      <div className="sb-controls">
+        <input
+          ref={search}
+          type="search"
+          className="sb-search"
+          placeholder="Search MRs   /"
+          aria-label="Search MRs"
+          value={list.search}
+          onChange={(event) => list.setSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              list.setSearch('')
+              event.currentTarget.blur()
+            }
+          }}
+        />
+        <fieldset className="sb-filters">
+          <legend className="visually-hidden">Filters</legend>
+          {FILTER_LABELS.map(([key, label]) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={list.filters[key]}
+                onChange={(event) => list.setFilters({ ...list.filters, [key]: event.target.checked })}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
+        <label className="sb-sort">
+          Sort
+          <select
+            value={list.order.sortBy}
+            onChange={(event) => list.setOrder({ ...list.order, sortBy: event.target.value as SortBy })}
+          >
+            {SORTS.map((sort) => (
+              <option key={sort} value={sort}>
+                {SORT_LABELS[sort]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <TagBar
+          chips={list.chips}
+          onToggle={(kind) => list.setOrder(toggleTag(list.order, kind))}
+          onClear={() => list.setOrder({ ...list.order, tags: [] })}
+        />
+      </div>
+      <div className="sb-groups">{body}</div>
+      <footer className="sb-foot">
+        {folded ? (
+          <p className="q-folded">
+            {folded} bot MR{folded === 1 ? '' : 's'} folded away
+          </p>
+        ) : null}
+        <nav aria-label="More">
+          <a href="#/snoozed">Snoozed ({snoozed})</a>
+          <a href="#/settings">Settings</a>
+          <button
+            type="button"
+            onClick={() => theme.setChoice(theme.theme === 'dark' ? 'light' : 'dark')}
+          >
+            {theme.theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+          <button type="button" onClick={() => setNewProjectOpen((open) => !open)}>
+            + Project
+          </button>
+        </nav>
+        {newProjectOpen ? <ProjectDialog onClose={() => setNewProjectOpen(false)} /> : null}
+      </footer>
+    </aside>
+  )
+}
