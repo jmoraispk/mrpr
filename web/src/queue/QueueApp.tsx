@@ -163,12 +163,9 @@ export function QueueApp() {
           full: !now.full,
         })
       },
-      jump(bucket) {
-        window.location.hash = `#/bucket/${bucket}`
-      },
-      jumpProject() {
-        document.querySelector<HTMLElement>('nav[aria-label="Projects"] a')?.focus()
-      },
+      toggle() {},
+      search() {},
+      sidebar() {},
       help: () => setHelpOpen((value) => !value),
       approve: () => current && actions.approve(current),
       snooze: () => current && actions.snooze(current),

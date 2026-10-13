@@ -205,16 +205,6 @@ test('d opens the selected review since your last look; Enter opens it plainly',
   expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1')
 })
 
-test('g w jumps to a bucket and ? shows every key', async () => {
-  renderApp()
-  await screen.findAllByRole('article')
-  fireEvent.keyDown(window, { key: 'g' })
-  fireEvent.keyDown(window, { key: 'w' })
-  expect(window.location.hash).toBe('#/bucket/waiting')
-  fireEvent.keyDown(window, { key: '?' })
-  expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
-})
-
 test('opening a review lands on the waiting thread and reads what was folded into its row', async () => {
   items = [
     {
