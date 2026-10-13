@@ -1,5 +1,6 @@
 import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
 import type { InboxItem } from '../inbox/types'
+import { attentionOf, type Attention, type Tag } from './tags'
 
 export type Bucket = 'needs-you' | 'quick-wins' | 'returned' | 'waiting' | 'done' | 'folded'
 
@@ -29,6 +30,13 @@ export interface QueueRow {
   bucket: Bucket
   score: number
   badges: Badge[]
+  /** Everything that applies, in no particular order; `visibleTags` orders them for display. */
+  tags: Tag[]
+  attention: Attention
+  /** Bot-authored: never listed, only counted. */
+  folded: boolean
+  /** Review time estimate from the diff size; 0 without facts. */
+  minutes: number
   items: InboxItem[]
   snoozed: boolean
 }
@@ -112,9 +120,6 @@ function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, 
   } else bucket = 'done'
 
   const needsYou = bucket === 'needs-you' || bucket === 'quick-wins'
-  // Who is blocked still ranks the row; it is no longer shown as a badge.
-  const blocking =
-    1 + mr.reviewers.filter((r) => r.username !== me && r.state === 'APPROVED').length
   if (forMe.length) badges.push({ kind: 'threads-waiting', count: threadCount(forMe) })
   if (commits > 0) badges.push({ kind: 'commits-since', count: commits })
   if (bucket === 'returned' && mine?.state === 'REQUESTED_CHANGES' && commits > 0) {
@@ -131,7 +136,39 @@ function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, 
   if (mr.draft) badges.push({ kind: 'draft' })
   if (mr.labels.some((label) => AGENT_LABEL.test(label))) badges.push({ kind: 'ai-authored' })
   badges.push(sizeBadge(lines))
-  return { bucket, badges, blocking: needsYou ? blocking : 0 }
+  const minutes = Math.max(1, Math.round(lines / 25))
+  const pending = Boolean(mine && PENDING.has(mine.state))
+  const needsReview = pending || unread.some((item) => item.kind === 'review_requested')
+  // Strict: your approval is the last one missing. GitLab's approval rules may
+  // not count yours, so this is a best guess.
+  const blocking =
+    pending && !mr.draft && mr.approvalsLeft === 1
+      ? 1 + mr.reviewers.filter((r) => r.username !== me && r.state === 'APPROVED').length
+      : 0
+  const tags: Tag[] = []
+  if (blocking) tags.push({ kind: 'blocking', people: blocking })
+  if (needsReview) tags.push({ kind: 'needs-review' })
+  if (forMe.length) tags.push({ kind: 'reply-waiting', count: threadCount(forMe) })
+  if (commits > 0) tags.push({ kind: 'new-commits', count: commits })
+  if (mine?.state === 'REQUESTED_CHANGES' && commits > 0) tags.push({ kind: 'changes-addressed' })
+  if (
+    isAuthor &&
+    (mr.reviewers.some((r) => r.state === 'REQUESTED_CHANGES') || comments.length > 0)
+  ) {
+    tags.push({ kind: 'returned' })
+  }
+  if (isAuthor && (mr.approvalsLeft > 0 || mr.reviewers.some((r) => PENDING.has(r.state)))) {
+    const names = mr.reviewers.filter((r) => PENDING.has(r.state)).map((r) => r.name)
+    const days = Math.floor((now - Date.parse(mr.createdAt)) / (24 * HOUR))
+    tags.push({ kind: 'waiting-on', names, days: Math.max(0, days) })
+  }
+  if (needsReview && lines <= QUICK_WIN_LINES) tags.push({ kind: 'quick-win', minutes })
+  // A failed pipeline matters only where it blocks a merge you own or must review.
+  if (mr.pipeline === 'FAILED' && (isAuthor || needsReview)) tags.push({ kind: 'pipeline-failed' })
+  if (isAuthor && mr.needsRebase) tags.push({ kind: 'needs-rebase' })
+  if (mr.draft) tags.push({ kind: 'draft' })
+  if (mr.labels.some((label) => AGENT_LABEL.test(label))) tags.push({ kind: 'ai-authored' })
+  return { bucket, badges, blocking, tags, minutes }
 }
 
 /** Where an MR with no facts goes, by what its unread inbox items say. */
@@ -139,6 +176,16 @@ function orphanBucket(items: InboxItem[]): Bucket {
   if (items.some((item) => isForMe(item) || item.kind === 'review_requested')) return 'needs-you'
   if (items.some((item) => item.kind === 'comment')) return 'returned'
   return 'done'
+}
+
+/** What an MR with no facts asks of you, by what its unread inbox items say. */
+function orphanTags(items: InboxItem[]): Tag[] {
+  const tags: Tag[] = []
+  const forMe = items.filter(isForMe)
+  if (items.some((item) => item.kind === 'review_requested')) tags.push({ kind: 'needs-review' })
+  if (forMe.length) tags.push({ kind: 'reply-waiting', count: threadCount(forMe) })
+  if (items.some((item) => item.kind === 'comment')) tags.push({ kind: 'returned' })
+  return tags
 }
 
 export function buildQueue(input: QueueInput): QueueRow[] {
@@ -153,10 +200,16 @@ export function buildQueue(input: QueueInput): QueueRow[] {
       const key = rowKey(host.hostId, mr.id)
       const items = hostItems.filter((item) => item.mrId === mr.id)
       const commits = input.commitsSince[key] ?? 0
-      const { bucket, badges, blocking } = classify(mr, host.username, items, commits, now)
+      const { bucket, badges, blocking, tags, minutes } = classify(
+        mr,
+        host.username,
+        items,
+        commits,
+        now,
+      )
       const ageHours = (now - Date.parse(mr.createdAt)) / HOUR
-      const score =
-        blocking * 10 + ageHours / 6 + (bucket === 'quick-wins' ? 5 : 0) - (mr.draft ? 20 : 0)
+      const quickWin = tags.some((tag) => tag.kind === 'quick-win')
+      const score = blocking * 10 + ageHours / 6 + (quickWin ? 5 : 0) - (mr.draft ? 20 : 0)
       rows.push({
         key,
         hostId: host.hostId,
@@ -170,6 +223,10 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         bucket,
         score,
         badges,
+        tags,
+        attention: attentionOf(tags),
+        folded: mr.author.bot,
+        minutes,
         items,
         snoozed: input.snoozed[key] === mr.updatedAt,
       })
@@ -184,6 +241,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
       const first = items[0]
       const key = rowKey(host.hostId, mrId)
       const forMe = items.filter(isForMe)
+      const tags = orphanTags(items)
       rows.push({
         key,
         hostId: host.hostId,
@@ -197,6 +255,10 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         bucket: orphanBucket(items),
         score: 0,
         badges: forMe.length ? [{ kind: 'threads-waiting', count: threadCount(forMe) }] : [],
+        tags,
+        attention: attentionOf(tags),
+        folded: false,
+        minutes: 0,
         items,
         snoozed: input.snoozed[key] === first.createdAt,
       })
@@ -218,10 +280,7 @@ export function bucketCounts(rows: QueueRow[]): Record<Bucket, number> {
 
 /** Minutes of review waiting on you today: the size estimates of what needs you. */
 export function todaysBudget(rows: QueueRow[]): number {
-  let minutes = 0
-  for (const row of rows) {
-    if (row.snoozed || (row.bucket !== 'needs-you' && row.bucket !== 'quick-wins')) continue
-    for (const badge of row.badges) if (badge.kind === 'size') minutes += badge.minutes
-  }
-  return minutes
+  return rows
+    .filter((row) => !row.snoozed && !row.folded && row.attention === 'needs-you')
+    .reduce((sum, row) => sum + row.minutes, 0)
 }

@@ -440,6 +440,10 @@ function rowFromOverview(overview: MrOverview, target: ReviewTarget): QueueRow {
     bucket: 'done',
     score: 0,
     badges: [],
+    tags: [],
+    attention: 'done',
+    folded: false,
+    minutes: 0,
     items: [],
     snoozed: false,
   }

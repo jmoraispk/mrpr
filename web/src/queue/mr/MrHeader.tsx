@@ -5,7 +5,7 @@ import type { MrOverview } from '../../gitlab/mrOverview'
 import { relativeTime } from '../../hub/relativeTime'
 import { createRuntimeTransport } from '../../transport/runtime'
 import type { ReviewTarget } from '../../transport/types'
-import { Badges } from '../Badges'
+import { TagList } from '../TagList'
 import { nudgeText, requestChangesText } from '../commentText'
 import { Composer } from '../Composer'
 import type { QueueRow } from '../model'
@@ -70,7 +70,9 @@ export function MrHeader({
     .map((reviewer) => reviewer.username)
   const canNudge =
     waitingReviewers.length > 0 &&
-    (row ? row.bucket === 'waiting' : Boolean(overview && overview.approvalsLeft > 0))
+    (row
+      ? row.tags.some((tag) => tag.kind === 'waiting-on')
+      : Boolean(overview && overview.approvalsLeft > 0))
 
   async function comment(body: string) {
     await transport.postComment!(body)
@@ -114,7 +116,7 @@ export function MrHeader({
           </>
         ) : null}
       </p>
-      {row ? <Badges badges={row.badges} bucket={row.bucket} /> : null}
+      {row ? <TagList tags={row.tags} /> : null}
       <div className="mr-actions">
         <button type="button" className="q-primary" onClick={onApprove}>
           Approve

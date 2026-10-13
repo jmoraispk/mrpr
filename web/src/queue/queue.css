@@ -240,3 +240,13 @@
   cursor: pointer;
 }
 .q-notice button[aria-label='Dismiss'] { border: 0; background: none; color: var(--muted); font-size: 18px; }
+
+/* Tags: what an MR asks of you. */
+.q-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.q-tag { padding: 1px 7px; border-radius: 99px; background: var(--soft); color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+.q-tag.is-blocking { background: var(--ink); color: var(--paper); font-weight: 500; }
+.q-tag.is-new-commits, .q-tag.is-pipeline-failed { background: var(--warm-bg); color: var(--warm-ink); font-weight: 500; }
+.q-tag.is-changes-addressed, .q-tag.is-reply-waiting { border: 1px solid var(--ink); background: transparent; color: var(--ink); font-weight: 500; }
+.q-tag.is-quick-win { background: var(--ok-bg); color: var(--ok-ink); }
+.q-tag.is-ai-authored { border: 1px solid var(--ai-line); background: var(--ai-bg); color: var(--ai-ink); }
+.q-tag.is-more { background: transparent; color: var(--muted); }
