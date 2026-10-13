@@ -7,7 +7,7 @@ import { useInbox } from '../hub/useInbox'
 import { INBOX_KEY } from '../inbox/store'
 import { platform } from '../platform/platform'
 import { createRuntimeTransport } from '../transport/runtime'
-import { buildQueue, bucketCounts, lookKeyFor, rowKey } from './model'
+import { buildQueue, lookKeyFor, rowKey } from './model'
 import { useLastLook, useSnoozed } from './state'
 
 export const QUEUE_QUERY_KEY = ['queue'] as const
@@ -77,7 +77,6 @@ export function useQueue() {
   )
   return {
     rows,
-    counts: bucketCounts(rows),
     hosts,
     inbox: inbox.data,
     isLoading: facts.isLoading,
