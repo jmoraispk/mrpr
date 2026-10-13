@@ -236,3 +236,18 @@ test('tags: an MR without facts is tagged by its unread items', () => {
   expect(byIid(rows, 7).tags).toEqual([{ kind: 'returned' }])
   expect(byIid(rows, 6)).toMatchObject({ tags: [], attention: 'done' })
 })
+
+test('tags: your own pushes are not new commits for you', () => {
+  const [row] = run(
+    [
+      mr(1, {
+        roles: ['author'],
+        author: me,
+        reviewers: [{ username: 'john', name: 'John', state: 'UNREVIEWED' }],
+      }),
+    ],
+    { commitsSince: { [rowKey(H, 1)]: 3 } },
+  )
+  expect(kinds(row)).not.toContain('new-commits')
+  expect(row.attention).toBe('waiting')
+})

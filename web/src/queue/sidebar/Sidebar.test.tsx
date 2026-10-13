@@ -99,6 +99,8 @@ function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) =
       previewRequest={null}
       onPreviewRequestHandled={() => {}}
       searchFocus={0}
+      onSearchFocused={() => {}}
+      onSearchDone={() => {}}
     />
   )
 }
@@ -244,4 +246,36 @@ test('nothing at all, and nothing but done', async () => {
   show(rowsOf([MRS[4]]))
   await user.click(screen.getByRole('button', { name: 'Show 1 done' }))
   expect(titles()).toEqual(['Already approved'])
+})
+
+test('a double-click opens the row it started on, even when the list moves under the pointer', () => {
+  const { onOpen } = show()
+  fireEvent.click(rowNamed('Retry budget'), { detail: 1 })
+  fireEvent.click(rowNamed('Fix flaky test'), { detail: 1 })
+  // Folding the row above moved the list: the second click lands on another row.
+  fireEvent.click(rowNamed('Port billing'), { detail: 2 })
+  fireEvent.dblClick(rowNamed('Port billing'))
+  expect(onOpen).toHaveBeenCalledOnce()
+  expect(onOpen.mock.calls[0][0]).toMatchObject({ iid: 2 })
+})
+
+test('a double-click whose second click lands in the row’s own new preview still opens it', () => {
+  const { onOpen } = show()
+  fireEvent.click(rowNamed('Fix flaky test'), { detail: 1 })
+  const preview = rowNamed('Fix flaky test').querySelector('.sb-preview')!
+  fireEvent.click(preview, { detail: 2 })
+  fireEvent.dblClick(preview)
+  expect(onOpen).toHaveBeenCalledOnce()
+  expect(onOpen.mock.calls[0][0]).toMatchObject({ iid: 2 })
+})
+
+test('double-clicking a word in a reply box opens nothing', async () => {
+  const user = userEvent.setup()
+  const { onOpen } = show()
+  await user.click(rowNamed('Retry budget'))
+  await user.click(within(rowNamed('Retry budget')).getByRole('button', { name: 'Request changes' }))
+  const box = within(rowNamed('Retry budget')).getByRole('textbox', { name: 'Request changes' })
+  fireEvent.click(box, { detail: 1 })
+  fireEvent.click(box, { detail: 2 })
+  expect(onOpen).not.toHaveBeenCalled()
 })

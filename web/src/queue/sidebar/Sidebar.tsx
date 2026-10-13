@@ -32,9 +32,14 @@ export interface SidebarProps {
   /** An action from the keyboard for the expanded row. */
   previewRequest: HeaderRequest | null
   onPreviewRequestHandled: () => void
-  /** Changes each time `/` asks for the search box. */
+  /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
+  onSearchFocused: () => void
+  /** Enter or ↓ in the search box: on to the results. */
+  onSearchDone: () => void
 }
+
+const DOUBLE_CLICK_MS = 600
 
 const FILTER_LABELS: [keyof ListFilters, string][] = [
   ['needsMeOnly', 'Needs me only'],
@@ -58,13 +63,20 @@ export function Sidebar({
   previewRequest,
   onPreviewRequestHandled,
   searchFocus,
+  onSearchFocused,
+  onSearchDone,
 }: SidebarProps) {
   const [projects, setProjects] = useProjects()
   const theme = useTheme()
   const [newProjectOpen, setNewProjectOpen] = useState(false)
   const search = useRef<HTMLInputElement>(null)
+  const firstClick = useRef<{ key: string; at: number } | null>(null)
+  // Focus once per ask: the sidebar mounting again (after full screen, or b) must not take it.
   useEffect(() => {
-    if (searchFocus) search.current?.focus()
+    if (!searchFocus) return
+    search.current?.focus()
+    onSearchFocused()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchFocus])
 
   const live = rows.filter((row) => !row.folded && !row.snoozed)
@@ -92,8 +104,10 @@ export function Sidebar({
             selected={row.key === selectedKey}
             expanded={row.key === expandedKey}
             current={row.key === openKey}
-            onToggle={() => onToggleRow(row)}
-            onOpen={() => onOpenRow(row)}
+            onToggle={(at) => {
+              firstClick.current = { key: row.key, at }
+              onToggleRow(row)
+            }}
           >
             <RowPreview
               row={row}
@@ -155,6 +169,11 @@ export function Sidebar({
           value={list.search}
           onChange={(event) => list.setSearch(event.target.value)}
           onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === 'ArrowDown') {
+              event.preventDefault()
+              event.currentTarget.blur()
+              onSearchDone()
+            }
             if (event.key === 'Escape') {
               list.setSearch('')
               event.currentTarget.blur()
@@ -193,7 +212,21 @@ export function Sidebar({
           onClear={() => list.setOrder({ ...list.order, tags: [] })}
         />
       </div>
-      <div className="sb-groups">{body}</div>
+      <div
+        className="sb-groups"
+        onClickCapture={(event) => {
+          // The first click folds and expands rows, so the list can move under
+          // the pointer: the second click opens the row the first one picked.
+          const first = firstClick.current
+          firstClick.current = null
+          if (event.detail < 2 || !first || event.timeStamp - first.at > DOUBLE_CLICK_MS) return
+          event.stopPropagation()
+          const row = list.groups.flatMap((group) => group.rows).find((r) => r.key === first.key)
+          if (row) onOpenRow(row)
+        }}
+      >
+        {body}
+      </div>
       <footer className="sb-foot">
         {folded ? (
           <p className="q-folded">

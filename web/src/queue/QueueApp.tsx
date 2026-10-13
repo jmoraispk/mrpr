@@ -76,17 +76,22 @@ export function QueueApp() {
     if (openKey) setSelected(openRowKey)
   }, [openKey, openRowKey])
 
-  // What keys act on: the selected row while the list shows it or it is the
-  // open MR; with nothing selected and nothing open, the first row.
+  const full = route.name === 'review' && route.full
+  const showSidebar = sidebar.open && !full
+  // What keys act on: with the sidebar hidden, the MR on screen. Otherwise the
+  // selected row while the list shows it or it is the open MR; with nothing
+  // selected and nothing open, the first row.
   const listed = new Set(list.flat.map((row) => row.key))
   const selectedRow = selected ? (queue.rows.find((row) => row.key === selected) ?? null) : null
-  const current = selectedRow
-    ? listed.has(selectedRow.key) || selectedRow.key === openRowKey
-      ? selectedRow
-      : null
-    : openTarget
-      ? null
-      : (list.flat[0] ?? null)
+  const current = !showSidebar
+    ? openRow
+    : selectedRow
+      ? listed.has(selectedRow.key) || selectedRow.key === openRowKey
+        ? selectedRow
+        : null
+      : openTarget
+        ? null
+        : (list.flat[0] ?? null)
   // Where the selected row sat, so j/k carry on from there once it leaves.
   const anchor = useRef<{ key: string; index: number } | null>(null)
   useEffect(() => {
@@ -122,14 +127,13 @@ export function QueueApp() {
     setExpanded(current.key)
     setPreviewRequest(request)
   }
-  const full = route.name === 'review' && route.full
-  const showSidebar = sidebar.open && !full
 
   useQueueKeys(
     {
       move(delta) {
         const rows = list.flat
-        if (!rows.length) return
+        // With the sidebar hidden there is no selection to see: j and k open the next MR.
+        if (!rows.length || (!showSidebar && !openTarget)) return
         const index = current ? rows.indexOf(current) : -1
         const last = rows.length - 1
         const left = index < 0 && anchor.current?.key === selected ? anchor.current : null
@@ -140,9 +144,10 @@ export function QueueApp() {
               ? // The rows after it moved up into its place.
                 rows[delta > 0 ? Math.min(left.index, last) : Math.max(left.index - 1, 0)]
               : rows[0]
-        setSelected(next.key)
+        if (showSidebar) setSelected(next.key)
+        else open(next)
       },
-      toggle: () => current && toggle(current),
+      toggle: () => showSidebar && current && toggle(current),
       open: () => current && open(current),
       diffSince: () => current && open(current, 'since'),
       // Escape, f and b read the address as it is now: a second key can land
@@ -213,7 +218,9 @@ export function QueueApp() {
 
   return (
     <div
-      className={`q-shell${showSidebar ? '' : ' is-sidebar-hidden'}${openTarget ? ' has-mr' : ''}`}
+      className={`q-shell${showSidebar ? '' : ' is-sidebar-hidden'}${openTarget ? ' has-mr' : ''}${
+        route.name === 'settings' || route.name === 'snoozed' ? ' has-page' : ''
+      }`}
     >
       {showSidebar ? (
         <Sidebar
@@ -225,15 +232,29 @@ export function QueueApp() {
           expandedKey={expanded}
           openKey={openRowKey}
           onToggleRow={toggle}
-          onOpenRow={(row) => open(row)}
+          onOpenRow={(row) => {
+            // A double-click leaves its row expanded, whatever its first click did.
+            setExpanded(row.key)
+            open(row)
+          }}
           onApprove={actions.approve}
           onSnooze={actions.snooze}
           previewRequest={previewRequest}
           onPreviewRequestHandled={() => setPreviewRequest(null)}
           searchFocus={searchFocus}
+          onSearchFocused={() => setSearchFocus(0)}
+          onSearchDone={() => {
+            if (list.flat[0]) setSelected(list.flat[0].key)
+          }}
         />
       ) : null}
       <main className="q-main-area">
+        {route.name === 'queue' ? null : (
+          // Narrow windows have no sidebar beside a page: this is the way back.
+          <a className="q-back" href="#/">
+            ← MRs
+          </a>
+        )}
         <NoticeBar notice={actions.notice} onUndo={actions.undo} onDismiss={actions.dismiss} />
         {[...errors.entries()].map(([hostId, error]) => (
           <p key={hostId} className="hub-error">

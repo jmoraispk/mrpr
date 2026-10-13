@@ -149,6 +149,7 @@
 .q-tag.is-more { background: transparent; color: var(--muted); }
 
 .q-shell.is-sidebar-hidden { grid-template-columns: minmax(0, 1fr); }
+.q-back { display: none; }
 
 /* The right panel with nothing open, and the Snoozed page. */
 .q-welcome { display: grid; min-height: 60vh; place-content: center; gap: 8px; color: var(--ink-2); text-align: center; }
@@ -167,5 +168,7 @@
 @media (max-width: 899px) {
   .q-shell { grid-template-columns: minmax(0, 1fr); }
   .q-shell .sb { position: fixed; inset: 0 auto 0 0; z-index: 5; width: min(360px, 100vw); }
-  .q-shell.has-mr .sb { display: none; }
+  .q-shell.has-mr .sb,
+  .q-shell.has-page .sb { display: none; }
+  .q-back { display: inline-block; margin: 12px 20px 0; color: var(--ink-2); font-size: 14px; }
 }

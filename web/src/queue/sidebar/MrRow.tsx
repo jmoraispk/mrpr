@@ -6,8 +6,8 @@ import { TagList } from '../TagList'
 import type { TagKind } from '../tags'
 
 /**
- * One MR: title, three tags, a grey line. A click expands it in place (the
- * second click of a double-click is ignored); a double-click opens it.
+ * One MR: title, three tags, a grey line. A click expands it in place; the
+ * sidebar opens it on the second click of a double-click.
  */
 export function MrRow({
   row,
@@ -16,7 +16,6 @@ export function MrRow({
   expanded,
   current,
   onToggle,
-  onOpen,
   children,
 }: {
   row: QueueRow
@@ -25,8 +24,8 @@ export function MrRow({
   expanded: boolean
   /** The MR open on the right. */
   current: boolean
-  onToggle: () => void
-  onOpen: () => void
+  /** A first click, with when it happened; the sidebar opens the row on the second. */
+  onToggle: (at: number) => void
   /** The expanded part. */
   children: ReactNode
 }) {
@@ -46,9 +45,8 @@ export function MrRow({
       draggable={!expanded}
       onDragStart={(event) => event.dataTransfer.setData('text/mrpr-row', row.key)}
       onClick={(event) => {
-        if (event.detail < 2) onToggle()
+        if (event.detail < 2) onToggle(event.timeStamp)
       }}
-      onDoubleClick={onOpen}
     >
       <h3 className="sb-title">
         {unread ? <span className="sb-unread" aria-label="Unread" /> : null}

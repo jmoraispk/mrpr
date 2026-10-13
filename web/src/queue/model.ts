@@ -73,7 +73,8 @@ function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, 
   if (blocking) tags.push({ kind: 'blocking', people: blocking })
   if (needsReview) tags.push({ kind: 'needs-review' })
   if (forMe.length) tags.push({ kind: 'reply-waiting', count: threadCount(forMe) })
-  if (commits > 0) tags.push({ kind: 'new-commits', count: commits })
+  // Commits matter to a reviewer; on your own MR they are your own pushes.
+  if (mine && commits > 0) tags.push({ kind: 'new-commits', count: commits })
   if (mine?.state === 'REQUESTED_CHANGES' && commits > 0) tags.push({ kind: 'changes-addressed' })
   if (
     isAuthor &&

@@ -587,3 +587,50 @@ test('in full screen, Escape leaves full screen even with a row expanded behind 
   fireEvent.keyDown(window, { key: 'Escape' })
   await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2'))
 })
+
+test('with the sidebar hidden, j opens the next MR and keys act on the one on screen', async () => {
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1/full'
+  renderApp()
+  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  await screen.findAllByRole('article').catch(() => undefined)
+  fireEvent.keyDown(window, { key: 'j' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2/full'))
+  await screen.findByRole('region', { name: 'Fix flaky test' })
+  fireEvent.keyDown(window, { key: 'a' })
+  expect(await screen.findByRole('status')).toHaveTextContent('Approved Fix flaky test')
+})
+
+test('the search box takes focus only when asked, not each time the sidebar comes back', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: '/' })
+  await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search MRs' })).toHaveFocus())
+  fireEvent.keyDown(screen.getByRole('searchbox', { name: 'Search MRs' }), { key: 'Escape' })
+  fireEvent.keyDown(window, { key: 'b' })
+  await waitFor(() => expect(sidebar()).toBeNull())
+  fireEvent.keyDown(window, { key: 'b' })
+  await waitFor(() => expect(sidebar()).toBeInTheDocument())
+  expect(screen.getByRole('searchbox', { name: 'Search MRs' })).not.toHaveFocus()
+})
+
+test('Enter in the search box keeps the search and selects the first match', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: '/' })
+  const box = screen.getByRole('searchbox', { name: 'Search MRs' })
+  await waitFor(() => expect(box).toHaveFocus())
+  await user.type(box, 'flaky{Enter}')
+  expect(box).not.toHaveFocus()
+  expect(box).toHaveValue('flaky')
+  expect(selectedText()).toContain('Fix flaky test')
+  fireEvent.keyDown(window, { key: 'a' })
+  expect(await screen.findByRole('status')).toHaveTextContent('Approved Fix flaky test')
+})
+
+test('Settings and Snoozed are pages of their own, with a way back to the MRs', async () => {
+  window.location.hash = '#/settings'
+  renderApp()
+  await waitFor(() => expect(document.querySelector('.q-shell')).toHaveClass('has-page'))
+  expect(screen.getByRole('link', { name: '← MRs' })).toHaveAttribute('href', '#/')
+})
