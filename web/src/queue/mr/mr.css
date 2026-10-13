@@ -1,21 +1,4 @@
-/* The MR beside the queue (split view), in the landing tokens. */
-.q-shell.has-panel { grid-template-columns: 1fr; }
-.q-shell.has-panel .q-sidebar { display: none; }
-.q-split { display: grid; grid-template-columns: minmax(0, 1fr); }
-.q-split.has-panel { grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); min-height: 100vh; }
-.q-split.has-panel .q-list-pane { max-height: 100vh; overflow-y: auto; border-right: 1px solid var(--line-2); }
-.q-split.is-full { grid-template-columns: minmax(0, 1fr); }
-.q-split.is-full .q-list-pane { display: none; }
-
-/* One-line rows beside an open MR: title, ref and the first badge. */
-.q-row.is-compact { gap: 10px; padding: 10px 14px; }
-.q-row.is-compact .q-title { font-size: 14px; }
-.q-row.is-compact .q-age,
-.q-row.is-compact .q-project,
-.q-row.is-compact .q-by,
-.q-row.is-compact .q-stats,
-.q-row.is-compact .q-badge:not(:first-child) { display: none; }
-
+/* The open MR, right of the sidebar, in the landing tokens. */
 .mr-panel { display: flex; min-width: 0; height: 100vh; flex-direction: column; background: var(--surface); }
 .mr-panel-top { flex: none; padding: 14px 20px 0; border-bottom: 1px solid var(--line-2); background: var(--surface); }
 .mr-tabs { display: flex; gap: 18px; margin-top: 10px; }
@@ -28,11 +11,6 @@
 .mr-error p { margin: 0 0 8px; }
 .mr-title { margin: 0; color: var(--ink); font: 600 18px/1.3 var(--font-body); }
 
-/* Narrow windows: the MR takes the whole width. */
-@media (max-width: 999px) {
-  .q-split.has-panel { grid-template-columns: minmax(0, 1fr); }
-  .q-split.has-panel .q-list-pane { display: none; }
-}
 
 /* The header: title, who wants to merge what, and the actions. */
 .mr-header { padding-bottom: 4px; }
