@@ -575,3 +575,15 @@ test('nothing open: the right says how to open an MR; an old bucket link lands h
   expect(screen.getByText('Double-click an MR to open it.')).toBeInTheDocument()
   expect(screen.getAllByRole('article')).toHaveLength(3)
 })
+
+test('in full screen, Escape leaves full screen even with a row expanded behind it', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.dblClick(rowNamed('Fix flaky test'))
+  await screen.findByRole('region', { name: 'Fix flaky test' })
+  fireEvent.keyDown(window, { key: 'f' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2/full'))
+  fireEvent.keyDown(window, { key: 'Escape' })
+  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2'))
+})

@@ -148,11 +148,13 @@ export function QueueApp() {
       // Escape, f and b read the address as it is now: a second key can land
       // before the screen has caught up with the first.
       close() {
-        if (expanded) {
+        const now = parseSiteRoute(window.location.hash)
+        // A row expanded in a hidden sidebar is not on screen: Escape is for what is.
+        const sidebarShown = sidebar.open && !(now.name === 'review' && now.full)
+        if (expanded && sidebarShown) {
           setExpanded(null)
           return
         }
-        const now = parseSiteRoute(window.location.hash)
         if (now.name !== 'review') return
         window.location.hash = now.full
           ? reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
