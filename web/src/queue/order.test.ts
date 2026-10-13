@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 
 import type { QueueMr } from '../gitlab/queueFacts'
 import type { QueueRow } from './model'
-import { filterRows, groupRows, repoGroupId, sortRows, tagChips, type ListFilters } from './order'
+import { filterRows, groupRows, repoGroupId, sortRows, tagChips, type ListFilters, type ListOrder } from './order'
 import type { Project } from './projects'
 
 function facts(over: Partial<QueueMr> = {}): QueueMr {
@@ -40,7 +40,7 @@ function row(n: number, over: Partial<QueueRow> = {}): QueueRow {
 }
 
 const iids = (rows: QueueRow[]) => rows.map((r) => r.iid)
-const DEFAULT = { tags: [], sortBy: 'waiting' } as const
+const DEFAULT: ListOrder = { tags: [], sortBy: 'waiting' }
 
 test('the default order: what needs you, then returned, waiting, done; then score; then newest', () => {
   const rows = [
