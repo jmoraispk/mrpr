@@ -80,7 +80,7 @@ test('signed out, it offers to sign in to each configured host', async () => {
 test('signed in, it is the review queue', async () => {
   hosts = [HOST]
   renderSite()
-  expect(await screen.findByRole('navigation', { name: 'Queue' })).toBeInTheDocument()
+  expect(await screen.findByRole('complementary', { name: 'Merge requests' })).toBeInTheDocument()
 })
 
 test('a signed-out host offers to sign in again', async () => {
@@ -108,7 +108,7 @@ test('the page schedule runs only while signed in', async () => {
 
   hosts = [HOST]
   const view = renderSite()
-  await screen.findByRole('navigation', { name: 'Queue' })
+  await screen.findByRole('complementary', { name: 'Merge requests' })
   expect(schedule.startPageSchedule).toHaveBeenCalledWith({ poll: schedule.lockedPoll })
 
   view.unmount()

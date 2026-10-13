@@ -1,19 +1,11 @@
 /* The review queue, in the landing page's visual system (tokens.css). */
 .q-shell {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 360px minmax(0, 1fr);
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
-}
-.q-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 18px 12px;
-  border-right: 1px solid var(--line-2);
-  background: var(--surface-2);
 }
 .q-brand {
   padding: 0 10px;
@@ -22,27 +14,6 @@
   letter-spacing: -0.02em;
   text-decoration: none;
 }
-.q-eyebrow {
-  margin: 0;
-  padding: 0 10px 6px;
-  color: var(--muted);
-  font: 500 11px var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.q-bucket {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 7px;
-  color: var(--ink-2);
-  font-size: 14px;
-  text-decoration: none;
-}
-.q-bucket:hover { background: var(--soft); }
-.q-bucket[aria-current='page'] { background: var(--ink); color: var(--paper); font-weight: 600; }
-.q-count { font-variant-numeric: tabular-nums; }
 .q-folded { margin: 6px 10px 0; color: var(--muted); font-size: 13px; }
 .q-dot {
   display: inline-block;
@@ -52,86 +23,18 @@
   border-radius: 4px;
   vertical-align: middle;
 }
-.q-sidebar-foot { display: flex; gap: 8px; align-items: center; margin-top: auto; padding: 0 10px; font-size: 13px; }
-.q-sidebar-foot a { color: var(--ink-2); }
-.q-sidebar-foot button {
-  padding: 2px 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  cursor: pointer;
-}
 .q-main-area { min-width: 0; background: var(--surface); }
 .q-main-area > .hub-error { margin: 12px 20px 0; }
-.q-list-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line-2);
-}
-.q-list-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
-.q-sort { color: var(--muted); font: 12px var(--font-mono); }
-.q-group {
-  margin: 0;
-  padding: 14px 20px 6px;
-  color: var(--muted);
-  font: 500 11px var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.q-row { display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line-3); cursor: pointer; }
-.q-row:hover, .q-row.is-selected { background: var(--hl); }
-.q-rank {
-  display: flex;
-  flex: 0 0 22px;
-  height: 22px;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid var(--accent);
-  border-radius: 11px;
-  color: var(--accent-ink);
-  font: 12px var(--font-mono);
-}
-.q-rank:empty { border: 0; }
-.q-rank.is-first { background: var(--accent); color: #fff; }
-.q-main { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 6px; }
-.q-title-line { display: flex; justify-content: space-between; gap: 12px; }
-.q-title { margin: 0; font-size: 15px; font-weight: 600; }
-.q-age, .q-ref { color: var(--muted); font: 12px var(--font-mono); }
-.q-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
-.q-by { color: var(--ink-2); }
-.q-project { display: inline-flex; align-items: center; color: var(--ink-2); font-weight: 500; }
-.q-badges { display: contents; }
-.q-badge { padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--ink-2); }
-.q-badge-blocking { background: var(--ink); color: var(--paper); font-weight: 500; }
-.q-badge-commits-since, .q-badge-pipeline-failed { background: var(--warm-bg); color: var(--warm-ink); font-weight: 500; }
-.q-badge-ai-authored { border: 1px solid var(--ai-line); background: var(--ai-bg); color: var(--ai-ink); }
-.q-badge-changes-addressed, .q-badge-threads-waiting {
-  border: 1px solid var(--ink);
-  background: transparent;
-  color: var(--ink);
-  font-weight: 500;
-}
-.q-stats { font-family: var(--font-mono); }
 .q-plus { color: var(--plus); }
 .q-minus { color: var(--minus); }
 .q-empty { padding: 24px 20px; color: var(--muted); }
-.q-keys { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 20px; color: var(--muted); font-size: 12px; }
-.q-keys kbd, .q-help kbd {
+.q-help kbd {
   padding: 1px 6px;
   border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: 5px;
   color: var(--ink);
   font: 12px var(--font-mono);
-}
-@media (max-width: 760px) {
-  .q-shell { grid-template-columns: 1fr; }
-  .q-sidebar { border-right: 0; border-bottom: 1px solid var(--line-2); }
 }
 
 /* Composer, project picker and dialogs, shared by the MR header and the sidebar. */
@@ -153,9 +56,13 @@
 }
 .mr-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
 .q-shell .q-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
-.q-composer, .q-dialog { display: flex; flex-direction: column; gap: 8px; }
+.q-composer,
+.q-dialog { display: flex; flex-direction: column; gap: 8px; }
 .q-composer-label { color: var(--muted); font: 500 11px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
-.q-composer textarea, .q-picker input, .q-dialog input, .q-shell textarea {
+.q-composer textarea,
+.q-picker input,
+.q-dialog input,
+.q-shell textarea {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -194,26 +101,14 @@
   cursor: pointer;
 }
 
-/* Projects in the sidebar and in Settings. */
-.q-sidebar-action {
-  margin: 4px 10px 0;
-  padding: 6px 8px;
-  border: 1px dashed var(--line);
-  border-radius: 7px;
-  background: transparent;
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-.q-sidebar .q-dialog { margin: 8px 10px 0; font-size: 13px; color: var(--muted); }
+/* Projects in Settings. */
 .q-dialog label { display: flex; flex-direction: column; gap: 4px; }
 .q-projects-settings { padding: 0 20px 20px; }
 .q-projects-settings textarea { width: 100%; box-sizing: border-box; font-family: var(--font-mono); font-size: 12px; }
 
 /* index.css styles every h1/h2 for the review view; the queue sets its own. */
-.q-shell h2, .q-shell h3 { color: var(--ink); font-family: var(--font-body); letter-spacing: normal; }
+.q-shell h2,
+.q-shell h3 { color: var(--ink); font-family: var(--font-body); letter-spacing: normal; }
 
 /* The last action, with Undo; it outlives the row it was about. */
 .q-notice {
@@ -240,3 +135,40 @@
   cursor: pointer;
 }
 .q-notice button[aria-label='Dismiss'] { border: 0; background: none; color: var(--muted); font-size: 18px; }
+
+/* Tags: what an MR asks of you. */
+.q-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.q-tag { padding: 1px 7px; border-radius: 99px; background: var(--soft); color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+.q-tag.is-blocking { background: var(--ink); color: var(--paper); font-weight: 500; }
+.q-tag.is-new-commits,
+.q-tag.is-pipeline-failed { background: var(--warm-bg); color: var(--warm-ink); font-weight: 500; }
+.q-tag.is-changes-addressed,
+.q-tag.is-reply-waiting { border: 1px solid var(--ink); background: transparent; color: var(--ink); font-weight: 500; }
+.q-tag.is-quick-win { background: var(--ok-bg); color: var(--ok-ink); }
+.q-tag.is-ai-authored { border: 1px solid var(--ai-line); background: var(--ai-bg); color: var(--ai-ink); }
+.q-tag.is-more { background: transparent; color: var(--muted); }
+
+.q-shell.is-sidebar-hidden { grid-template-columns: minmax(0, 1fr); }
+.q-back { display: none; }
+
+/* The right panel with nothing open, and the Snoozed page. */
+.q-welcome { display: grid; min-height: 60vh; place-content: center; gap: 8px; color: var(--ink-2); text-align: center; }
+.q-welcome p { margin: 0; }
+.q-welcome .q-muted { color: var(--muted); font-size: 13px; }
+.q-welcome kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; font: 12px var(--font-mono); }
+.q-page { padding: 20px; }
+.q-page h2 { margin: 0 0 4px; font-size: 18px; }
+.q-page-note { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.q-page-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.q-page-list li { display: flex; gap: 10px; align-items: center; }
+.q-page-ref { color: var(--muted); font: 12px var(--font-mono); }
+.q-page-list button { margin-left: auto; padding: 3px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+
+/* Narrow windows: the sidebar lies over the page, and an open MR takes the whole width. */
+@media (max-width: 899px) {
+  .q-shell { grid-template-columns: minmax(0, 1fr); }
+  .q-shell .sb { position: fixed; inset: 0 auto 0 0; z-index: 5; width: min(360px, 100vw); }
+  .q-shell.has-mr .sb,
+  .q-shell.has-page .sb { display: none; }
+  .q-back { display: inline-block; margin: 12px 20px 0; color: var(--ink-2); font-size: 14px; }
+}

@@ -1,0 +1,70 @@
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { beforeEach, expect, test } from 'vitest'
+
+import { installPlatform } from '../platform/platform'
+import { createFakePlatform } from '../test/fakePlatform'
+import {
+  DEFAULT_LIST_FILTERS,
+  DEFAULT_LIST_ORDER,
+  normalizeCollapsed,
+  normalizeListFilters,
+  normalizeListOrder,
+  normalizeSidebar,
+  toggleTag,
+  useListOrder,
+} from './listSettings'
+
+let fake: ReturnType<typeof createFakePlatform>
+beforeEach(() => {
+  fake = createFakePlatform()
+  installPlatform(fake)
+})
+
+test('stored filters keep what is valid and default the rest', () => {
+  expect(normalizeListFilters(undefined)).toEqual(DEFAULT_LIST_FILTERS)
+  expect(normalizeListFilters('junk')).toEqual(DEFAULT_LIST_FILTERS)
+  expect(normalizeListFilters({ needsMeOnly: true, hideDrafts: 'yes', extra: 1 })).toEqual({
+    needsMeOnly: true,
+    hideDrafts: false,
+    showDone: false,
+  })
+})
+
+test('a stored order drops unknown tags, repeats and sorts', () => {
+  expect(normalizeListOrder(null)).toEqual(DEFAULT_LIST_ORDER)
+  expect(
+    normalizeListOrder({ tags: ['draft', 'nonsense', 'draft', 7, 'blocking'], sortBy: 'sideways' }),
+  ).toEqual({ tags: ['draft', 'blocking'], sortBy: 'waiting' })
+  expect(normalizeListOrder({ tags: 'draft', sortBy: 'oldest' })).toEqual({
+    tags: [],
+    sortBy: 'oldest',
+  })
+})
+
+test('the sidebar is open unless stored closed; collapsed groups are distinct strings', () => {
+  expect(normalizeSidebar(undefined)).toEqual({ open: true })
+  expect(normalizeSidebar({ open: false })).toEqual({ open: false })
+  expect(normalizeSidebar({ open: 'no' })).toEqual({ open: true })
+  expect(normalizeCollapsed(['a', 3, 'a', 'b'])).toEqual(['a', 'b'])
+  expect(normalizeCollapsed({})).toEqual([])
+})
+
+test('clicking a tag adds it last; clicking it again takes it off', () => {
+  const once = toggleTag(DEFAULT_LIST_ORDER, 'draft')
+  const twice = toggleTag(once, 'blocking')
+  expect(twice.tags).toEqual(['draft', 'blocking'])
+  expect(toggleTag(twice, 'draft').tags).toEqual(['blocking'])
+})
+
+test('the order is saved in this browser and shared across the page', async () => {
+  const first = renderHook(() => useListOrder())
+  const second = renderHook(() => useListOrder())
+  act(() => first.result.current[1]({ tags: ['returned'], sortBy: 'smallest' }))
+  await waitFor(() =>
+    expect(second.result.current[0]).toEqual({ tags: ['returned'], sortBy: 'smallest' }),
+  )
+  await expect(fake.store.get('listOrder')).resolves.toEqual({
+    tags: ['returned'],
+    sortBy: 'smallest',
+  })
+})

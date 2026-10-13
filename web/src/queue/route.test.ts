@@ -1,14 +1,14 @@
 import { expect, test } from 'vitest'
 
-import { listHash, parseSiteRoute, reviewHash } from './route'
+import { parseSiteRoute, reviewHash } from './route'
 
 const T = { hostId: 'gitlab.example.com', project: 'g/p', iid: 5 }
 
-test('queue, buckets, projects, settings', () => {
-  expect(parseSiteRoute('')).toEqual({ name: 'queue', bucket: null })
-  expect(parseSiteRoute('#/bucket/waiting')).toEqual({ name: 'queue', bucket: 'waiting' })
-  expect(parseSiteRoute('#/bucket/nonsense')).toEqual({ name: 'queue', bucket: null })
-  expect(parseSiteRoute('#/project/abc')).toEqual({ name: 'project', id: 'abc' })
+test('the list, settings and snoozed; old bucket and project links land on the list', () => {
+  expect(parseSiteRoute('')).toEqual({ name: 'queue' })
+  expect(parseSiteRoute('#/')).toEqual({ name: 'queue' })
+  expect(parseSiteRoute('#/bucket/waiting')).toEqual({ name: 'queue' })
+  expect(parseSiteRoute('#/project/abc')).toEqual({ name: 'queue' })
   expect(parseSiteRoute('#/settings')).toEqual({ name: 'settings' })
   expect(parseSiteRoute('#/snoozed')).toEqual({ name: 'snoozed' })
 })
@@ -31,11 +31,4 @@ test('a review, its tab, a note in it, and full screen round-trip', () => {
   })
   // Links from before tabs existed still work.
   expect(parseSiteRoute('#/mr/gitlab.example.com/g%2Fp/5/since')).toEqual({ ...base, tab: 'since' })
-})
-
-test('every list has its own address', () => {
-  expect(listHash({ name: 'queue', bucket: null })).toBe('#/')
-  expect(listHash({ name: 'queue', bucket: 'waiting' })).toBe('#/bucket/waiting')
-  expect(listHash({ name: 'project', id: 'abc' })).toBe('#/project/abc')
-  expect(listHash({ name: 'snoozed' })).toBe('#/snoozed')
 })

@@ -115,35 +115,68 @@ http://localhost:5173/.
 
 ## Using the queue
 
-After signing in, the app is one review queue. Each merge request is one row;
-replies, mentions and comments on it are folded into that row rather than
-listed separately.
+After signing in, the app is two panels: every merge request in a sidebar on
+the left, and the one you open on the right. Each MR is one row; replies,
+mentions and comments on it are folded into that row.
 
-- **Buckets:** Needs you (your review or a thread waiting on you), Quick wins
-  (the same, 30 changed lines or fewer), Returned to you (changes requested or
-  new comments on your MR, or new commits on one you reviewed), Waiting on
-  others (your MR still needing approvals), and Done. Bot-authored MRs are
-  folded into a count.
-- **Order:** who is blocked first (the author plus reviewers who already
-  approved), then age; drafts sink.
+- **Groups:** your projects first, then one group per repository for the rest.
+  Click a group's header to fold it; folded groups stay folded.
+- **Tags** say what an MR asks of you:
+  - **Blocking N people:** your approval is the last one missing. It counts
+    the author and the reviewers who already approved. It is a best guess,
+    since GitLab's approval rules may not count your approval.
+  - **Needs your review**, **Reply waiting**;
+  - **N new commits** since your last look, and **Changes addressed** when they
+    come after you requested changes;
+  - **Returned to you** and **Waiting on X** (your MRs);
+  - **Quick win** (30 changed lines or fewer), **Pipeline failed**, **Needs
+    rebase**, **Draft** and **AI-authored**.
+
+  A row shows three tags, then "+N".
+- **Order:** by default, what needs you comes first, then what came back to
+  you, then what waits on others. Within each, the order is who is blocked,
+  then how long it has waited. **Sort** offers Recently updated, Oldest first
+  and Smallest first.
+- **Put tags first:** click a tag chip and MRs with that tag come first. Click
+  more chips to add them after it, numbered 1, 2, 3, and click a chip again to
+  take it off. Your order and sort apply to every group and are kept in this
+  browser.
+- **Filters:**
+  - Search (`/`) matches title, `!number`, author, repository and tags.
+  - Needs me only, Hide drafts and Show done are toggles; done MRs are hidden
+    unless Show done is on.
+  - Snoozed MRs are listed under "Snoozed (N)" at the bottom, and bot MRs are
+    only counted.
+- **One click** expands a row in place:
+  - the start of its description, and the comment waiting on you with a reply
+    box;
+  - Approve, Reply, Request changes, Nudge, Snooze, Move and Open full view.
+
+  Expanding doesn't mark anything read. **Double-click** (or `Enter`) opens it
+  on the right.
 - **Since last review:** opening or approving an MR remembers its head commit
   in this browser. Next time, `d` (or the "Since last review" tab) shows only
   what changed since.
-- **Projects:** group MRs by repository, by label, or by moving them by hand
-  (`m`, or drag a row onto a project). Projects live in this browser; Settings
+- **Projects:** group MRs by repository, by label, or by hand (`m`, or drag a
+  row onto a project's header). Projects live in this browser; Settings
   exports and imports them as JSON.
-- **Keys:** `j`/`k` move, `Enter` or `o` open, `a` approve, `r` reply, `x`
-  request changes, `n` nudge, `s` snooze until the MR changes, `m` move to a
-  project, `d` since last review, `f` full screen, `Esc` close (or leave full
-  screen), `g n|r|w|q` jump to a bucket, `g p` projects, `?` help.
+- **Keys:**
+  - moving and opening: `j`/`k` move, `Space` expand, `Enter` or `o` open;
+  - actions: `a` approve, `r` reply, `x` request changes, `n` nudge, `s` snooze
+    until the MR changes, `m` move to a project, `d` since last review;
+  - the screen: `/` search, `b` or `Ctrl+B` hide or show the sidebar, `f` full
+    screen, `Esc` fold the row, leave full screen or close the MR;
+  - `?` shows all keys.
+
+  Keys act on the selected row; opening an MR selects it.
 - **Comments are signed.** Replies, requests for changes (a comment tagging
   the author) and nudges (a comment tagging the reviewers still waiting) end
   with "*— via Mr. PR*". Turning the signature off is on the roadmap.
 
 ### Opening an MR
 
-One click on a row opens the MR beside the list; `j`/`k` move to the next one
-and the panel follows. `f` makes it full screen and `Esc` steps back.
+The MR opens on the right, beside the sidebar. `f` makes it full screen
+(hiding the sidebar) and `Esc` steps back.
 
 - **Overview** (first): the description as GitLab would show it, and the
   Activity: threads and events in time order, with a "New since last review"

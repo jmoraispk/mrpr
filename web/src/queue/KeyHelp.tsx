@@ -1,6 +1,7 @@
 const KEYS: [string, string][] = [
   ['j / k', 'next / previous'],
-  ['Enter or o', 'open review'],
+  ['Space', 'expand or fold the row'],
+  ['Enter or o', 'open the MR'],
   ['a', 'approve'],
   ['r', 'reply'],
   ['x', 'request changes'],
@@ -8,9 +9,9 @@ const KEYS: [string, string][] = [
   ['s', 'snooze until it changes'],
   ['m', 'move to project'],
   ['d', 'since last review'],
-  ['g n / g r / g w / g q', 'jump to a bucket'],
-  ['g p', 'go to projects'],
-  ['Esc', 'close the MR (or leave full screen)'],
+  ['/', 'search'],
+  ['b or Ctrl+B', 'hide or show the sidebar'],
+  ['Esc', 'fold the row, leave full screen, or close the MR'],
   ['f', 'full screen'],
   ['?', 'this help'],
 ]

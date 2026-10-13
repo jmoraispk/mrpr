@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { MrOverview } from '../gitlab/mrOverview'
 import { hubRequest } from '../hub/api'
@@ -9,29 +9,25 @@ import { ACTIVE_POLL_MAX_AGE_MS } from '../inbox/types'
 import { platform } from '../platform/platform'
 import type { ReviewTarget } from '../transport/types'
 import { KeyHelp } from './KeyHelp'
-import { BUCKET_LABELS, BUCKET_ORDER, todaysBudget, type QueueRow } from './model'
-import { ProjectDialog } from './ProjectDialog'
-import { moveRow, projectOf, projectsFromRepositories } from './projects'
-import { ProjectsSettings } from './ProjectsSettings'
-import { NoticeBar } from './NoticeBar'
-import { QueueList } from './QueueList'
-import { focusNoteOf, markRowRead } from './readState'
+import { useSidebar } from './listSettings'
+import type { QueueRow } from './model'
 import { MrHeader, type HeaderRequest } from './mr/MrHeader'
 import { MrOverviewView } from './mr/MrOverview'
 import { MrPanel } from './mr/MrPanel'
 import { RebaseControl } from './mr/RebaseControl'
-import { listHash, parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
+import { NoticeBar } from './NoticeBar'
+import { projectOf } from './projects'
+import { ProjectsSettings } from './ProjectsSettings'
+import { focusNoteOf, markRowRead } from './readState'
+import { parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
+import { Sidebar } from './sidebar/Sidebar'
+import { useSidebarList } from './sidebar/useSidebarList'
+import { SnoozedPage } from './SnoozedPage'
 import { useProjects } from './state'
-import { useTheme } from './theme'
 import { useQueue } from './useQueue'
 import { useQueueKeys } from './useQueueKeys'
 import { useRowActions } from './useRowActions'
 
-const needsYouHeading = (count: number) =>
-  count === 1 ? '1 review needs you' : `${count} reviews need you`
-
-/** The project route for MRs no project claims. Project ids are random base-36, never this. */
-const UNSORTED = 'unsorted'
 const REAUTH_CODES = new Set(['signed_out', 'gitlab_authentication_failed'])
 
 function useSiteRoute(): SiteRoute {
@@ -44,68 +40,70 @@ function useSiteRoute(): SiteRoute {
   return route
 }
 
-/** The signed-in site: the review queue, projects, settings and the review view. */
+const sameMr = (row: QueueRow, target: ReviewTarget) =>
+  row.hostId === target.hostId && row.project === target.project && row.iid === target.iid
+
+/** The signed-in site: every MR on the left, the open one (or settings, or snoozed) on the right. */
 export function QueueApp() {
   const route = useSiteRoute()
   const queue = useQueue()
-  const [projects, setProjects] = useProjects()
-  const [newProjectOpen, setNewProjectOpen] = useState(false)
-  const theme = useTheme()
+  const [projects] = useProjects()
+  const list = useSidebarList(queue.rows, projects)
+  const [sidebar, setSidebar] = useSidebar()
   const [selected, setSelected] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [searchFocus, setSearchFocus] = useState(0)
+  const [headerRequest, setHeaderRequest] = useState<HeaderRequest | null>(null)
+  const [previewRequest, setPreviewRequest] = useState<HeaderRequest | null>(null)
+  const [replyTo, setReplyTo] = useState<string | null>(null)
   const actions = useRowActions()
-  useUnreadTitle(queue.counts['needs-you'] + queue.counts['quick-wins'])
+  useUnreadTitle(
+    queue.rows.filter((row) => !row.snoozed && !row.folded && row.attention === 'needs-you').length,
+  )
   // Opening the queue is a sign the user is looking; catch up if the last
   // poll is stale rather than waiting up to two minutes for the next.
   useEffect(() => {
     void hubRequest('pollNow', { maxAgeMs: ACTIVE_POLL_MAX_AGE_MS }).catch(() => undefined)
   }, [])
-  // The list an MR was opened from, so closing it returns there.
-  const [listRoute, setListRoute] = useState<SiteRoute>(() =>
-    route.name === 'review' || route.name === 'settings' ? { name: 'queue', bucket: null } : route,
-  )
-  useEffect(() => {
-    if (route.name !== 'review' && route.name !== 'settings') setListRoute(route)
-  }, [route])
-  const shown = route.name === 'review' ? listRoute : route
 
-  const inProject = (id: string) => (row: QueueRow) =>
-    id === UNSORTED ? projectOf(row, projects) === null : projectOf(row, projects)?.id === id
-  // A project's view keeps Waiting and Done too, so nothing in it is forgotten.
-  // Snoozed rows show only on their own list, where `s` brings them back.
-  const listed =
-    shown.name === 'snoozed'
-      ? queue.rows.filter((row) => row.snoozed)
-      : (shown.name === 'project'
-          ? queue.rows.filter((row) => row.bucket !== 'folded' && inProject(shown.id)(row))
-          : shown.name === 'queue' && shown.bucket
-            ? queue.rows.filter((row) => row.bucket === shown.bucket)
-            : queue.rows.filter((row) => row.bucket !== 'done' && row.bucket !== 'folded')
-        ).filter((row) => !row.snoozed)
-  const visible = listed
-  const snoozedCount = queue.rows.filter((row) => row.snoozed).length
   const openTarget = route.name === 'review' ? route.target : null
-  const openRow = openTarget
-    ? (queue.rows.find(
-        (row) =>
-          row.hostId === openTarget.hostId &&
-          row.project === openTarget.project &&
-          row.iid === openTarget.iid,
-      ) ?? null)
-    : null
-  // The keyboard's row: the open MR (none if it is outside the queue, so no
-  // key acts on a list row while another MR is on screen), else the one
-  // picked, else the first.
-  const current = openTarget
+  const openRow = openTarget ? (queue.rows.find((row) => sameMr(row, openTarget)) ?? null) : null
+  const openKey = openTarget ? `${openTarget.hostId}/${openTarget.project}/${openTarget.iid}` : null
+  const openRowKey = openRow?.key ?? null
+  // Opening an MR selects its row; an MR the list doesn't hold leaves nothing selected.
+  useEffect(() => {
+    if (openKey) setSelected(openRowKey)
+  }, [openKey, openRowKey])
+
+  const full = route.name === 'review' && route.full
+  const showSidebar = sidebar.open && !full
+  // What keys act on: with the sidebar hidden, the MR on screen. Otherwise the
+  // selected row while the list shows it or it is the open MR; with nothing
+  // selected and nothing open, the first row.
+  const listed = new Set(list.flat.map((row) => row.key))
+  const selectedRow = selected ? (queue.rows.find((row) => row.key === selected) ?? null) : null
+  const current = !showSidebar
     ? openRow
-    : (visible.find((row) => row.key === selected) ?? visible[0] ?? null)
-  // Where the open row sat in the list, so j/k carry on from there once it
-  // leaves (approved, snoozed, read).
+    : selectedRow
+      ? listed.has(selectedRow.key) || selectedRow.key === openRowKey
+        ? selectedRow
+        : null
+      : openTarget
+        ? null
+        : (list.flat[0] ?? null)
+  // Where the selected row sat, so j/k carry on from there once it leaves.
   const anchor = useRef<{ key: string; index: number } | null>(null)
   useEffect(() => {
-    const index = current ? visible.indexOf(current) : -1
-    if (current && index >= 0) anchor.current = { key: current.key, index }
+    const index = selected ? list.flat.findIndex((row) => row.key === selected) : -1
+    if (selected && index >= 0) anchor.current = { key: selected, index }
   })
+
+  const toggle = (row: QueueRow) => {
+    setSelected(row.key)
+    setPreviewRequest(null)
+    setExpanded((key) => (key === row.key ? null : row.key))
+  }
   const open = (row: QueueRow, tab: ReviewTab = 'overview') => {
     markRowRead(row)
     setSelected(row.key)
@@ -118,41 +116,54 @@ export function QueueApp() {
       },
     )
   }
-  const [headerRequest, setHeaderRequest] = useState<HeaderRequest | null>(null)
-  const [replyTo, setReplyTo] = useState<string | null>(null)
-  // r, x, n and m start their action in the MR header, opening the MR first.
-  const askHeader = (request: HeaderRequest) => {
+  // r, x, n and m: in the open MR's header when keys act on it, else in the selected row, expanded.
+  const ask = (request: HeaderRequest) => {
+    if (openTarget && (current === null || current.key === openRowKey)) {
+      setHeaderRequest(request)
+      return
+    }
     if (!current) return
-    if (route.name !== 'review') open(current)
-    setHeaderRequest(request)
+    setSelected(current.key)
+    setExpanded(current.key)
+    setPreviewRequest(request)
   }
+
   useQueueKeys(
     {
       move(delta) {
-        if (!visible.length) return
-        const index = current ? visible.indexOf(current) : -1
-        const last = visible.length - 1
-        const left = current && index < 0 && anchor.current?.key === current.key ? anchor.current : null
+        const rows = list.flat
+        // With the sidebar hidden there is no selection to see: j and k open the next MR.
+        if (!rows.length || (!showSidebar && !openTarget)) return
+        const index = current ? rows.indexOf(current) : -1
+        const last = rows.length - 1
+        const left = index < 0 && anchor.current?.key === selected ? anchor.current : null
         const next =
           index >= 0
-            ? visible[Math.min(last, Math.max(0, index + delta))]
+            ? rows[Math.min(last, Math.max(0, index + delta))]
             : left
               ? // The rows after it moved up into its place.
-                visible[delta > 0 ? Math.min(left.index, last) : Math.max(left.index - 1, 0)]
-              : visible[0]
-        if (route.name === 'review') open(next)
-        else setSelected(next.key)
+                rows[delta > 0 ? Math.min(left.index, last) : Math.max(left.index - 1, 0)]
+              : rows[0]
+        if (showSidebar) setSelected(next.key)
+        else open(next)
       },
+      toggle: () => showSidebar && current && toggle(current),
       open: () => current && open(current),
       diffSince: () => current && open(current, 'since'),
-      // Escape and f read the address as it is now: a second key can land
+      // Escape, f and b read the address as it is now: a second key can land
       // before the screen has caught up with the first.
       close() {
         const now = parseSiteRoute(window.location.hash)
+        // A row expanded in a hidden sidebar is not on screen: Escape is for what is.
+        const sidebarShown = sidebar.open && !(now.name === 'review' && now.full)
+        if (expanded && sidebarShown) {
+          setExpanded(null)
+          return
+        }
         if (now.name !== 'review') return
         window.location.hash = now.full
           ? reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
-          : listHash(listRoute)
+          : '#/'
       },
       full() {
         const now = parseSiteRoute(window.location.hash)
@@ -163,34 +174,36 @@ export function QueueApp() {
           full: !now.full,
         })
       },
-      jump(bucket) {
-        window.location.hash = `#/bucket/${bucket}`
+      sidebar() {
+        const now = parseSiteRoute(window.location.hash)
+        if (now.name === 'review' && now.full) {
+          window.location.hash = reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
+          if (!sidebar.open) setSidebar({ open: true })
+          return
+        }
+        setSidebar({ open: !sidebar.open })
       },
-      jumpProject() {
-        document.querySelector<HTMLElement>('nav[aria-label="Projects"] a')?.focus()
+      search() {
+        const now = parseSiteRoute(window.location.hash)
+        if (now.name === 'review' && now.full) {
+          window.location.hash = reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
+        }
+        if (!sidebar.open) setSidebar({ open: true })
+        setSearchFocus((count) => count + 1)
       },
       help: () => setHelpOpen((value) => !value),
       approve: () => current && actions.approve(current),
       snooze: () => current && actions.snooze(current),
-      reply: () => askHeader('reply'),
-      changes: () => askHeader('changes'),
-      nudge: () => askHeader('nudge'),
-      moveProject: () => askHeader('move'),
+      reply: () => ask('reply'),
+      changes: () => ask('changes'),
+      nudge: () => ask('nudge'),
+      moveProject: () => ask('move'),
     },
     route.name !== 'settings',
   )
-  const me =
-    (openTarget && queue.hosts.find((host) => host.hostId === openTarget.hostId)?.username) ?? ''
-  const heading =
-    shown.name === 'snoozed'
-      ? 'Snoozed'
-      : shown.name === 'project'
-      ? shown.id === UNSORTED
-        ? 'Unsorted'
-        : (projects.find((p) => p.id === shown.id)?.name ?? 'Project')
-      : shown.name === 'queue' && shown.bucket
-        ? BUCKET_LABELS[shown.bucket]
-        : needsYouHeading(queue.counts['needs-you'] + queue.counts['quick-wins'])
+  const meFor = (hostId: string) =>
+    queue.hosts.find((host) => host.hostId === hostId)?.username ?? ''
+  const me = openTarget ? meFor(openTarget.hostId) : ''
 
   // Errors from either source: the queue's own fetch, or the inbox poll.
   const errors = new Map<string, { host: string; code: string }>()
@@ -203,114 +216,45 @@ export function QueueApp() {
     }
   }
 
-  // Each project link is also a drop target for a dragged row.
-  const projectLink = (id: string, label: ReactNode, count: ReactNode) => (
-    <a
-      key={id}
-      href={`#/project/${id}`}
-      className="q-bucket"
-      aria-current={route.name === 'project' && route.id === id ? 'page' : undefined}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault()
-        const key = event.dataTransfer.getData('text/mrpr-row')
-        if (key) setProjects(moveRow(projects, key, id === UNSORTED ? null : id))
-      }}
-    >
-      <span>{label}</span>
-      <span className="q-count">{count}</span>
-    </a>
-  )
-
   return (
-    <div className={`q-shell${route.name === 'review' ? ' has-panel' : ''}`}>
-      <aside className="q-sidebar">
-        <a className="q-brand" href="#/">
-          Mr. PR
-        </a>
-        <nav aria-label="Queue">
-          <p className="q-eyebrow">Queue</p>
-          {BUCKET_ORDER.filter((bucket) => bucket !== 'folded').map((bucket) => (
-            <a
-              key={bucket}
-              href={`#/bucket/${bucket}`}
-              className="q-bucket"
-              aria-current={route.name === 'queue' && route.bucket === bucket ? 'page' : undefined}
-            >
-              <span>{BUCKET_LABELS[bucket]}</span>{' '}
-              <span className="q-count">{queue.counts[bucket]}</span>
-            </a>
-          ))}
-          <p className="q-folded">
-            Folded: {queue.counts.folded} bot MR{queue.counts.folded === 1 ? '' : 's'}
-          </p>
-          <p className="q-folded">Today's budget: ~{todaysBudget(queue.rows)} min</p>
-          {snoozedCount > 0 ? (
-            <a
-              href="#/snoozed"
-              className="q-bucket"
-              aria-current={route.name === 'snoozed' ? 'page' : undefined}
-            >
-              <span>Snoozed</span> <span className="q-count">{snoozedCount}</span>
-            </a>
-          ) : null}
-        </nav>
-        <nav aria-label="Projects">
-          <p className="q-eyebrow">Projects</p>
-          {projects.map((project) => {
-            const rows = queue.rows.filter(
-              (row) => row.bucket !== 'folded' && !row.snoozed && inProject(project.id)(row),
-            )
-            const needs = rows.filter(
-              (row) => row.bucket === 'needs-you' || row.bucket === 'quick-wins',
-            ).length
-            return projectLink(
-              project.id,
-              <>
-                <span className="q-dot" style={{ background: project.color }} />
-                {project.name}
-              </>,
-              `${needs ? `${needs} / ` : ''}${rows.length}`,
-            )
-          })}
-          {projectLink(
-            UNSORTED,
-            'Unsorted',
-            queue.rows.filter(
-              (row) => row.bucket !== 'folded' && !row.snoozed && inProject(UNSORTED)(row),
-            ).length,
-          )}
-          {projects.length === 0 && queue.rows.length > 0 ? (
-            <button
-              type="button"
-              className="q-sidebar-action"
-              onClick={() =>
-                setProjects(projectsFromRepositories(projects, queue.rows.map((row) => row.project)))
-              }
-            >
-              Create one project per repository
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="q-sidebar-action"
-            onClick={() => setNewProjectOpen((open) => !open)}
-          >
-            + New project
-          </button>
-          {newProjectOpen ? <ProjectDialog onClose={() => setNewProjectOpen(false)} /> : null}
-        </nav>
-        <div className="q-sidebar-foot">
-          <a href="#/settings">Settings</a>
-          <button
-            type="button"
-            onClick={() => theme.setChoice(theme.theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme.theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          </button>
-        </div>
-      </aside>
+    <div
+      className={`q-shell${showSidebar ? '' : ' is-sidebar-hidden'}${openTarget ? ' has-mr' : ''}${
+        route.name === 'settings' || route.name === 'snoozed' ? ' has-page' : ''
+      }`}
+    >
+      {showSidebar ? (
+        <Sidebar
+          rows={queue.rows}
+          list={list}
+          loading={queue.isLoading}
+          meFor={meFor}
+          selectedKey={current?.key ?? null}
+          expandedKey={expanded}
+          openKey={openRowKey}
+          onToggleRow={toggle}
+          onOpenRow={(row) => {
+            // A double-click leaves its row expanded, whatever its first click did.
+            setExpanded(row.key)
+            open(row)
+          }}
+          onApprove={actions.approve}
+          onSnooze={actions.snooze}
+          previewRequest={previewRequest}
+          onPreviewRequestHandled={() => setPreviewRequest(null)}
+          searchFocus={searchFocus}
+          onSearchFocused={() => setSearchFocus(0)}
+          onSearchDone={() => {
+            if (list.flat[0]) setSelected(list.flat[0].key)
+          }}
+        />
+      ) : null}
       <main className="q-main-area">
+        {route.name === 'queue' ? null : (
+          // Narrow windows have no sidebar beside a page: this is the way back.
+          <a className="q-back" href="#/">
+            ← MRs
+          </a>
+        )}
         <NoticeBar notice={actions.notice} onUndo={actions.undo} onDismiss={actions.dismiss} />
         {[...errors.entries()].map(([hostId, error]) => (
           <p key={hostId} className="hub-error">
@@ -335,88 +279,72 @@ export function QueueApp() {
             <Settings />
             <ProjectsSettings />
           </>
-        ) : (
-          <div
-            className={`q-split${route.name === 'review' ? ' has-panel' : ''}${
-              route.name === 'review' && route.full ? ' is-full' : ''
-            }`}
-          >
-            <div className="q-list-pane">
-              {queue.isLoading ? (
-                <p className="q-empty">Loading your queue…</p>
-              ) : (
-                <QueueList
-                  rows={listed}
-                  projects={projects}
-                  selectedKey={current?.key ?? null}
-                  onSelect={(key) => {
-                    const row = visible.find((value) => value.key === key)
-                    if (row) open(row)
+        ) : route.name === 'snoozed' ? (
+          <SnoozedPage rows={queue.rows} onUnsnooze={actions.snooze} />
+        ) : route.name === 'review' ? (
+          <MrPanel
+            key={openKey}
+            target={route.target}
+            row={openRow}
+            me={me}
+            tab={route.tab}
+            full={route.full}
+            noteId={route.noteId}
+            header={(overview) => {
+              const target = route.target
+              // An MR outside the queue still gets the queue's notice, from its overview.
+              const asRow = openRow ?? (overview ? rowFromOverview(overview, target) : null)
+              return (
+                <MrHeader
+                  target={target}
+                  me={me}
+                  row={openRow}
+                  overview={overview}
+                  full={route.full}
+                  fullHref={reviewHash(target, {
+                    tab: route.tab,
+                    noteId: route.noteId,
+                    full: !route.full,
+                  })}
+                  closeHref="#/"
+                  onApprove={() => asRow && actions.approve(asRow)}
+                  onSnooze={() => openRow && actions.snooze(openRow)}
+                  onReply={(id) => {
+                    setReplyTo(id)
+                    if (route.tab !== 'overview') {
+                      window.location.hash = reviewHash(target, { full: route.full })
+                    }
                   }}
-                  heading={heading}
-                  grouped={shown.name === 'project'}
-                  compact={route.name === 'review'}
+                  request={headerRequest}
+                  onRequestHandled={() => setHeaderRequest(null)}
                 />
-              )}
-            </div>
-            {route.name === 'review' ? (
-              <MrPanel
-                key={`${route.target.hostId}/${route.target.project}/${route.target.iid}`}
-                target={route.target}
-                row={openRow}
-                me={me}
-                tab={route.tab}
-                full={route.full}
-                noteId={route.noteId}
-                header={(overview) => {
-                  const target = route.target
-                  // An MR outside the queue still gets the queue's notice, from its overview.
-                  const asRow = openRow ?? (overview ? rowFromOverview(overview, target) : null)
-                  return (
-                    <MrHeader
-                      target={target}
-                      me={me}
-                      row={openRow}
-                      overview={overview}
-                      full={route.full}
-                      fullHref={reviewHash(target, {
-                        tab: route.tab,
-                        noteId: route.noteId,
-                        full: !route.full,
-                      })}
-                      closeHref={listHash(listRoute)}
-                      onApprove={() => asRow && actions.approve(asRow)}
-                      onSnooze={() => openRow && actions.snooze(openRow)}
-                      onReply={(id) => {
-                        setReplyTo(id)
-                        if (route.tab !== 'overview') {
-                          window.location.hash = reviewHash(target, { full: route.full })
-                        }
-                      }}
-                      request={headerRequest}
-                      onRequestHandled={() => setHeaderRequest(null)}
-                    />
-                  )
-                }}
-                overview={(overview, previous) => {
-                  const project = openRow ? projectOf(openRow, projects) : null
-                  return (
-                    <MrOverviewView
-                      overview={overview}
-                      target={route.target}
-                      me={me}
-                      previous={previous}
-                      replyTo={replyTo}
-                      onReplied={() => setReplyTo(null)}
-                      projectName={project?.name ?? null}
-                      projectColor={project?.color ?? null}
-                      rebase={<RebaseControl overview={overview} target={route.target} />}
-                      focusNoteId={route.noteId}
-                    />
-                  )
-                }}
-              />
-            ) : null}
+              )
+            }}
+            overview={(overview, previous) => {
+              const project = openRow ? projectOf(openRow, projects) : null
+              return (
+                <MrOverviewView
+                  overview={overview}
+                  target={route.target}
+                  me={me}
+                  previous={previous}
+                  replyTo={replyTo}
+                  onReplied={() => setReplyTo(null)}
+                  projectName={project?.name ?? null}
+                  projectColor={project?.color ?? null}
+                  rebase={<RebaseControl overview={overview} target={route.target} />}
+                  focusNoteId={route.noteId}
+                />
+              )
+            }}
+          />
+        ) : (
+          <div className="q-welcome">
+            <p>Double-click an MR to open it.</p>
+            <p className="q-muted">
+              <kbd>j</kbd>/<kbd>k</kbd> move · <kbd>Space</kbd> expand · <kbd>Enter</kbd> open ·{' '}
+              <kbd>?</kbd> all keys
+            </p>
           </div>
         )}
       </main>
@@ -437,9 +365,11 @@ function rowFromOverview(overview: MrOverview, target: ReviewTarget): QueueRow {
     title: overview.title,
     webUrl: overview.webUrl,
     updatedAt: overview.updatedAt,
-    bucket: 'done',
     score: 0,
-    badges: [],
+    tags: [],
+    attention: 'done',
+    folded: false,
+    minutes: 0,
     items: [],
     snoozed: false,
   }

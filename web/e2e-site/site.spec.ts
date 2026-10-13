@@ -275,22 +275,23 @@ async function fakeGitLab(
 async function signIn(page: Page) {
   await page.goto('/app/')
   await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
-  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
 }
 
 test('sign in, see the queue, open a comment at its thread', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
 
-  const queue = page.getByRole('navigation', { name: 'Queue' })
-  await expect(queue.getByRole('link', { name: /Needs you\s*1/ })).toBeVisible()
+  const sidebar = page.getByRole('complementary', { name: 'Merge requests' })
+  await expect(sidebar.getByText('1 needs you')).toBeVisible()
   const first = page.getByRole('article').first()
   await expect(first).toContainText('Retry budget for webhooks')
   await expect(first).toContainText('by ANA')
 
-  // Ana's comment on your MR is folded into its row, in Returned to you.
-  await expect(queue.getByRole('link', { name: /Returned to you\s*1/ })).toBeVisible()
-  await page.getByRole('article').filter({ hasText: 'Improve parser errors' }).click()
+  // Ana's comment on your MR is folded into its row, tagged Returned to you.
+  const yours = page.getByRole('article').filter({ hasText: 'Improve parser errors' })
+  await expect(yours).toContainText('Returned to you')
+  await yours.dblclick()
   await expect(page).toHaveURL(/#\/mr\/gitlab\.example\.com\/g%2Fp\/1\/note\/11$/)
   const panel = page.getByRole('region', { name: 'Improve parser errors' })
   await expect(panel.locator('.mr-thread.is-focused [data-discussion-id="d1"]')).toBeVisible()
@@ -315,7 +316,7 @@ test('request changes tags the author and is signed', async ({ page }) => {
   await signIn(page)
   await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
 
-  // x opens the MR with request changes started in its header.
+  // x starts request changes in the selected row.
   await page.keyboard.press('x')
   await page
     .getByRole('textbox', { name: 'Request changes' })
@@ -338,7 +339,7 @@ test('d shows only what changed since last review', async ({ page }) => {
   await expect(page).toHaveURL(/#\/mr\/gitlab\.example\.com\/g%2Fq\/2$/)
   await expect(page.getByRole('region', { name: 'Description' })).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+  await expect(page).toHaveURL(/#\/$/)
 
   // New commits arrive.
   gitlab.state.reviewHead = 'head-2'
@@ -353,12 +354,12 @@ test('d shows only what changed since last review', async ({ page }) => {
   expect(gitlab.compares).toEqual([{ from: 'head-1', to: 'head-2', straight: 'false' }])
 })
 
-test('one click opens the MR beside the queue: description, the thread that matters, and inline reply', async ({
+test('a double-click opens the MR beside the queue: description, the thread that matters, and inline reply', async ({
   page,
 }) => {
   const gitlab = await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).dblclick()
   const panel = page.getByRole('region', { name: 'Retry budget for webhooks' })
   await expect(panel.getByRole('region', { name: 'Description' })).toContainText(
     'Adds a retry budget per endpoint.',
@@ -377,15 +378,18 @@ test('one click opens the MR beside the queue: description, the thread that matt
 test('Changes, full screen, and back', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).dblclick()
   await page.getByRole('link', { name: /^Changes/ }).click()
   await expect(page.getByRole('region', { name: 'src/retry.py' })).toBeVisible()
   await page.locator('body').click({ position: { x: 5, y: 5 } })
   await page.keyboard.press('f')
   await expect(page).toHaveURL(/\/changes\/full$/)
-  await expect(page.locator('.q-list-pane')).toBeHidden()
+  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeHidden()
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/\/changes$/)
+  // The double-click left its row expanded: Escape folds it, then closes the MR.
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Open full view' })).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/#\/$/)
 })
@@ -393,11 +397,28 @@ test('Changes, full screen, and back', async ({ page }) => {
 test('rebase when GitLab says it is needed', async ({ page }) => {
   const gitlab = await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).dblclick()
   const details = page.getByRole('complementary', { name: 'Details' })
   await details.getByRole('button', { name: 'Rebase' }).click()
   await expect.poll(() => gitlab.rebases.length).toBe(1)
   await expect(details.getByText('Rebased')).toBeVisible({ timeout: 10_000 })
+})
+
+test('expand a row, approve from it, and put a tag first for good', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  const row = page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
+  await row.click()
+  await expect(row.getByText('Adds a retry budget per endpoint.')).toBeVisible()
+  expect(page.url()).not.toContain('#/mr/')
+  await row.getByRole('button', { name: 'Approve' }).click()
+  await expect(page.getByRole('status')).toContainText('Approved Retry budget for webhooks')
+  expect(gitlab.approvals).toEqual(['approve'])
+
+  await page.getByRole('button', { name: /Returned to you/ }).click()
+  await expect(page.getByRole('button', { name: /Returned to you/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.reload()
+  await expect(page.getByRole('button', { name: /Returned to you/ })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('the queue has a dark mode and its own fonts, under the app’s security policy', async ({
@@ -427,7 +448,7 @@ test('a token near expiry is refreshed before use', async ({ page }) => {
   await page.goto('/app/')
   await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
 
-  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
   await expect
     .poll(() => tokenRequests.map((body) => body.grant_type))
     .toContain('refresh_token')
@@ -437,7 +458,7 @@ test('signing out returns to the sign-in screen', async ({ page }) => {
   await fakeGitLab(page)
   await page.goto('/app/')
   await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
-  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Sign out' }).click()
@@ -500,7 +521,7 @@ test('the first person from a new server sets it up, and it is shared', async ({
   await page.getByLabel('Application ID').fill(PASTED_ID)
   await page.getByRole('button', { name: 'Sign in' }).click()
 
-  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
   expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
   await expect.poll(() => posts).toEqual([{ host: 'gitlab.other.org', clientId: PASTED_ID }])
 })
@@ -513,7 +534,7 @@ test('the next person from that server goes straight to GitLab', async ({ page }
   await page.getByLabel('Paste a link to any merge request').fill(OTHER + '/g/p/-/merge_requests/1')
   await page.getByRole('button', { name: 'Continue' }).click()
 
-  await expect(page.getByRole('navigation', { name: 'Queue' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
   expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
   await expect(page.getByText('Congratulations')).toHaveCount(0)
   expect(posts).toEqual([])
