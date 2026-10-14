@@ -9,10 +9,14 @@ import {
   accessToken,
   AUTH_KEY,
   AuthError,
+  canPost,
   completeSignIn,
+  FULL_SCOPE_KEY,
   PENDING_KEY,
   pkceChallenge,
+  POPUP_PENDING_KEY,
   signIn,
+  signInForPosting,
   signOut,
 } from './auth'
 import { siteConfig } from './config'
@@ -24,6 +28,7 @@ const ORIGIN = 'https://gitlab.example.com'
 beforeEach(() => {
   installPlatform(createFakePlatform())
   sessionStorage.clear()
+  localStorage.clear()
 })
 
 test('the PKCE challenge is the RFC 7636 example', async () => {
@@ -33,10 +38,10 @@ test('the PKCE challenge is the RFC 7636 example', async () => {
 })
 
 test('the config is empty until a client id is set', () => {
-  expect(siteConfig({})).toEqual({ hosts: [], scopes: 'api' })
+  expect(siteConfig({})).toEqual({ hosts: [], scopes: 'read_api' })
   expect(siteConfig({ VITE_GITLAB_CLIENT_ID: 'abc' })).toEqual({
     hosts: [{ host: 'gitlab-master.nvidia.com', clientId: 'abc' }],
-    scopes: 'api',
+    scopes: 'read_api',
   })
 })
 
@@ -308,4 +313,101 @@ test('the code is exchanged under the id the sign-in started with', async () => 
   await completeSignIn(new URL(`${window.location.origin}/app/?code=c&state=${state}`), CONFIG)
 
   expect(clientIds).toEqual(['f'.repeat(64)])
+})
+
+function tokenHandler(extra: Record<string, unknown> = {}) {
+  return [
+    http.post(`${ORIGIN}/oauth/token`, () =>
+      HttpResponse.json({ access_token: 'at-1', refresh_token: 'rt-1', expires_in: 7200, ...extra }),
+    ),
+    http.get(`${ORIGIN}/api/v4/user`, () => HttpResponse.json({ id: 7, username: 'joao' })),
+  ]
+}
+
+async function returnFrom(scope: string, query: string, extra: Record<string, unknown> = {}) {
+  await signIn(SITE, '#/mr/x', scope, () => {})
+  const { state } = JSON.parse(sessionStorage.getItem(PENDING_KEY)!) as { state: string }
+  server.use(...tokenHandler(extra))
+  return completeSignIn(new URL(`${window.location.origin}/?${query}&state=${state}`), CONFIG, () => {})
+}
+
+const stored = async () =>
+  ((await platform().store.get<Record<string, { scopes?: string[] }>>(AUTH_KEY)) ?? {})[SITE.host]
+
+test('scopes come from the token response, or from the request when GitLab leaves them out', async () => {
+  await returnFrom('read_api', 'code=c-1', { scope: 'read_api' })
+  expect((await stored())?.scopes).toEqual(['read_api'])
+  await returnFrom('read_api', 'code=c-1')
+  expect((await stored())?.scopes).toEqual(['read_api'])
+  await expect(canPost(SITE.host)).resolves.toBe(false)
+})
+
+test('a sign-in with api can post, and so can one stored before scopes existed', async () => {
+  await returnFrom('api', 'code=c-1')
+  await expect(canPost(SITE.host)).resolves.toBe(true)
+  await platform().store.set({ [AUTH_KEY]: { [SITE.host]: { accessToken: 'a', refreshToken: 'r', expiresAt: 1 } } })
+  await expect(canPost(SITE.host)).resolves.toBe(true)
+})
+
+test('a server that refuses read_api is asked for api at once, and from then on', async () => {
+  let target = ''
+  await signIn(SITE, '#/mr/x', 'read_api', () => {})
+  const { state } = JSON.parse(sessionStorage.getItem(PENDING_KEY)!) as { state: string }
+  const result = await completeSignIn(
+    new URL(`${window.location.origin}/?error=invalid_scope&state=${state}`),
+    CONFIG,
+    (url) => {
+      target = url
+    },
+  )
+  expect(result).toEqual({ returnTo: '#/mr/x', restarted: true })
+  expect(new URL(target).searchParams.get('scope')).toBe('api')
+  await expect(platform().store.get(FULL_SCOPE_KEY)).resolves.toEqual([SITE.host])
+
+  let later = ''
+  await signIn(SITE, '#/', 'read_api', (url) => {
+    later = url
+  })
+  expect(new URL(later).searchParams.get('scope')).toBe('api')
+})
+
+test('a pending sign-in from before scopes completes as api', async () => {
+  sessionStorage.setItem(
+    PENDING_KEY,
+    JSON.stringify({ host: SITE.host, clientId: SITE.clientId, state: 's-old', verifier: 'v', returnTo: '#/' }),
+  )
+  server.use(...tokenHandler())
+  await completeSignIn(new URL(`${window.location.origin}/?code=c-1&state=s-old`), CONFIG)
+  await expect(canPost(SITE.host)).resolves.toBe(true)
+})
+
+test('a sign-in for posting runs in its own window and completes there', async () => {
+  const popup = { location: { href: '' } } as unknown as Window
+  await signInForPosting(SITE, popup)
+  const url = new URL(popup.location.href)
+  expect(url.searchParams.get('scope')).toBe('api')
+  const pending = JSON.parse(localStorage.getItem(POPUP_PENDING_KEY)!) as { state: string }
+  expect(url.searchParams.get('state')).toBe(pending.state)
+
+  server.use(...tokenHandler({ scope: 'api' }))
+  const result = await completeSignIn(
+    new URL(`${window.location.origin}/?code=c-2&state=${pending.state}`),
+    CONFIG,
+  )
+  expect(result).toEqual({ returnTo: '#/', popup: true })
+  expect(localStorage.getItem(POPUP_PENDING_KEY)).toBeNull()
+  await expect(canPost(SITE.host)).resolves.toBe(true)
+})
+
+test('a refresh keeps the scopes the sign-in was granted', async () => {
+  await platform().store.set({
+    [AUTH_KEY]: { [SITE.host]: { accessToken: 'at-old', refreshToken: 'rt-old', expiresAt: 1_000_000 + 30_000, scopes: ['read_api'] } },
+  })
+  server.use(
+    http.post(`${ORIGIN}/oauth/token`, () =>
+      HttpResponse.json({ access_token: 'at-new', refresh_token: 'rt-new', expires_in: 7200 }),
+    ),
+  )
+  await expect(accessToken(SITE, () => 1_000_000)).resolves.toBe('at-new')
+  expect((await stored())?.scopes).toEqual(['read_api'])
 })
