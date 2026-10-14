@@ -53,7 +53,15 @@ beforeEach(() => {
 })
 
 /** The sidebar with the selection QueueApp would keep. */
-function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) => void }) {
+function Harness({
+  rows,
+  onOpen,
+  onSnooze,
+}: {
+  rows: QueueRow[]
+  onOpen: (row: QueueRow) => void
+  onSnooze: (row: QueueRow) => void
+}) {
   const [projects] = useProjects()
   const list = useSidebarList(rows, projects)
   const [selected, setSelected] = useState<string | null>(null)
@@ -64,6 +72,7 @@ function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) =
       loading={false}
       selectedKey={selected}
       openKey={null}
+      onSnoozeRow={onSnooze}
       onOpenRow={(row) => {
         setSelected(row.key)
         onOpen(row)
@@ -80,10 +89,11 @@ function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) =
 
 function show(rows: QueueRow[] = rowsOf(MRS)) {
   const onOpen = vi.fn()
+  const onSnooze = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} />,
+    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} />,
   )
-  return { onOpen, ...view }
+  return { onOpen, onSnooze, ...view }
 }
 
 const titles = () =>
@@ -208,3 +218,11 @@ test('nothing at all, and nothing but done', async () => {
   expect(titles()).toEqual(['Already approved'])
 })
 
+
+test('the snooze button snoozes and never opens the row', () => {
+  const { onOpen, onSnooze } = show()
+  fireEvent.click(screen.getByRole('button', { name: 'Snooze Fix flaky test' }))
+  expect(onSnooze).toHaveBeenCalledOnce()
+  expect(onSnooze.mock.calls[0][0]).toMatchObject({ iid: 2 })
+  expect(onOpen).not.toHaveBeenCalled()
+})

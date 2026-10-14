@@ -12,6 +12,7 @@ export function MrRow({
   selected,
   current,
   onOpen,
+  onSnooze,
 }: {
   row: QueueRow
   order: TagKind[]
@@ -19,6 +20,7 @@ export function MrRow({
   /** The MR open on the right. */
   current: boolean
   onOpen: () => void
+  onSnooze: () => void
 }) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -36,10 +38,25 @@ export function MrRow({
       onDragStart={(event) => event.dataTransfer.setData('text/mrpr-row', row.key)}
       onClick={onOpen}
     >
-      <h3 className="sb-title">
-        {unread ? <span className="sb-unread" aria-label="Unread" /> : null}
-        <span className="sb-title-text">{row.title}</span>
-      </h3>
+      <div className="sb-title-line">
+        <h3 className="sb-title">
+          {unread ? <span className="sb-unread" aria-label="Unread" /> : null}
+          <span className="sb-title-text">{row.title}</span>
+        </h3>
+        <button
+          type="button"
+          className="sb-snooze"
+          aria-label={`Snooze ${row.title}`}
+          title="Snooze until it changes"
+          onClick={(event) => {
+            // The row opens on click; this button never does.
+            event.stopPropagation()
+            onSnooze()
+          }}
+        >
+          💤
+        </button>
+      </div>
       <TagList tags={row.tags} order={order} max={3} />
       <p className="sb-meta">
         !{row.iid}

@@ -215,6 +215,7 @@ export function QueueApp() {
           selectedKey={current?.key ?? null}
           openKey={openRowKey}
           onOpenRow={(row) => open(row)}
+          onSnoozeRow={actions.snooze}
           searchFocus={searchFocus}
           onSearchFocused={() => setSearchFocus(0)}
           width={width}

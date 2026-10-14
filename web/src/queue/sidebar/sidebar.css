@@ -40,3 +40,10 @@
 
 .sb-resize { position: absolute; top: 0; right: -3px; z-index: 2; width: 6px; height: 100%; cursor: col-resize; touch-action: none; }
 .sb-resize:hover, .sb-resize:focus-visible { background: var(--accent); outline: none; opacity: 0.5; }
+
+.sb-title-line { display: flex; gap: 6px; align-items: center; }
+.sb-title-line .sb-title { flex: 1; min-width: 0; }
+.sb-snooze { flex: none; padding: 0 4px; border: 0; border-radius: 6px; background: none; font-size: 14px; line-height: 1.4; cursor: pointer; opacity: 0; }
+.sb-row:hover .sb-snooze, .sb-row.is-selected .sb-snooze, .sb-snooze:focus-visible { opacity: 1; }
+.sb-snooze:hover { background: var(--soft); }
+@media (hover: none) { .sb-snooze { opacity: 1; } }

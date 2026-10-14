@@ -22,6 +22,7 @@ export interface SidebarProps {
   /** The row of the MR open on the right. */
   openKey: string | null
   onOpenRow: (row: QueueRow) => void
+  onSnoozeRow: (row: QueueRow) => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
   onSearchFocused: () => void
@@ -46,6 +47,7 @@ export function Sidebar({
   selectedKey,
   openKey,
   onOpenRow,
+  onSnoozeRow,
   searchFocus,
   onSearchFocused,
   onSearchDone,
@@ -90,6 +92,7 @@ export function Sidebar({
             selected={row.key === selectedKey}
             current={row.key === openKey}
             onOpen={() => onOpenRow(row)}
+            onSnooze={() => onSnoozeRow(row)}
           />
         ))}
       </MrGroup>

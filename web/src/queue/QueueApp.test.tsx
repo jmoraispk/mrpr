@@ -617,3 +617,16 @@ test('the sidebar is as wide as it was left', async () => {
   fireEvent.keyDown(screen.getByRole('separator', { name: 'Resize the sidebar' }), { key: 'ArrowLeft' })
   await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: true, width: 464 }))
 })
+
+test('the 💤 on a row snoozes it without opening it, and Undo brings it back', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('button', { name: 'Snooze Fix flaky test' }))
+  await waitFor(() =>
+    expect(screen.getAllByRole('article').map((row) => row.textContent).join()).not.toContain('Fix flaky test'),
+  )
+  expect(window.location.hash).toBe('')
+  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+  await waitFor(() => expect(rowNamed('Fix flaky test')).toBeInTheDocument())
+})
