@@ -59,7 +59,7 @@ function facts(
 /** Everything GitLab would answer, keyed by what the page asks for. */
 async function fakeGitLab(
   page: Page,
-  options: { expiresIn?: number; origin?: string } = {},
+  options: { expiresIn?: number; origin?: string; scope?: string } = {},
 ) {
   const tokenRequests: Record<string, string>[] = []
   const authorizeRequests: Record<string, string>[] = []
@@ -70,7 +70,7 @@ async function fakeGitLab(
   const compares: Record<string, string>[] = []
   const replies: string[] = []
   const rebases: string[] = []
-  await page.route(`${options.origin ?? GITLAB}/**`, async (route: Route) => {
+  await page.context().route(`${options.origin ?? GITLAB}/**`, async (route: Route) => {
     const request = route.request()
     const url = new URL(request.url())
     const json = (body: unknown, extra: Record<string, string> = {}) =>
@@ -91,6 +91,8 @@ async function fakeGitLab(
         access_token: `at-${tokenRequests.length}`,
         refresh_token: `rt-${tokenRequests.length}`,
         expires_in: options.expiresIn ?? 7200,
+        // GitLab grants what was asked; `scope: 'api'` stands for a sign-in from before read-only.
+        scope: options.scope ?? authorizeRequests.at(-1)?.scope,
         token_type: 'Bearer',
       })
     }
@@ -276,6 +278,8 @@ async function signIn(page: Page) {
   await page.goto('/app/')
   await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
   await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
+  // First sign-in in a fresh browser: the welcome comes first.
+  await page.getByRole('button', { name: 'Start reviewing' }).click()
 }
 
 test('sign in, see the queue, open a comment at its thread', async ({ page }) => {
@@ -299,7 +303,7 @@ test('sign in, see the queue, open a comment at its thread', async ({ page }) =>
 })
 
 test('approve from the keyboard', async ({ page }) => {
-  const gitlab = await fakeGitLab(page)
+  const gitlab = await fakeGitLab(page, { scope: 'api' })
   await signIn(page)
   await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
 
@@ -312,7 +316,7 @@ test('approve from the keyboard', async ({ page }) => {
 })
 
 test('request changes tags the author and is signed', async ({ page }) => {
-  const gitlab = await fakeGitLab(page)
+  const gitlab = await fakeGitLab(page, { scope: 'api' })
   await signIn(page)
   await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
 
@@ -357,7 +361,7 @@ test('d shows only what changed since last review', async ({ page }) => {
 test('one click opens the MR beside the queue: description, the thread that matters, and inline reply', async ({
   page,
 }) => {
-  const gitlab = await fakeGitLab(page)
+  const gitlab = await fakeGitLab(page, { scope: 'api' })
   await signIn(page)
   await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
   const panel = page.getByRole('region', { name: 'Retry budget for webhooks' })
@@ -392,7 +396,7 @@ test('Changes, full screen, and back', async ({ page }) => {
 })
 
 test('rebase when GitLab says it is needed', async ({ page }) => {
-  const gitlab = await fakeGitLab(page)
+  const gitlab = await fakeGitLab(page, { scope: 'api' })
   await signIn(page)
   await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
   const details = page.getByRole('complementary', { name: 'Details' })
@@ -445,9 +449,7 @@ test('a token near expiry is refreshed before use', async ({ page }) => {
 
 test('signing out returns to the sign-in screen', async ({ page }) => {
   await fakeGitLab(page)
-  await page.goto('/app/')
-  await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
-  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
+  await signIn(page)
 
   await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Sign out' }).click()
@@ -543,4 +545,74 @@ test('the landing page theme toggle works under its security policy', async ({ p
 
   await expect(page.locator('#page')).toHaveAttribute('data-theme', 'dark')
   expect(blocked).toEqual([])
+})
+
+test('sign-in asks GitLab for read-only access', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  expect(gitlab.authorizeRequests[0].scope).toBe('read_api')
+})
+
+test('the first approval asks for posting rights, and goes through once GitLab says yes', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
+  await page.keyboard.press('a')
+  const dialog = page.getByRole('dialog', { name: 'Allow posting' })
+  await expect(dialog).toContainText('GitLab needs your OK before Mr. PR can post as you on gitlab.example.com.')
+  const opened = page.waitForEvent('popup')
+  await dialog.getByRole('button', { name: 'Allow' }).click()
+  const popup = await opened
+  await popup.waitForEvent('close')
+  await expect(page.getByRole('status')).toContainText('Approved Retry budget for webhooks')
+  expect(gitlab.approvals).toEqual(['approve'])
+  expect(gitlab.authorizeRequests.map((request) => request.scope)).toEqual(['read_api', 'api'])
+})
+
+test('Feedback sends what you typed and says thanks', async ({ page }) => {
+  await fakeGitLab(page)
+  const bodies: unknown[] = []
+  await page.route('**/api/feedback/**', async (route) => {
+    bodies.push(route.request().postDataJSON())
+    await route.fulfill({ json: { ok: true } })
+  })
+  await signIn(page)
+  await page.getByRole('button', { name: 'Feedback' }).click()
+  await page.getByRole('textbox', { name: "What's rough or missing?" }).fill('Love the tags')
+  await page.getByRole('button', { name: 'Send' }).click()
+  await expect(page.getByText('Thanks. We read every message.')).toBeVisible()
+  expect(bodies).toEqual([{ message: 'Love the tags', version: expect.any(String), browser: expect.any(String) }])
+})
+
+test('the welcome shows on the first sign-in only', async ({ page }) => {
+  await fakeGitLab(page)
+  await page.goto('/app/')
+  await page.getByRole('button', { name: /Sign in with GitLab.*gitlab.example.com/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Welcome' })).toContainText('Everything is unlocked during early access')
+  await page.getByRole('button', { name: 'Start reviewing' }).click()
+  await page.reload()
+  await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Welcome' })).toHaveCount(0)
+})
+
+test('the landing page waitlist says thanks, or says it couldn’t', async ({ page }) => {
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort())
+  let answer = 200
+  const bodies: unknown[] = []
+  await page.route('**/api/waitlist/**', async (route) => {
+    bodies.push(route.request().postDataJSON())
+    await route.fulfill({ status: answer, json: answer === 200 ? { ok: true } : { error: 'down' } })
+  })
+  await page.goto('/')
+  const field = page.getByLabel('Email for the GitHub waitlist')
+  const join = page.getByRole('button', { name: 'Join waitlist' })
+  await field.fill('ana@example.com')
+  await join.click()
+  await expect(page.locator('#waitlist-status')).toHaveText("Thanks, you're on the list.")
+  expect(bodies).toEqual([{ email: 'ana@example.com' }])
+
+  answer = 500
+  await join.click()
+  await expect(page.locator('#waitlist-status')).toHaveText("Couldn't add you. Try again in a moment.")
+  await expect(join).toBeEnabled()
 })
