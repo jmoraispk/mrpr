@@ -50,6 +50,9 @@ export function QueueApp() {
   const [projects] = useProjects()
   const list = useSidebarList(queue.rows, projects)
   const [sidebar, setSidebar] = useSidebar()
+  // While dragging, the width follows the pointer; it is saved on release.
+  const [dragWidth, setDragWidth] = useState<number | null>(null)
+  const width = dragWidth ?? sidebar.width
   const [selected, setSelected] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchFocus, setSearchFocus] = useState(0)
@@ -76,6 +79,10 @@ export function QueueApp() {
 
   const full = route.name === 'review' && route.full
   const showSidebar = sidebar.open && !full
+  // A drag cut short by hiding the sidebar (b, f) is dropped: the saved width shows.
+  useEffect(() => {
+    if (!showSidebar) setDragWidth(null)
+  }, [showSidebar])
   // What keys act on: with the sidebar hidden, the MR on screen. Otherwise the
   // selected row while the list shows it or it is the open MR; with nothing
   // selected and nothing open, the first row.
@@ -159,17 +166,17 @@ export function QueueApp() {
         const now = parseSiteRoute(window.location.hash)
         if (now.name === 'review' && now.full) {
           window.location.hash = reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
-          if (!sidebar.open) setSidebar({ open: true })
+          if (!sidebar.open) setSidebar({ ...sidebar, open: true })
           return
         }
-        setSidebar({ open: !sidebar.open })
+        setSidebar({ ...sidebar, open: !sidebar.open })
       },
       search() {
         const now = parseSiteRoute(window.location.hash)
         if (now.name === 'review' && now.full) {
           window.location.hash = reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
         }
-        if (!sidebar.open) setSidebar({ open: true })
+        if (!sidebar.open) setSidebar({ ...sidebar, open: true })
         setSearchFocus((count) => count + 1)
       },
       help: () => setHelpOpen((value) => !value),
@@ -202,6 +209,7 @@ export function QueueApp() {
       className={`q-shell${showSidebar ? '' : ' is-sidebar-hidden'}${openTarget ? ' has-mr' : ''}${
         route.name === 'settings' || route.name === 'snoozed' ? ' has-page' : ''
       }`}
+      style={{ ['--sidebar-width' as string]: `${width}px` }}
     >
       {showSidebar ? (
         <Sidebar
@@ -211,8 +219,15 @@ export function QueueApp() {
           selectedKey={current?.key ?? null}
           openKey={openRowKey}
           onOpenRow={(row) => open(row)}
+          onSnoozeRow={actions.snooze}
           searchFocus={searchFocus}
           onSearchFocused={() => setSearchFocus(0)}
+          width={width}
+          onResize={setDragWidth}
+          onResizeEnd={(next) => {
+            setDragWidth(null)
+            setSidebar({ ...sidebar, width: next })
+          }}
           onSearchDone={() => {
             if (list.flat[0]) setSelected(list.flat[0].key)
           }}
@@ -339,6 +354,7 @@ function rowFromOverview(overview: MrOverview, target: ReviewTarget): QueueRow {
     attention: 'done',
     folded: false,
     minutes: 0,
+    newCommits: 0,
     items: [],
     snoozed: false,
   }

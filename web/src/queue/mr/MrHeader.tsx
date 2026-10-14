@@ -71,7 +71,7 @@ export function MrHeader({
   const canNudge =
     waitingReviewers.length > 0 &&
     (row
-      ? row.tags.some((tag) => tag.kind === 'waiting-on')
+      ? row.tags.some((tag) => tag.kind === 'waiting-on-others')
       : Boolean(overview && overview.approvalsLeft > 0))
 
   async function comment(body: string) {

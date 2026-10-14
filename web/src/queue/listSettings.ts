@@ -8,7 +8,6 @@ export const DEFAULT_LIST_FILTERS: ListFilters = {
   showDone: false,
 }
 export const DEFAULT_LIST_ORDER: ListOrder = { tags: [], sortBy: 'waiting' }
-const OPEN = { open: true }
 const NONE: string[] = []
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -30,8 +29,28 @@ export function normalizeListOrder(stored: unknown): ListOrder {
   return { tags, sortBy }
 }
 
-export function normalizeSidebar(stored: unknown): { open: boolean } {
-  return isRecord(stored) && typeof stored.open === 'boolean' ? { open: stored.open } : OPEN
+/** The sidebar's width in pixels: dragged within these limits, saved in this browser. */
+export const SIDEBAR_WIDTH = { min: 260, max: 600, default: 360 } as const
+
+export interface SidebarSettings {
+  open: boolean
+  width: number
+}
+
+const OPEN: SidebarSettings = { open: true, width: SIDEBAR_WIDTH.default }
+
+export const clampWidth = (width: number) =>
+  Math.round(Math.min(SIDEBAR_WIDTH.max, Math.max(SIDEBAR_WIDTH.min, width)))
+
+export function normalizeSidebar(stored: unknown): SidebarSettings {
+  if (!isRecord(stored)) return OPEN
+  return {
+    open: typeof stored.open === 'boolean' ? stored.open : true,
+    width:
+      typeof stored.width === 'number' && Number.isFinite(stored.width)
+        ? clampWidth(stored.width)
+        : SIDEBAR_WIDTH.default,
+  }
 }
 
 export function normalizeCollapsed(stored: unknown): string[] {

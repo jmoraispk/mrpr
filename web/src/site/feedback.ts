@@ -8,6 +8,17 @@ export interface FeedbackInput {
   email: string
 }
 
+/** The server refused the feedback: `code` is its reason (`bad_email`, `bad_message`) or `http_<status>`. */
+export class FeedbackError extends Error {
+  readonly code: string
+
+  constructor(code: string) {
+    super(`Feedback was not accepted (${code}).`)
+    this.name = 'FeedbackError'
+    this.code = code
+  }
+}
+
 /** Send what the user typed, with the app version and the browser. Nothing else. */
 export async function sendFeedback({ message, email }: FeedbackInput): Promise<void> {
   const response = await fetch(FEEDBACK_URL, {
@@ -20,5 +31,8 @@ export async function sendFeedback({ message, email }: FeedbackInput): Promise<v
       browser: navigator.userAgent,
     }),
   })
-  if (!response.ok) throw new Error(`Feedback was not accepted (${response.status}).`)
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: unknown } | null
+    throw new FeedbackError(typeof body?.error === 'string' ? body.error : `http_${response.status}`)
+  }
 }

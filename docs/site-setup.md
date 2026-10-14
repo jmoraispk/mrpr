@@ -49,7 +49,7 @@ origin shared with other sites, such as a GitHub Pages project path under
 `<user>.github.io`: a script on any of them could read visitors' tokens. A
 Vercel project gets its own origin (`<project>.vercel.app`), and so does a
 custom domain like `mrpr.dev`. The landing page shares the app's origin, so it
-must never run a script; its Content Security Policy forbids them.
+runs only its own script file (`landing.js`), never inline code, and connects only to its own origin.
 
 ## 1. Deploy on Vercel
 
@@ -125,16 +125,14 @@ mentions and comments on it are folded into that row.
 
 - **Groups:** your projects first, then one group per repository for the rest.
   Click a group's header to fold it; folded groups stay folded.
-- **Tags** say what an MR asks of you:
+- **Labels** say what an MR asks of you:
   - **Blocking N people:** your approval is the last one missing. It counts
-    the author and the reviewers who already approved. It is a best guess,
-    since GitLab's approval rules may not count your approval.
-  - **Needs your review**, **Reply waiting**;
-  - **N new commits** since your last look, and **Changes addressed** when they
-    come after you requested changes;
-  - **Returned to you** and **Waiting on X** (your MRs);
-  - **Quick win** (30 changed lines or fewer), **Pipeline failed**, **Needs
-    rebase**, **Draft** and **AI-authored**.
+    the author and the reviewers who already approved. It is a best guess:
+    GitLab's approval rules may not count your approval.
+  - **Waiting on you:** your review, or a reply waiting on you.
+  - **Changes addressed:** new commits after you requested changes.
+  - **Returned to you** and **Waiting on others** (your MRs).
+  - **Quick win** (30 changed lines or fewer) and **Needs rebase**.
 
   A row shows three tags, then "+N".
 - **Order:** by default, what needs you comes first, then what came back to
@@ -200,7 +198,7 @@ Three more functions share the Upstash database with `/api/registry`:
   server, the numeric user ID and the date (`user:<host>:<id>`), written once.
 
 Read the newest feedback with `npm run feedback` (or `npm run feedback -- 50`)
-from `web/`, after `vercel env pull .env.local`. The privacy page at
+from `web/`, after `vercel env pull .env.local`. Each is limited per IP address: feedback 60 an hour, waitlist 30, first visits 30. The privacy page at
 `/privacy/` lists all of this for visitors.
 
 ## Security notes
@@ -208,7 +206,7 @@ from `web/`, after `vercel env pull .env.local`. The privacy page at
 - Tokens are stored in the visitor's browser (`localStorage`), last two hours,
   and refresh automatically. Signing out revokes the current token.
 - The app ships a Content Security Policy allowing only its own scripts and
-  connections to the configured GitLab host; the landing page allows no script
+  connections to the configured GitLab host; the landing and privacy pages run only their own script file, never inline code
   at all. `vercel.json` adds `frame-ancestors 'none'` so neither can be framed.
   Never add a third-party script.
 - Whoever can push to `main` controls the code that holds visitors' tokens.

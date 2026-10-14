@@ -53,7 +53,7 @@ test('the privacy page says what the server keeps, and runs no script', () => {
   const doc = new DOMParser().parseFromString(privacy, 'text/html')
   expect(doc.querySelectorAll('script')).toHaveLength(0)
   expect(doc.title).toMatch(/^Privacy · Mr\. PR/)
-  for (const fact of [/never reaches our servers/, /waitlist/i, /Feedback/, /numeric user ID/]) {
+  for (const fact of [/never reaches our servers/, /waitlist/i, /Feedback/, /numeric user ID/, /IP address is kept for up to two hours/]) {
     expect(privacy).toMatch(fact)
   }
 })

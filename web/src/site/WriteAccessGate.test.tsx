@@ -103,3 +103,15 @@ test('Escape counts as Not now', async () => {
   fireEvent(dialog, new Event('cancel', { cancelable: true }))
   await waitFor(() => expect(refused).toMatchObject({ code: 'write_access_denied' }))
 })
+
+test('Not now forgets the posting sign-in it started', async () => {
+  const user = userEvent.setup()
+  render(<WriteAccessGate config={CONFIG} openWindow={fakeWindow} />)
+  act(() => {
+    requestWriteAccess(SITE.host).catch(() => {})
+  })
+  await user.click(await screen.findByRole('button', { name: 'Allow' }))
+  await waitFor(() => expect(localStorage.getItem(POPUP_PENDING_KEY)).not.toBeNull())
+  await user.click(screen.getByRole('button', { name: 'Not now' }))
+  expect(localStorage.getItem(POPUP_PENDING_KEY)).toBeNull()
+})

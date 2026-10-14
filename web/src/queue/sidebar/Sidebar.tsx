@@ -9,6 +9,7 @@ import { useProjects } from '../state'
 import { useTheme } from '../theme'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
+import { SidebarResizer } from './SidebarResizer'
 import { TagBar } from './TagBar'
 import type { SidebarList } from './useSidebarList'
 
@@ -21,11 +22,15 @@ export interface SidebarProps {
   /** The row of the MR open on the right. */
   openKey: string | null
   onOpenRow: (row: QueueRow) => void
+  onSnoozeRow: (row: QueueRow) => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
   onSearchFocused: () => void
   /** Enter or ↓ in the search box: on to the results. */
   onSearchDone: () => void
+  width: number
+  onResize: (width: number) => void
+  onResizeEnd: (width: number) => void
 }
 
 const FILTER_LABELS: [keyof ListFilters, string][] = [
@@ -42,9 +47,13 @@ export function Sidebar({
   selectedKey,
   openKey,
   onOpenRow,
+  onSnoozeRow,
   searchFocus,
   onSearchFocused,
   onSearchDone,
+  width,
+  onResize,
+  onResizeEnd,
 }: SidebarProps) {
   const [projects, setProjects] = useProjects()
   const theme = useTheme()
@@ -83,6 +92,7 @@ export function Sidebar({
             selected={row.key === selectedKey}
             current={row.key === openKey}
             onOpen={() => onOpenRow(row)}
+            onSnooze={() => onSnoozeRow(row)}
           />
         ))}
       </MrGroup>
@@ -198,6 +208,7 @@ export function Sidebar({
         </nav>
         {newProjectOpen ? <ProjectDialog onClose={() => setNewProjectOpen(false)} /> : null}
       </footer>
+      <SidebarResizer width={width} onResize={onResize} onResizeEnd={onResizeEnd} />
     </aside>
   )
 }

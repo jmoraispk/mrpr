@@ -13,9 +13,9 @@ import './index.css'
 import { createLocalStore } from './platform/localStore'
 import { createSitePlatform } from './platform/site'
 import { installPlatform } from './platform/platform'
-import { AuthError, completeSignIn } from './site/auth'
 import { siteConfig } from './site/config'
 import { loadCustomHosts, adoptSite } from './site/servers'
+import { finishSignInIfReturning } from './site/returning'
 import { SiteApp } from './site/SiteApp'
 
 const config = siteConfig()
@@ -27,35 +27,6 @@ const queryClient = new QueryClient({
   },
 })
 
-/** GitLab sends the user back here with `code`/`state`, or `error`. */
-async function finishSignInIfReturning(): Promise<string | null> {
-  const url = new URL(window.location.href)
-  if (!url.searchParams.has('code') && !url.searchParams.has('error')) return null
-  // Drop the one-time code from the address bar whatever happens next.
-  history.replaceState(null, '', url.pathname)
-  try {
-    const result = await completeSignIn(url, config)
-    // On its way back to GitLab, asking for `api` instead.
-    if ('restarted' in result) return null
-    // A window opened for posting rights: the page that opened it carries on.
-    if ('popup' in result && window.opener) {
-      window.close()
-      return null
-    }
-    history.replaceState(null, '', `${url.pathname}${result.returnTo}`)
-    return null
-  } catch (error) {
-    // A posting window whose sign-in failed: close it, and the page that
-    // opened it refuses the post and says why.
-    if (window.name === 'mrpr-allow-posting' && window.opener) {
-      window.close()
-      return null
-    }
-    return error instanceof AuthError
-      ? error.message
-      : 'GitLab did not complete the sign-in. Try again.'
-  }
-}
 
 async function start(): Promise<void> {
   // Servers set up in this browser join the ones built in; never override a
@@ -65,7 +36,9 @@ async function start(): Promise<void> {
     if (!builtIn.has(site.host)) adoptSite(config, site)
   }
   installPlatform(createSitePlatform(config, store))
-  const notice = await finishSignInIfReturning()
+  const { notice, closing } = await finishSignInIfReturning(new URL(window.location.href), config)
+  // Going away (a posting window, or back to GitLab): render nothing, poll nothing.
+  if (closing) return
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>

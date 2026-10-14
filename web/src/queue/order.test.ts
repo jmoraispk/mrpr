@@ -69,12 +69,12 @@ test('recently updated, oldest first, smallest first', () => {
 test('chosen tags come first, in your order; the sort settles the rest', () => {
   const rows = [
     row(1, { attention: 'needs-you', score: 9 }),
-    row(2, { tags: [{ kind: 'draft' }] }),
+    row(2, { tags: [{ kind: 'needs-rebase' }] }),
     row(3, { tags: [{ kind: 'quick-win', minutes: 1 }], attention: 'needs-you' }),
-    row(4, { tags: [{ kind: 'draft' }, { kind: 'quick-win', minutes: 1 }], attention: 'needs-you', score: 5 }),
+    row(4, { tags: [{ kind: 'needs-rebase' }, { kind: 'quick-win', minutes: 1 }], attention: 'needs-you', score: 5 }),
   ]
-  expect(iids(sortRows(rows, { tags: ['draft'], sortBy: 'waiting' }))).toEqual([4, 2, 1, 3])
-  expect(iids(sortRows(rows, { tags: ['quick-win', 'draft'], sortBy: 'waiting' }))).toEqual([
+  expect(iids(sortRows(rows, { tags: ['needs-rebase'], sortBy: 'waiting' }))).toEqual([4, 2, 1, 3])
+  expect(iids(sortRows(rows, { tags: ['quick-win', 'needs-rebase'], sortBy: 'waiting' }))).toEqual([
     4, 3, 2, 1,
   ])
 })
@@ -144,14 +144,14 @@ test('your projects first, in your order; then one group per repository, by its 
 
 test('chips: chosen tags first with their place, then the rest by priority, with counts', () => {
   const rows = [
-    row(1, { tags: [{ kind: 'draft' }, { kind: 'needs-review' }] }),
-    row(2, { tags: [{ kind: 'needs-review' }, { kind: 'quick-win', minutes: 1 }] }),
+    row(1, { tags: [{ kind: 'needs-rebase' }, { kind: 'waiting-on-you' }] }),
+    row(2, { tags: [{ kind: 'waiting-on-you' }, { kind: 'quick-win', minutes: 1 }] }),
   ]
-  expect(tagChips(rows, ['draft', 'returned'])).toEqual([
-    { kind: 'draft', count: 1, position: 1 },
+  expect(tagChips(rows, ['needs-rebase', 'returned'])).toEqual([
+    { kind: 'needs-rebase', count: 1, position: 1 },
     // Chosen but on no row: still shown, so it can be taken off.
     { kind: 'returned', count: 0, position: 2 },
-    { kind: 'needs-review', count: 2, position: null },
+    { kind: 'waiting-on-you', count: 2, position: null },
     { kind: 'quick-win', count: 1, position: null },
   ])
 })

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 
 /**
  * A modal dialog over the app: focus stays inside, Escape cancels, and the
@@ -14,14 +14,20 @@ export function Modal({
   children: ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
+  // A layout effect: its cleanup runs before the dialog leaves the page, so
+  // focus can be handed back to whatever had it before the dialog opened.
+  useLayoutEffect(() => {
     const dialog = ref.current
-    if (!dialog || dialog.open) return
-    // jsdom has no showModal.
-    if (typeof dialog.showModal === 'function') dialog.showModal()
-    else dialog.setAttribute('open', '')
+    if (!dialog) return
+    const before = document.activeElement as HTMLElement | null
+    if (!dialog.open) {
+      // jsdom has no showModal.
+      if (typeof dialog.showModal === 'function') dialog.showModal()
+      else dialog.setAttribute('open', '')
+    }
     return () => {
       if (dialog.open && typeof dialog.close === 'function') dialog.close()
+      before?.focus?.()
     }
   }, [])
   return (

@@ -63,7 +63,7 @@ export function MrPanel({
 
   const prior = previous.data ?? null
   const sinceAvailable = Boolean(prior && headSha && prior.headSha !== headSha)
-  const commits = row?.tags.find((tag) => tag.kind === 'new-commits')
+  const commits = row?.newCommits ?? 0
   const tabs: { id: ReviewTab; label: string }[] = [
     { id: 'overview', label: 'Overview' },
     {
@@ -77,9 +77,7 @@ export function MrPanel({
     tabs.push({
       id: 'since',
       label:
-        commits?.kind === 'new-commits'
-          ? `Since last review · ${plural(commits.count, 'commit')}`
-          : 'Since last review',
+        commits > 0 ? `Since last review · ${plural(commits, 'commit')}` : 'Since last review',
     })
   }
   const title = overview.data?.title ?? row?.title ?? `!${target.iid}`

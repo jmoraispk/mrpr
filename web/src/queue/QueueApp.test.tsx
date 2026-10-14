@@ -168,7 +168,7 @@ test('MRs are grouped by repository, what needs you first, each with its tags', 
   expect(within(rows[0]).getByText(/by Ana/)).toBeInTheDocument()
   expect(within(rows[1]).getByText('Quick win · ~1 min')).toBeInTheDocument()
   // Days counted from now, so only the name is fixed.
-  expect(within(rows[2]).getByText(/^Waiting on John/)).toBeInTheDocument()
+  expect(within(rows[2]).getByText(/^Waiting on others/)).toBeInTheDocument()
 })
 
 test('a host error shows its sentence and offers to sign in again', async () => {
@@ -528,7 +528,7 @@ test('b and Ctrl+B hide and show the sidebar, and it stays as you left it', asyn
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'b' })
   await waitFor(() => expect(sidebar()).toBeNull())
-  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false }))
+  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false, width: 360 }))
   fireEvent.keyDown(window, { key: 'b', ctrlKey: true })
   await waitFor(() => expect(sidebar()).toBeInTheDocument())
 })
@@ -605,4 +605,41 @@ test('an approval refused for want of posting rights says so', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent(
     "Couldn't approve Retry budget for webhooks: posting needs your OK in GitLab.",
   )
+})
+
+test('the sidebar is as wide as it was left', async () => {
+  await fake.store.set({ sidebar: { open: true, width: 480 } })
+  renderApp()
+  await screen.findAllByRole('article')
+  await waitFor(() =>
+    expect((document.querySelector('.q-shell') as HTMLElement).style.getPropertyValue('--sidebar-width')).toBe('480px'),
+  )
+  fireEvent.keyDown(screen.getByRole('separator', { name: 'Resize the sidebar' }), { key: 'ArrowLeft' })
+  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: true, width: 464 }))
+})
+
+test('the 💤 on a row snoozes it without opening it, and Undo brings it back', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('button', { name: 'Snooze Fix flaky test' }))
+  await waitFor(() =>
+    expect(screen.getAllByRole('article').map((row) => row.textContent).join()).not.toContain('Fix flaky test'),
+  )
+  expect(window.location.hash).toBe('')
+  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+  await waitFor(() => expect(rowNamed('Fix flaky test')).toBeInTheDocument())
+})
+
+test('hiding the sidebar mid-drag drops the drag, and the saved width shows', async () => {
+  await fake.store.set({ sidebar: { open: true, width: 400 } })
+  renderApp()
+  await screen.findAllByRole('article')
+  const handle = screen.getByRole('separator', { name: 'Resize the sidebar' })
+  fireEvent.pointerDown(handle, { clientX: 400, pointerId: 1, button: 0 })
+  fireEvent.pointerMove(handle, { clientX: 520, pointerId: 1 })
+  fireEvent.keyDown(window, { key: 'b' })
+  fireEvent.keyDown(window, { key: 'b' })
+  await screen.findByRole('separator', { name: 'Resize the sidebar' })
+  expect((document.querySelector('.q-shell') as HTMLElement).style.getPropertyValue('--sidebar-width')).toBe('400px')
 })

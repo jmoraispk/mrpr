@@ -53,7 +53,15 @@ beforeEach(() => {
 })
 
 /** The sidebar with the selection QueueApp would keep. */
-function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) => void }) {
+function Harness({
+  rows,
+  onOpen,
+  onSnooze,
+}: {
+  rows: QueueRow[]
+  onOpen: (row: QueueRow) => void
+  onSnooze: (row: QueueRow) => void
+}) {
   const [projects] = useProjects()
   const list = useSidebarList(rows, projects)
   const [selected, setSelected] = useState<string | null>(null)
@@ -64,10 +72,14 @@ function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) =
       loading={false}
       selectedKey={selected}
       openKey={null}
+      onSnoozeRow={onSnooze}
       onOpenRow={(row) => {
         setSelected(row.key)
         onOpen(row)
       }}
+      width={360}
+      onResize={() => {}}
+      onResizeEnd={() => {}}
       searchFocus={0}
       onSearchFocused={() => {}}
       onSearchDone={() => {}}
@@ -77,10 +89,11 @@ function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) =
 
 function show(rows: QueueRow[] = rowsOf(MRS)) {
   const onOpen = vi.fn()
+  const onSnooze = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} />,
+    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} />,
   )
-  return { onOpen, ...view }
+  return { onOpen, onSnooze, ...view }
 }
 
 const titles = () =>
@@ -111,14 +124,27 @@ test('one group per repository, needs-you first, and done hidden', () => {
   ])
 })
 
-test('a row: its title, three tags then +N, and a grey line', () => {
-  show()
-  const billing = rowNamed('Port billing')
-  expect(within(billing).getByText('Waiting on John')).toBeInTheDocument()
-  expect(within(billing).getByText('Pipeline failed')).toBeInTheDocument()
-  expect(within(billing).getByText('Needs rebase')).toBeInTheDocument()
-  expect(within(billing).queryByText('AI-authored')).toBeNull()
-  expect(within(billing).getByText('+1')).toBeInTheDocument()
+test('a row: its title, three labels then +N, and a grey line', () => {
+  // Your own small MR that you also review, with changes requested and behind its target: five labels.
+  const busy = mr(9, {
+    title: 'Busy one',
+    roles: ['author', 'reviewer'],
+    author: JOAO,
+    additions: 4,
+    deletions: 1,
+    needsRebase: true,
+    reviewers: [
+      { username: 'joao', name: 'Joao', state: 'UNREVIEWED' },
+      { username: 'ana', name: 'Ana', state: 'REQUESTED_CHANGES' },
+    ],
+  })
+  show(rowsOf([MRS[0], busy]))
+  const row = rowNamed('Busy one')
+  expect(within(row).getByText('Blocking 1 person')).toBeInTheDocument()
+  expect(within(row).getByText('Returned to you')).toBeInTheDocument()
+  expect(within(row).getByText('Quick win · ~1 min')).toBeInTheDocument()
+  expect(within(row).queryByText(/Waiting on others/)).toBeNull()
+  expect(within(row).getByText('+2')).toBeInTheDocument()
   expect(rowNamed('Retry budget')).toHaveTextContent(/!1 · by Ana · \+120 −10 ·/)
 })
 
@@ -139,7 +165,7 @@ test('a chip puts its tag first, numbered, and the order is saved', async () => 
   expect(chip).toHaveAttribute('aria-pressed', 'true')
   expect(chip).toHaveTextContent(/^1/)
   await waitFor(async () =>
-    expect(await fake.store.get('listOrder')).toEqual({ tags: ['waiting-on'], sortBy: 'waiting' }),
+    expect(await fake.store.get('listOrder')).toEqual({ tags: ['waiting-on-others'], sortBy: 'waiting' }),
   )
   await user.click(screen.getByRole('button', { name: 'Clear' }))
   expect(titles()[0]).toBe('Retry budget for webhooks')
@@ -192,3 +218,11 @@ test('nothing at all, and nothing but done', async () => {
   expect(titles()).toEqual(['Already approved'])
 })
 
+
+test('the snooze button snoozes and never opens the row', () => {
+  const { onOpen, onSnooze } = show()
+  fireEvent.click(screen.getByRole('button', { name: 'Snooze Fix flaky test' }))
+  expect(onSnooze).toHaveBeenCalledOnce()
+  expect(onSnooze.mock.calls[0][0]).toMatchObject({ iid: 2 })
+  expect(onOpen).not.toHaveBeenCalled()
+})
