@@ -35,4 +35,6 @@ export const server = setupServer(
     ]),
   ),
   http.get('/api/discussions', () => HttpResponse.json([])),
+  // The site reports each user's first visit; tests never care about the answer.
+  http.post('*/api/users/', () => HttpResponse.json({ ok: true, firstSeen: '2026-10-14T00:00:00.000Z' })),
 )
