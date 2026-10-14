@@ -1,4 +1,4 @@
-import { hostIdFor, removeHost, saveHost } from '../extension/hosts'
+import { hostIdFor, listHosts, removeHost, saveHost } from '../extension/hosts'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
 import { updateInbox } from '../inbox/store'
@@ -41,7 +41,12 @@ interface Pending {
   publish?: Record<string, never>
 }
 
-export type AuthFailure = 'cancelled' | 'no_pending' | 'state_mismatch' | 'exchange_failed'
+export type AuthFailure =
+  | 'cancelled'
+  | 'no_pending'
+  | 'state_mismatch'
+  | 'exchange_failed'
+  | 'wrong_user'
 
 export class AuthError extends Error {
   readonly reason: AuthFailure
@@ -81,6 +86,24 @@ export function redirectUri(): string {
 
 async function fullScopeHosts(): Promise<string[]> {
   return (await platform().store.get<string[]>(FULL_SCOPE_KEY)) ?? []
+}
+
+/** Ask this server for `api` from now on: its sign-in application does not allow `read_api`. */
+export async function rememberFullScope(host: string): Promise<void> {
+  const hosts = await fullScopeHosts()
+  await platform().store.set({ [FULL_SCOPE_KEY]: [...new Set([...hosts, host])] })
+}
+
+/**
+ * The server of a read-only sign-in this tab started and never finished. GitLab
+ * may show its own error page, rather than come back, when its application
+ * does not allow `read_api`: the way out is signing in with full access.
+ */
+export function unfinishedReadOnlySignIn(): string | null {
+  const raw = sessionStorage.getItem(PENDING_KEY)
+  if (!raw) return null
+  const pending = JSON.parse(raw) as Pending
+  return pending.scope && pending.scope !== 'api' ? pending.host : null
 }
 
 /** The GitLab page that asks the user to approve this pending sign-in. */
@@ -241,8 +264,7 @@ export async function completeSignIn(
   const asked = pending.scope ?? 'api'
   if (url.searchParams.get('error') === 'invalid_scope' && asked !== 'api' && site) {
     // This server's application allows only `api`: remember it and ask for that.
-    const hosts = await fullScopeHosts()
-    await platform().store.set({ [FULL_SCOPE_KEY]: [...new Set([...hosts, site.host])] })
+    await rememberFullScope(site.host)
     await signIn(site, pending.returnTo, 'api', navigate, { publish: pending.publish })
     return { returnTo: pending.returnTo, restarted: true }
   }
@@ -264,12 +286,22 @@ export async function completeSignIn(
     throw new AuthError('exchange_failed', 'GitLab did not complete the sign-in. Try again.')
   }
   const auth = toAuth(result.token, Date.now(), asked.split(' '))
-  await write(site.host, auth)
   const apiBase = `https://${site.host}/api/v4`
   const user = await new GitLabClient(apiBase, async () => auth.accessToken).request<{
     id: number
     username: string
   }>('GET', '/user')
+  if (pending.popup) {
+    // GitLab may now be signed in as someone else: never post under their name.
+    const known = (await listHosts()).find((value) => value.id === hostIdFor(site.host))
+    if (known && known.userId !== user.id) {
+      throw new AuthError(
+        'wrong_user',
+        `GitLab is signed in as ${user.username} in this browser, not ${known.username}. Nothing was changed.`,
+      )
+    }
+  }
+  await write(site.host, auth)
   await saveHost({
     id: hostIdFor(site.host),
     host: hostIdFor(site.host),

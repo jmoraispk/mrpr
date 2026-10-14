@@ -411,3 +411,35 @@ test('a refresh keeps the scopes the sign-in was granted', async () => {
   await expect(accessToken(SITE, () => 1_000_000)).resolves.toBe('at-new')
   expect((await stored())?.scopes).toEqual(['read_api'])
 })
+
+test('a read-only sign-in that never came back is found; a full one or a finished one is not', async () => {
+  const { unfinishedReadOnlySignIn } = await import('./auth')
+  expect(unfinishedReadOnlySignIn()).toBeNull()
+  await signIn(SITE, '#/', 'read_api', () => {})
+  expect(unfinishedReadOnlySignIn()).toBe(SITE.host)
+  await signIn(SITE, '#/', 'api', () => {})
+  expect(unfinishedReadOnlySignIn()).toBeNull()
+})
+
+test('a posting window signed in as someone else posts nothing and keeps the sign-in', async () => {
+  await platform().store.set({
+    [AUTH_KEY]: { [SITE.host]: { accessToken: 'at-mine', refreshToken: 'rt-mine', expiresAt: Date.now() + 3_600_000, scopes: ['read_api'] } },
+  })
+  await platform().store.set({
+    hosts: [{ id: SITE.host, host: SITE.host, apiBase: `${ORIGIN}/api/v4`, userId: 7, username: 'joao' }],
+  })
+  const popup = { location: { href: '' } } as unknown as Window
+  await signInForPosting(SITE, popup)
+  const pending = JSON.parse(localStorage.getItem(POPUP_PENDING_KEY)!) as { state: string }
+  server.use(
+    http.post(`${ORIGIN}/oauth/token`, () =>
+      HttpResponse.json({ access_token: 'at-other', refresh_token: 'rt-other', expires_in: 7200, scope: 'api' }),
+    ),
+    http.get(`${ORIGIN}/api/v4/user`, () => HttpResponse.json({ id: 99, username: 'someone-else' })),
+  )
+  await expect(
+    completeSignIn(new URL(`${window.location.origin}/?code=c-3&state=${pending.state}`), CONFIG),
+  ).rejects.toMatchObject({ reason: 'wrong_user' })
+  expect((await stored())?.scopes).toEqual(['read_api'])
+  await expect(listHosts()).resolves.toMatchObject([{ userId: 7, username: 'joao' }])
+})

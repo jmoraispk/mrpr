@@ -75,8 +75,10 @@ On gitlab-master: avatar → Preferences → Applications → Add new applicatio
   - `http://localhost:5173/app/` (local development)
 - **Confidential:** off. The site cannot keep a secret; PKCE replaces one.
 - **Scopes:** `read_api` and `api`. Mr. PR signs in read-only and asks for
-  `api` the first time someone approves, replies or nudges. An application
-  registered with `api` only still works: sign-in asks for `api` there.
+  `api` the first time someone approves, replies or nudges. Add `read_api` to
+  an application registered earlier with `api` only. Until then, GitLab may
+  stop sign-in there on its own error page: back on Mr. PR, "sign in with full
+  access" gets past it, and that server is asked for `api` from then on.
 
 Save, and copy the **Application ID**. It is public by design; do not copy the
 secret, which Mr. PR never uses.

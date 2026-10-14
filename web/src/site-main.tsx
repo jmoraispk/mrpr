@@ -45,6 +45,12 @@ async function finishSignInIfReturning(): Promise<string | null> {
     history.replaceState(null, '', `${url.pathname}${result.returnTo}`)
     return null
   } catch (error) {
+    // A posting window whose sign-in failed: close it, and the page that
+    // opened it refuses the post and says why.
+    if (window.name === 'mrpr-allow-posting' && window.opener) {
+      window.close()
+      return null
+    }
     return error instanceof AuthError
       ? error.message
       : 'GitLab did not complete the sign-in. Try again.'
