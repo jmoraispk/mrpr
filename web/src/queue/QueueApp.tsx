@@ -339,6 +339,7 @@ function rowFromOverview(overview: MrOverview, target: ReviewTarget): QueueRow {
     attention: 'done',
     folded: false,
     minutes: 0,
+    newCommits: 0,
     items: [],
     snoozed: false,
   }

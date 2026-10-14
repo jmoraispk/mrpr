@@ -21,6 +21,8 @@ export interface QueueRow {
   folded: boolean
   /** Review time estimate from the diff size; 0 without facts. */
   minutes: number
+  /** Commits since your last look, on an MR you review; 0 otherwise. */
+  newCommits: number
   score: number
   items: InboxItem[]
   snoozed: boolean
@@ -38,7 +40,6 @@ export interface QueueInput {
 
 const QUICK_WIN_LINES = 30
 const PENDING: ReadonlySet<string> = new Set(['UNREVIEWED', 'REVIEW_STARTED', 'UNAPPROVED'])
-const AGENT_LABEL = /agent|\bai\b|bot/i
 const HOUR = 3_600_000
 
 export function rowKey(hostId: string, mrId: number): string {
@@ -51,7 +52,6 @@ export function lookKeyFor(hostId: string, project: string, iid: number): string
 }
 
 const isForMe = (item: InboxItem) => item.kind === 'reply' || item.kind === 'mention'
-const threadCount = (items: InboxItem[]) => new Set(items.map((item) => item.discussionId)).size
 
 function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, now: number) {
   const unread = items.filter((item) => !item.read)
@@ -71,10 +71,7 @@ function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, 
       : 0
   const tags: Tag[] = []
   if (blocking) tags.push({ kind: 'blocking', people: blocking })
-  if (needsReview) tags.push({ kind: 'needs-review' })
-  if (forMe.length) tags.push({ kind: 'reply-waiting', count: threadCount(forMe) })
-  // Commits matter to a reviewer; on your own MR they are your own pushes.
-  if (mine && commits > 0) tags.push({ kind: 'new-commits', count: commits })
+  if (needsReview || forMe.length) tags.push({ kind: 'waiting-on-you' })
   if (mine?.state === 'REQUESTED_CHANGES' && commits > 0) tags.push({ kind: 'changes-addressed' })
   if (
     isAuthor &&
@@ -83,25 +80,22 @@ function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, 
     tags.push({ kind: 'returned' })
   }
   if (isAuthor && (mr.approvalsLeft > 0 || mr.reviewers.some((r) => PENDING.has(r.state)))) {
-    const names = mr.reviewers.filter((r) => PENDING.has(r.state)).map((r) => r.name)
     const days = Math.floor((now - Date.parse(mr.createdAt)) / (24 * HOUR))
-    tags.push({ kind: 'waiting-on', names, days: Math.max(0, days) })
+    tags.push({ kind: 'waiting-on-others', days: Math.max(0, days) })
   }
   if (needsReview && lines <= QUICK_WIN_LINES) tags.push({ kind: 'quick-win', minutes })
-  // A failed pipeline matters only where it blocks a merge you own or must review.
-  if (mr.pipeline === 'FAILED' && (isAuthor || needsReview)) tags.push({ kind: 'pipeline-failed' })
   if (isAuthor && mr.needsRebase) tags.push({ kind: 'needs-rebase' })
-  if (mr.draft) tags.push({ kind: 'draft' })
-  if (mr.labels.some((label) => AGENT_LABEL.test(label))) tags.push({ kind: 'ai-authored' })
-  return { tags, minutes, blocking }
+  // Commits matter to a reviewer; on your own MR they are your own pushes.
+  return { tags, minutes, blocking, newCommits: mine ? commits : 0 }
 }
 
 /** What an MR with no facts asks of you, by what its unread inbox items say. */
 function orphanTags(items: InboxItem[]): Tag[] {
   const tags: Tag[] = []
   const forMe = items.filter(isForMe)
-  if (items.some((item) => item.kind === 'review_requested')) tags.push({ kind: 'needs-review' })
-  if (forMe.length) tags.push({ kind: 'reply-waiting', count: threadCount(forMe) })
+  if (forMe.length || items.some((item) => item.kind === 'review_requested')) {
+    tags.push({ kind: 'waiting-on-you' })
+  }
   if (items.some((item) => item.kind === 'comment')) tags.push({ kind: 'returned' })
   return tags
 }
@@ -119,7 +113,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
       const key = rowKey(host.hostId, mr.id)
       const items = hostItems.filter((item) => item.mrId === mr.id)
       const commits = input.commitsSince[key] ?? 0
-      const { tags, minutes, blocking } = classify(mr, host.username, items, commits, now)
+      const { tags, minutes, blocking, newCommits } = classify(mr, host.username, items, commits, now)
       const ageHours = (now - Date.parse(mr.createdAt)) / HOUR
       const quickWin = tags.some((tag) => tag.kind === 'quick-win')
       rows.push({
@@ -136,6 +130,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         attention: attentionOf(tags),
         folded: mr.author.bot,
         minutes,
+        newCommits,
         score: blocking * 10 + ageHours / 6 + (quickWin ? 5 : 0) - (mr.draft ? 20 : 0),
         items,
         snoozed: input.snoozed[key] === mr.updatedAt,
@@ -165,6 +160,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         attention: attentionOf(tags),
         folded: false,
         minutes: 0,
+        newCommits: 0,
         score: 0,
         items,
         snoozed: input.snoozed[key] === first.createdAt,

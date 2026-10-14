@@ -127,7 +127,7 @@ test('tags: a pending review with one approval left blocks the author and whoeve
     }),
   ])
   expect(byIid(rows, 1).tags).toEqual(
-    expect.arrayContaining([{ kind: 'blocking', people: 1 }, { kind: 'needs-review' }]),
+    expect.arrayContaining([{ kind: 'blocking', people: 1 }, { kind: 'waiting-on-you' }]),
   )
   expect(byIid(rows, 2).tags).toEqual(expect.arrayContaining([{ kind: 'blocking', people: 2 }]))
   expect(byIid(rows, 1).attention).toBe('needs-you')
@@ -142,10 +142,10 @@ test('tags: Blocking only when your approval is the last one missing', () => {
     mr(5, { approvalsLeft: 0 }),
   ])
   for (const iid of [1, 2, 3, 4, 5]) expect(kinds(byIid(rows, iid))).not.toContain('blocking')
-  expect(kinds(byIid(rows, 1))).toContain('needs-review')
-  expect(kinds(byIid(rows, 2))).not.toContain('needs-review')
-  expect(kinds(byIid(rows, 3))).not.toContain('needs-review')
-  expect(kinds(byIid(rows, 4))).toEqual(expect.arrayContaining(['needs-review', 'draft']))
+  expect(kinds(byIid(rows, 1))).toContain('waiting-on-you')
+  expect(kinds(byIid(rows, 2))).not.toContain('waiting-on-you')
+  expect(kinds(byIid(rows, 3))).not.toContain('waiting-on-you')
+  expect(kinds(byIid(rows, 4))).toEqual(['waiting-on-you'])
 })
 
 test('tags: a small review is a quick win; a small MR that needs nothing from you is not', () => {
@@ -162,19 +162,25 @@ test('tags: an unread reply waits on you, even after approving', () => {
     [mr(1, { reviewers: [{ username: 'joao', name: 'J', state: 'APPROVED' }] })],
     { items: [item(1, 'reply')] },
   )
-  expect(row.tags).toEqual([{ kind: 'reply-waiting', count: 1 }])
+  expect(row.tags).toEqual([{ kind: 'waiting-on-you' }])
   expect(row.attention).toBe('needs-you')
 })
 
-test('tags: new commits since your look, and changes addressed after you asked for them', () => {
+test('tags: new commits after you asked for changes say changes were addressed', () => {
   const [row] = run(
     [mr(1, { reviewers: [{ username: 'joao', name: 'J', state: 'REQUESTED_CHANGES' }] })],
     { commitsSince: { [rowKey(H, 1)]: 4 } },
   )
-  expect(row.tags).toEqual(
-    expect.arrayContaining([{ kind: 'new-commits', count: 4 }, { kind: 'changes-addressed' }]),
+  expect(row.tags).toEqual([{ kind: 'changes-addressed' }])
+  expect(row).toMatchObject({ attention: 'returned', newCommits: 4 })
+})
+
+test('tags: new commits alone are no label, and an MR you approved stays done', () => {
+  const [row] = run(
+    [mr(1, { reviewers: [{ username: 'joao', name: 'J', state: 'APPROVED' }] })],
+    { commitsSince: { [rowKey(H, 1)]: 3 } },
   )
-  expect(row.attention).toBe('returned')
+  expect(row).toMatchObject({ tags: [], attention: 'done', newCommits: 3 })
 })
 
 test('tags: your MR is returned with changes requested or unread comments', () => {
@@ -200,7 +206,7 @@ test('tags: your MR waiting on reviewers names them and counts the days', () => 
       reviewers: [{ username: 'john', name: 'John', state: 'UNREVIEWED' }],
     }),
   ])
-  expect(row.tags).toEqual([{ kind: 'waiting-on', names: ['John'], days: 2 }])
+  expect(row.tags).toEqual([{ kind: 'waiting-on-others', days: 2 }])
   expect(row.attention).toBe('waiting')
 })
 
@@ -213,15 +219,13 @@ test('tags: quiet and approved is done; bot-authored is folded', () => {
   expect(byIid(rows, 2).folded).toBe(true)
 })
 
-test('tags: drafts, failed pipelines, AI labels, and a rebase only on your own MR', () => {
+test('tags: no labels for drafts, failed pipelines or AI; a rebase only on your own MR', () => {
   const rows = run([
     mr(1, { draft: true, pipeline: 'FAILED', labels: ['agents'], additions: 600, deletions: 50 }),
     mr(2, { roles: ['author'], author: me, needsRebase: true }),
     mr(3, { needsRebase: true }),
   ])
-  expect(kinds(byIid(rows, 1))).toEqual(
-    expect.arrayContaining(['draft', 'pipeline-failed', 'ai-authored']),
-  )
+  expect(kinds(byIid(rows, 1))).toEqual(['waiting-on-you'])
   expect(byIid(rows, 1).minutes).toBe(26)
   expect(kinds(byIid(rows, 2))).toContain('needs-rebase')
   expect(kinds(byIid(rows, 3))).not.toContain('needs-rebase')
@@ -231,8 +235,8 @@ test('tags: an MR without facts is tagged by its unread items', () => {
   const rows = run([], {
     items: [item(9, 'review_requested'), item(8, 'mention'), item(7, 'comment'), item(6, 'merged')],
   })
-  expect(byIid(rows, 9)).toMatchObject({ tags: [{ kind: 'needs-review' }], attention: 'needs-you', minutes: 0 })
-  expect(byIid(rows, 8).tags).toEqual([{ kind: 'reply-waiting', count: 1 }])
+  expect(byIid(rows, 9)).toMatchObject({ tags: [{ kind: 'waiting-on-you' }], attention: 'needs-you', minutes: 0 })
+  expect(byIid(rows, 8).tags).toEqual([{ kind: 'waiting-on-you' }])
   expect(byIid(rows, 7).tags).toEqual([{ kind: 'returned' }])
   expect(byIid(rows, 6)).toMatchObject({ tags: [], attention: 'done' })
 })
@@ -248,6 +252,6 @@ test('tags: your own pushes are not new commits for you', () => {
     ],
     { commitsSince: { [rowKey(H, 1)]: 3 } },
   )
-  expect(kinds(row)).not.toContain('new-commits')
+  expect(row.newCommits).toBe(0)
   expect(row.attention).toBe('waiting')
 })

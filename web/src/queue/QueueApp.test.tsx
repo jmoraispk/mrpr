@@ -168,7 +168,7 @@ test('MRs are grouped by repository, what needs you first, each with its tags', 
   expect(within(rows[0]).getByText(/by Ana/)).toBeInTheDocument()
   expect(within(rows[1]).getByText('Quick win · ~1 min')).toBeInTheDocument()
   // Days counted from now, so only the name is fixed.
-  expect(within(rows[2]).getByText(/^Waiting on John/)).toBeInTheDocument()
+  expect(within(rows[2]).getByText(/^Waiting on others/)).toBeInTheDocument()
 })
 
 test('a host error shows its sentence and offers to sign in again', async () => {

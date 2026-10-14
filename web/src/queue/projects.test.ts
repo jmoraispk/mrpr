@@ -28,6 +28,7 @@ function row(key: string, project: string, labels: string[] = []): QueueRow {
     attention: 'needs-you',
     folded: false,
     minutes: 0,
+    newCommits: 0,
     items: [],
     snoozed: false,
     mr: { labels } as never,

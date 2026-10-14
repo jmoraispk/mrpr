@@ -125,16 +125,14 @@ mentions and comments on it are folded into that row.
 
 - **Groups:** your projects first, then one group per repository for the rest.
   Click a group's header to fold it; folded groups stay folded.
-- **Tags** say what an MR asks of you:
+- **Labels** say what an MR asks of you:
   - **Blocking N people:** your approval is the last one missing. It counts
-    the author and the reviewers who already approved. It is a best guess,
-    since GitLab's approval rules may not count your approval.
-  - **Needs your review**, **Reply waiting**;
-  - **N new commits** since your last look, and **Changes addressed** when they
-    come after you requested changes;
-  - **Returned to you** and **Waiting on X** (your MRs);
-  - **Quick win** (30 changed lines or fewer), **Pipeline failed**, **Needs
-    rebase**, **Draft** and **AI-authored**.
+    the author and the reviewers who already approved. It is a best guess:
+    GitLab's approval rules may not count your approval.
+  - **Waiting on you:** your review, or a reply waiting on you.
+  - **Changes addressed:** new commits after you requested changes.
+  - **Returned to you** and **Waiting on others** (your MRs).
+  - **Quick win** (30 changed lines or fewer) and **Needs rebase**.
 
   A row shows three tags, then "+N".
 - **Order:** by default, what needs you comes first, then what came back to

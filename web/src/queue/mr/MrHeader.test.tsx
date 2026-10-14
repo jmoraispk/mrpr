@@ -40,6 +40,7 @@ function row(over: Partial<QueueRow> = {}): QueueRow {
     attention: 'needs-you',
     folded: false,
     minutes: 0,
+    newCommits: 0,
     items: [],
     snoozed: false,
     ...over,
@@ -174,7 +175,7 @@ test('a failed post keeps the text and says so', async () => {
 
 test('nudge appears on waiting rows and tags the reviewers still waiting', async () => {
   const user = userEvent.setup()
-  show(row({ tags: [{ kind: 'waiting-on', names: ['John'], days: 0 }] }))
+  show(row({ tags: [{ kind: 'waiting-on-others', days: 0 }] }))
   await user.click(screen.getByRole('button', { name: 'Nudge' }))
   expect(screen.getByRole('textbox')).toHaveValue(
     "@john friendly nudge, this one's ready for your review whenever you have a moment.",
@@ -276,7 +277,7 @@ test('reply finds the thread waiting on you from the MR itself, even once the in
 })
 
 test('the header shows the row’s tags', () => {
-  show(row({ tags: [{ kind: 'needs-review' }, { kind: 'new-commits', count: 3 }] }))
-  expect(screen.getByText('3 new commits')).toBeInTheDocument()
-  expect(screen.getByText('Needs your review')).toBeInTheDocument()
+  show(row({ tags: [{ kind: 'waiting-on-you' }, { kind: 'changes-addressed' }] }))
+  expect(screen.getByText('Changes addressed')).toBeInTheDocument()
+  expect(screen.getByText('Waiting on you')).toBeInTheDocument()
 })
