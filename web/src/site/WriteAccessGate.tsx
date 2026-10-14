@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { platform } from '../platform/platform'
-import { AUTH_KEY, canPost, signIn, signInForPosting } from './auth'
+import { AUTH_KEY, canPost, forgetPostingSignIn, signIn, signInForPosting } from './auth'
 import type { SiteConfig } from './config'
 import { Modal } from './Modal'
+import { POSTING_WINDOW } from './returning'
 import { pendingWriteAccess, settleWriteAccess, subscribeWriteAccess } from './writeAccess'
 
 type Stage = 'ask' | 'waiting' | 'blocked'
 
 const openPostingWindow = () =>
-  window.open('about:blank', 'mrpr-allow-posting', 'popup,width=600,height=700')
+  window.open('about:blank', POSTING_WINDOW, 'popup,width=600,height=700')
 
 /** Asks once per server before the first post, and lets the post through when GitLab says yes. */
 export function WriteAccessGate({
@@ -38,7 +39,10 @@ export function WriteAccessGate({
     })
     const timer = window.setInterval(() => {
       if (!popup.current?.closed) return
-      void canPost(host).then((granted) => settleWriteAccess(host, granted))
+      void canPost(host).then((granted) => {
+        if (!granted) forgetPostingSignIn()
+        settleWriteAccess(host, granted)
+      })
     }, 500)
     return () => {
       stop()
@@ -48,7 +52,10 @@ export function WriteAccessGate({
 
   if (!host) return null
   const site = config.hosts.find((value) => value.host === host)
-  const refuse = () => settleWriteAccess(host, false)
+  const refuse = () => {
+    forgetPostingSignIn()
+    settleWriteAccess(host, false)
+  }
   function allow() {
     // Opened inside the click, so pop-up blockers let it through.
     const opened = site ? openWindow() : null

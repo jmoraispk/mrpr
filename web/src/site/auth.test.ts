@@ -443,3 +443,41 @@ test('a posting window signed in as someone else posts nothing and keeps the sig
   expect((await stored())?.scopes).toEqual(['read_api'])
   await expect(listHosts()).resolves.toMatchObject([{ userId: 7, username: 'joao' }])
 })
+
+test('a posting sign-in that lands during a refresh is not overwritten by it', async () => {
+  await platform().store.set({
+    [AUTH_KEY]: { [SITE.host]: { accessToken: 'at-old', refreshToken: 'rt-old', expiresAt: 1_000_000 + 30_000, scopes: ['read_api'] } },
+    hosts: [{ id: SITE.host, host: SITE.host, apiBase: `${ORIGIN}/api/v4`, userId: 7, username: 'joao' }],
+  })
+  let release!: () => void
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  server.use(
+    http.post(`${ORIGIN}/oauth/token`, async ({ request }) => {
+      const body = Object.fromEntries(new URLSearchParams(await request.text()))
+      if (body.grant_type === 'refresh_token') {
+        await held
+        return HttpResponse.json({ access_token: 'at-refreshed', refresh_token: 'rt-refreshed', expires_in: 7200 })
+      }
+      return HttpResponse.json({ access_token: 'at-api', refresh_token: 'rt-api', expires_in: 7200, scope: 'api' })
+    }),
+    http.get(`${ORIGIN}/api/v4/user`, () => HttpResponse.json({ id: 7, username: 'joao' })),
+  )
+  const refreshing = accessToken(SITE, () => 1_000_000)
+  const popup = { location: { href: '' } } as unknown as Window
+  await signInForPosting(SITE, popup)
+  const { state } = JSON.parse(localStorage.getItem(POPUP_PENDING_KEY)!) as { state: string }
+  const posting = completeSignIn(new URL(`${window.location.origin}/?code=c&state=${state}`), CONFIG)
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  release()
+  await Promise.all([refreshing, posting])
+  expect((await stored())?.scopes).toEqual(['api'])
+})
+
+test('forgetting a posting sign-in clears its slot', async () => {
+  const { forgetPostingSignIn } = await import('./auth')
+  await signInForPosting(SITE, { location: { href: '' } } as unknown as Window)
+  forgetPostingSignIn()
+  expect(localStorage.getItem(POPUP_PENDING_KEY)).toBeNull()
+})

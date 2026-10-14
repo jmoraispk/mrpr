@@ -161,6 +161,11 @@ export async function signInForPosting(site: SiteHost, popup: Window): Promise<v
   popup.location.href = await authorizeUrl(site, pending)
 }
 
+/** Clear the posting sign-in once the user has refused it, so nothing stale lingers. */
+export function forgetPostingSignIn(): void {
+  localStorage.removeItem(POPUP_PENDING_KEY)
+}
+
 /** Whether this server's sign-in may post. No sign-in at all is left to fail as signed out. */
 export async function canPost(host: string): Promise<boolean> {
   const auth = (await readAll())[host]
@@ -301,7 +306,9 @@ export async function completeSignIn(
       )
     }
   }
-  await write(site.host, auth)
+  // The refresh writes under this lock too: whichever finishes last must not
+  // undo fresh posting rights.
+  await withLock(`delta-auth-${site.host}`, () => write(site.host, auth))
   await saveHost({
     id: hostIdFor(site.host),
     host: hostIdFor(site.host),
