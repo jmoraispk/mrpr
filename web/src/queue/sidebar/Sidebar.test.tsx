@@ -68,6 +68,9 @@ function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) =
         setSelected(row.key)
         onOpen(row)
       }}
+      width={360}
+      onResize={() => {}}
+      onResizeEnd={() => {}}
       searchFocus={0}
       onSearchFocused={() => {}}
       onSearchDone={() => {}}

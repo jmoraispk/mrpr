@@ -528,7 +528,7 @@ test('b and Ctrl+B hide and show the sidebar, and it stays as you left it', asyn
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'b' })
   await waitFor(() => expect(sidebar()).toBeNull())
-  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false }))
+  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false, width: 360 }))
   fireEvent.keyDown(window, { key: 'b', ctrlKey: true })
   await waitFor(() => expect(sidebar()).toBeInTheDocument())
 })
@@ -605,4 +605,15 @@ test('an approval refused for want of posting rights says so', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent(
     "Couldn't approve Retry budget for webhooks: posting needs your OK in GitLab.",
   )
+})
+
+test('the sidebar is as wide as it was left', async () => {
+  await fake.store.set({ sidebar: { open: true, width: 480 } })
+  renderApp()
+  await screen.findAllByRole('article')
+  await waitFor(() =>
+    expect((document.querySelector('.q-shell') as HTMLElement).style.getPropertyValue('--sidebar-width')).toBe('480px'),
+  )
+  fireEvent.keyDown(screen.getByRole('separator', { name: 'Resize the sidebar' }), { key: 'ArrowLeft' })
+  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: true, width: 464 }))
 })

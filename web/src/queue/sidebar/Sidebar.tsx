@@ -9,6 +9,7 @@ import { useProjects } from '../state'
 import { useTheme } from '../theme'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
+import { SidebarResizer } from './SidebarResizer'
 import { TagBar } from './TagBar'
 import type { SidebarList } from './useSidebarList'
 
@@ -26,6 +27,9 @@ export interface SidebarProps {
   onSearchFocused: () => void
   /** Enter or ↓ in the search box: on to the results. */
   onSearchDone: () => void
+  width: number
+  onResize: (width: number) => void
+  onResizeEnd: (width: number) => void
 }
 
 const FILTER_LABELS: [keyof ListFilters, string][] = [
@@ -45,6 +49,9 @@ export function Sidebar({
   searchFocus,
   onSearchFocused,
   onSearchDone,
+  width,
+  onResize,
+  onResizeEnd,
 }: SidebarProps) {
   const [projects, setProjects] = useProjects()
   const theme = useTheme()
@@ -198,6 +205,7 @@ export function Sidebar({
         </nav>
         {newProjectOpen ? <ProjectDialog onClose={() => setNewProjectOpen(false)} /> : null}
       </footer>
+      <SidebarResizer width={width} onResize={onResize} onResizeEnd={onResizeEnd} />
     </aside>
   )
 }

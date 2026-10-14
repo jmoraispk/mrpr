@@ -50,6 +50,9 @@ export function QueueApp() {
   const [projects] = useProjects()
   const list = useSidebarList(queue.rows, projects)
   const [sidebar, setSidebar] = useSidebar()
+  // While dragging, the width follows the pointer; it is saved on release.
+  const [dragWidth, setDragWidth] = useState<number | null>(null)
+  const width = dragWidth ?? sidebar.width
   const [selected, setSelected] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchFocus, setSearchFocus] = useState(0)
@@ -159,17 +162,17 @@ export function QueueApp() {
         const now = parseSiteRoute(window.location.hash)
         if (now.name === 'review' && now.full) {
           window.location.hash = reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
-          if (!sidebar.open) setSidebar({ open: true })
+          if (!sidebar.open) setSidebar({ ...sidebar, open: true })
           return
         }
-        setSidebar({ open: !sidebar.open })
+        setSidebar({ ...sidebar, open: !sidebar.open })
       },
       search() {
         const now = parseSiteRoute(window.location.hash)
         if (now.name === 'review' && now.full) {
           window.location.hash = reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
         }
-        if (!sidebar.open) setSidebar({ open: true })
+        if (!sidebar.open) setSidebar({ ...sidebar, open: true })
         setSearchFocus((count) => count + 1)
       },
       help: () => setHelpOpen((value) => !value),
@@ -202,6 +205,7 @@ export function QueueApp() {
       className={`q-shell${showSidebar ? '' : ' is-sidebar-hidden'}${openTarget ? ' has-mr' : ''}${
         route.name === 'settings' || route.name === 'snoozed' ? ' has-page' : ''
       }`}
+      style={{ ['--sidebar-width' as string]: `${width}px` }}
     >
       {showSidebar ? (
         <Sidebar
@@ -213,6 +217,12 @@ export function QueueApp() {
           onOpenRow={(row) => open(row)}
           searchFocus={searchFocus}
           onSearchFocused={() => setSearchFocus(0)}
+          width={width}
+          onResize={setDragWidth}
+          onResizeEnd={(next) => {
+            setDragWidth(null)
+            setSidebar({ ...sidebar, width: next })
+          }}
           onSearchDone={() => {
             if (list.flat[0]) setSelected(list.flat[0].key)
           }}

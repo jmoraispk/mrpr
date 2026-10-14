@@ -37,3 +37,6 @@
 .sb-foot a { color: var(--ink-2); }
 .sb-foot button { padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
 .sb .q-dialog { color: var(--muted); font-size: 13px; }
+
+.sb-resize { position: absolute; top: 0; right: -3px; z-index: 2; width: 6px; height: 100%; cursor: col-resize; touch-action: none; }
+.sb-resize:hover, .sb-resize:focus-visible { background: var(--accent); outline: none; opacity: 0.5; }
