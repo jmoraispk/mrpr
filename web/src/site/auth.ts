@@ -1,4 +1,4 @@
-import { hostIdFor, removeHost, saveHost } from '../extension/hosts'
+import { hostIdFor, listHosts, removeHost, saveHost } from '../extension/hosts'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
 import { updateInbox } from '../inbox/store'
@@ -11,6 +11,10 @@ import { publishToDirectory } from './servers'
 export const AUTH_KEY = 'auth'
 /** The in-flight sign-in, in sessionStorage: it must not outlive the tab. */
 export const PENDING_KEY = 'delta:pendingSignIn'
+/** A sign-in for posting, in its own window: localStorage, since a new window may not share sessionStorage. */
+export const POPUP_PENDING_KEY = 'delta:popupSignIn'
+/** Servers whose sign-in application only allows `api`: they refused `read_api` once. */
+export const FULL_SCOPE_KEY = 'fullScopeHosts'
 /** Refresh this long before expiry, so no request goes out with a dying token. */
 const REFRESH_MARGIN_MS = 60_000
 
@@ -18,6 +22,8 @@ interface HostAuth {
   accessToken: string
   refreshToken: string
   expiresAt: number
+  /** What GitLab granted. Missing on sign-ins from before scopes were stored, which asked for `api`. */
+  scopes?: string[]
 }
 
 interface Pending {
@@ -27,11 +33,20 @@ interface Pending {
   state: string
   verifier: string
   returnTo: string
+  /** The scope asked for. Missing on sign-ins started before scopes existed, which asked for `api`. */
+  scope?: string
+  /** Running in a window opened for posting rights: it closes itself when done. */
+  popup?: true
   /** Set when the id was pasted in setup: share it once sign-in works. */
   publish?: Record<string, never>
 }
 
-export type AuthFailure = 'cancelled' | 'no_pending' | 'state_mismatch' | 'exchange_failed'
+export type AuthFailure =
+  | 'cancelled'
+  | 'no_pending'
+  | 'state_mismatch'
+  | 'exchange_failed'
+  | 'wrong_user'
 
 export class AuthError extends Error {
   readonly reason: AuthFailure
@@ -69,6 +84,43 @@ export function redirectUri(): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}${APP_PATH}`
 }
 
+async function fullScopeHosts(): Promise<string[]> {
+  return (await platform().store.get<string[]>(FULL_SCOPE_KEY)) ?? []
+}
+
+/** Ask this server for `api` from now on: its sign-in application does not allow `read_api`. */
+export async function rememberFullScope(host: string): Promise<void> {
+  const hosts = await fullScopeHosts()
+  await platform().store.set({ [FULL_SCOPE_KEY]: [...new Set([...hosts, host])] })
+}
+
+/**
+ * The server of a read-only sign-in this tab started and never finished. GitLab
+ * may show its own error page, rather than come back, when its application
+ * does not allow `read_api`: the way out is signing in with full access.
+ */
+export function unfinishedReadOnlySignIn(): string | null {
+  const raw = sessionStorage.getItem(PENDING_KEY)
+  if (!raw) return null
+  const pending = JSON.parse(raw) as Pending
+  return pending.scope && pending.scope !== 'api' ? pending.host : null
+}
+
+/** The GitLab page that asks the user to approve this pending sign-in. */
+async function authorizeUrl(site: SiteHost, pending: Pending): Promise<string> {
+  const url = new URL(`https://${site.host}/oauth/authorize`)
+  url.search = new URLSearchParams({
+    client_id: site.clientId,
+    redirect_uri: redirectUri(),
+    response_type: 'code',
+    scope: pending.scope ?? 'api',
+    state: pending.state,
+    code_challenge: await pkceChallenge(pending.verifier),
+    code_challenge_method: 'S256',
+  }).toString()
+  return url.toString()
+}
+
 export async function signIn(
   site: SiteHost,
   returnTo: string,
@@ -76,6 +128,8 @@ export async function signIn(
   navigate: (url: string) => void = (url) => window.location.assign(url),
   options: { publish?: Record<string, never> } = {},
 ): Promise<void> {
+  // A server that refused `read_api` once is asked for `api` from then on.
+  const scope = scopes === 'api' || (await fullScopeHosts()).includes(site.host) ? 'api' : scopes
   const pending: Pending = {
     host: site.host,
     clientId: site.clientId,
@@ -83,19 +137,34 @@ export async function signIn(
     state: randomString(),
     verifier: randomString(),
     returnTo,
+    scope,
   }
   sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending))
-  const url = new URL(`https://${site.host}/oauth/authorize`)
-  url.search = new URLSearchParams({
-    client_id: site.clientId,
-    redirect_uri: redirectUri(),
-    response_type: 'code',
-    scope: scopes,
-    state: pending.state,
-    code_challenge: await pkceChallenge(pending.verifier),
-    code_challenge_method: 'S256',
-  }).toString()
-  navigate(url.toString())
+  navigate(await authorizeUrl(site, pending))
+}
+
+/**
+ * Ask for posting rights in a window the user just opened from a click, so
+ * this page, and anything typed in it, stays as it is.
+ */
+export async function signInForPosting(site: SiteHost, popup: Window): Promise<void> {
+  const pending: Pending = {
+    host: site.host,
+    clientId: site.clientId,
+    state: randomString(),
+    verifier: randomString(),
+    returnTo: '#/',
+    scope: 'api',
+    popup: true,
+  }
+  localStorage.setItem(POPUP_PENDING_KEY, JSON.stringify(pending))
+  popup.location.href = await authorizeUrl(site, pending)
+}
+
+/** Whether this server's sign-in may post. No sign-in at all is left to fail as signed out. */
+export async function canPost(host: string): Promise<boolean> {
+  const auth = (await readAll())[host]
+  return !auth || (auth.scopes ?? ['api']).includes('api')
 }
 
 async function readAll(): Promise<Record<string, HostAuth>> {
@@ -117,7 +186,7 @@ async function write(host: string, auth: HostAuth | null): Promise<void> {
 /** How long a token request may take before it counts as GitLab being down. */
 const TOKEN_TIMEOUT_MS = 15_000
 
-type TokenPayload = { access_token: string; refresh_token: string; expires_in: number }
+type TokenPayload = { access_token: string; refresh_token: string; expires_in: number; scope?: string }
 
 /**
  * `rejected`: GitLab refused the grant (400/401), so it will never work again.
@@ -149,41 +218,59 @@ async function requestToken(
   }
 }
 
-function toAuth(
-  token: TokenPayload,
-  now: number,
-): HostAuth {
+function toAuth(token: TokenPayload, now: number, asked: string[] | undefined): HostAuth {
   return {
     accessToken: token.access_token,
     refreshToken: token.refresh_token,
     expiresAt: now + token.expires_in * 1000,
+    // GitLab may leave the scope out of its answer: it granted what was asked.
+    scopes: token.scope ? token.scope.split(/\s+/) : asked,
   }
+}
+
+/** The pending sign-in this return answers: this tab's, or a posting window's. */
+function takePending(state: string | null): Pending | null {
+  const raw = sessionStorage.getItem(PENDING_KEY)
+  sessionStorage.removeItem(PENDING_KEY)
+  const popupRaw = localStorage.getItem(POPUP_PENDING_KEY)
+  const popup = popupRaw ? (JSON.parse(popupRaw) as Pending) : null
+  if (popup && popup.state === state) {
+    localStorage.removeItem(POPUP_PENDING_KEY)
+    return popup
+  }
+  return raw ? (JSON.parse(raw) as Pending) : null
 }
 
 export async function completeSignIn(
   url: URL,
   config: SiteConfig,
-): Promise<{ returnTo: string }> {
-  const raw = sessionStorage.getItem(PENDING_KEY)
-  sessionStorage.removeItem(PENDING_KEY)
-  if (!raw) {
+  navigate: (url: string) => void = (target) => window.location.assign(target),
+): Promise<{ returnTo: string; popup?: true; restarted?: true }> {
+  const pending = takePending(url.searchParams.get('state'))
+  if (!pending) {
     throw new AuthError(
       'no_pending',
       'That sign-in link has already been used or came from another tab. Sign in again.',
     )
   }
-  const pending = JSON.parse(raw) as Pending
   if (url.searchParams.get('state') !== pending.state) {
     throw new AuthError('state_mismatch', 'The sign-in response did not match. Sign in again.')
-  }
-  if (url.searchParams.has('error')) {
-    throw new AuthError('cancelled', 'Sign-in was cancelled on GitLab.')
   }
   // The id the sign-in started with: the code was issued to it, even if this
   // or another tab has since learned a different id for the same server.
   const site = pending.clientId
     ? { host: pending.host, clientId: pending.clientId }
     : config.hosts.find((value) => value.host === pending.host)
+  const asked = pending.scope ?? 'api'
+  if (url.searchParams.get('error') === 'invalid_scope' && asked !== 'api' && site) {
+    // This server's application allows only `api`: remember it and ask for that.
+    await rememberFullScope(site.host)
+    await signIn(site, pending.returnTo, 'api', navigate, { publish: pending.publish })
+    return { returnTo: pending.returnTo, restarted: true }
+  }
+  if (url.searchParams.has('error')) {
+    throw new AuthError('cancelled', 'Sign-in was cancelled on GitLab.')
+  }
   const code = url.searchParams.get('code')
   const result =
     site && code
@@ -198,13 +285,23 @@ export async function completeSignIn(
   if (!site || !result?.ok) {
     throw new AuthError('exchange_failed', 'GitLab did not complete the sign-in. Try again.')
   }
-  const auth = toAuth(result.token, Date.now())
-  await write(site.host, auth)
+  const auth = toAuth(result.token, Date.now(), asked.split(' '))
   const apiBase = `https://${site.host}/api/v4`
   const user = await new GitLabClient(apiBase, async () => auth.accessToken).request<{
     id: number
     username: string
   }>('GET', '/user')
+  if (pending.popup) {
+    // GitLab may now be signed in as someone else: never post under their name.
+    const known = (await listHosts()).find((value) => value.id === hostIdFor(site.host))
+    if (known && known.userId !== user.id) {
+      throw new AuthError(
+        'wrong_user',
+        `GitLab is signed in as ${user.username} in this browser, not ${known.username}. Nothing was changed.`,
+      )
+    }
+  }
+  await write(site.host, auth)
   await saveHost({
     id: hostIdFor(site.host),
     host: hostIdFor(site.host),
@@ -215,7 +312,7 @@ export async function completeSignIn(
   if (pending.publish) {
     void publishToDirectory(site.host, site.clientId)
   }
-  return { returnTo: pending.returnTo }
+  return pending.popup ? { returnTo: pending.returnTo, popup: true } : { returnTo: pending.returnTo }
 }
 
 function signedOut(host: string): GitLabError {
@@ -255,7 +352,7 @@ export async function accessToken(
       await write(site.host, null)
       throw signedOut(site.host)
     }
-    const auth = toAuth(next.token, now())
+    const auth = toAuth(next.token, now(), fresh.scopes)
     await write(site.host, auth)
     return auth.accessToken
   })

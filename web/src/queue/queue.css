@@ -172,3 +172,18 @@
   .q-shell.has-page .sb { display: none; }
   .q-back { display: inline-block; margin: 12px 20px 0; color: var(--ink-2); font-size: 14px; }
 }
+
+/* Site dialogs (feedback, welcome, posting rights) and the Feedback button. */
+.q-modal { width: min(440px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: 15px/1.5 var(--font-body); box-shadow: 0 16px 40px -16px rgba(18, 22, 31, 0.4); }
+.q-modal::backdrop { background: rgba(18, 22, 31, 0.35); }
+.q-modal p { margin: 0 0 12px; color: var(--ink-2); }
+.q-modal-title { margin: 0 0 8px; color: var(--ink); font: 700 20px/1.2 var(--font-display); }
+.q-modal-note { color: var(--muted); font-size: 13px; }
+.q-modal-list { margin: 0 0 12px; padding: 0; list-style: none; color: var(--ink); }
+.q-modal-form { display: flex; flex-direction: column; gap: 10px; }
+.q-modal-form label { display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); font-size: 14px; }
+.q-modal-form textarea, .q-modal-form input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.q-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.q-modal-actions button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.q-modal-actions .q-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.q-feedback { position: fixed; right: 16px; bottom: 16px; z-index: 6; padding: 8px 14px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--ink); font: 500 14px var(--font-body); box-shadow: 0 6px 20px -10px rgba(18, 22, 31, 0.4); cursor: pointer; }

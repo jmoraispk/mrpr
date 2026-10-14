@@ -34,10 +34,23 @@ async function finishSignInIfReturning(): Promise<string | null> {
   // Drop the one-time code from the address bar whatever happens next.
   history.replaceState(null, '', url.pathname)
   try {
-    const { returnTo } = await completeSignIn(url, config)
-    history.replaceState(null, '', `${url.pathname}${returnTo}`)
+    const result = await completeSignIn(url, config)
+    // On its way back to GitLab, asking for `api` instead.
+    if ('restarted' in result) return null
+    // A window opened for posting rights: the page that opened it carries on.
+    if ('popup' in result && window.opener) {
+      window.close()
+      return null
+    }
+    history.replaceState(null, '', `${url.pathname}${result.returnTo}`)
     return null
   } catch (error) {
+    // A posting window whose sign-in failed: close it, and the page that
+    // opened it refuses the post and says why.
+    if (window.name === 'mrpr-allow-posting' && window.opener) {
+      window.close()
+      return null
+    }
     return error instanceof AuthError
       ? error.message
       : 'GitLab did not complete the sign-in. Try again.'

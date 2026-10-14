@@ -74,7 +74,11 @@ On gitlab-master: avatar → Preferences → Applications → Add new applicatio
   - `https://mrpr.dev/app/` (once the domain is connected)
   - `http://localhost:5173/app/` (local development)
 - **Confidential:** off. The site cannot keep a secret; PKCE replaces one.
-- **Scopes:** `api`. Mr. PR posts comments and replies, which needs write access.
+- **Scopes:** `read_api` and `api`. Mr. PR signs in read-only and asks for
+  `api` the first time someone approves, replies or nudges. Add `read_api` to
+  an application registered earlier with `api` only. Until then, GitLab may
+  stop sign-in there on its own error page: back on Mr. PR, "sign in with full
+  access" gets past it, and that server is asked for `api` from then on.
 
 Save, and copy the **Application ID**. It is public by design; do not copy the
 secret, which Mr. PR never uses.
@@ -183,6 +187,21 @@ The MR opens on the right, beside the sidebar. `f` makes it full screen
   branch needs it and you can push to it.
 - **Changes:** the code, with inline comments shown.
 - **Since last review:** only what changed since you last looked.
+
+## Feedback, waitlist and first visits
+
+Three more functions share the Upstash database with `/api/registry`:
+
+- `/api/waitlist/`: GitHub waitlist emails (the set `waitlist:github`), from the
+  landing page.
+- `/api/feedback/`: the app's Feedback button. It stores only the message, an
+  optional email, the app version and the browser (the list `feedback`).
+- `/api/users/`: the first time each user signed in. It stores the GitLab
+  server, the numeric user ID and the date (`user:<host>:<id>`), written once.
+
+Read the newest feedback with `npm run feedback` (or `npm run feedback -- 50`)
+from `web/`, after `vercel env pull .env.local`. The privacy page at
+`/privacy/` lists all of this for visitors.
 
 ## Security notes
 

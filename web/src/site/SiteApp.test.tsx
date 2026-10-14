@@ -7,6 +7,7 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import { installPlatform } from '../platform/platform'
 import { createFakePlatform } from '../test/fakePlatform'
 import { server } from '../test/server'
+import { FULL_SCOPE_KEY, PENDING_KEY } from './auth'
 import { SiteApp } from './SiteApp'
 
 const signIn = vi.hoisted(() => vi.fn(async () => {}))
@@ -193,4 +194,24 @@ test('a directory that is down still leads to the setup, without claiming first'
   )
   await user.click(screen.getByRole('button', { name: 'Continue' }))
   expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Set up Mr. PR for')
+})
+
+test('back from GitLab without signing in, read-only: it offers full access', async () => {
+  const user = userEvent.setup()
+  // A read-only sign-in that never came back: GitLab showed its own error page.
+  sessionStorage.setItem(
+    PENDING_KEY,
+    JSON.stringify({ host: SITE.host, clientId: SITE.clientId, state: 's', verifier: 'v', returnTo: '#/', scope: 'read_api' }),
+  )
+  renderSite(null, { hosts: [SITE], scopes: 'read_api' })
+  await user.click(await screen.findByRole('button', { name: 'sign in with full access' }))
+  expect(signIn).toHaveBeenCalledWith(SITE, expect.any(String), 'api')
+  await expect(fake.store.get(FULL_SCOPE_KEY)).resolves.toEqual([SITE.host])
+  sessionStorage.clear()
+})
+
+test('no unfinished sign-in, no offer', async () => {
+  renderSite(null, { hosts: [SITE], scopes: 'read_api' })
+  await screen.findByRole('button', { name: /Sign in with GitLab/ })
+  expect(screen.queryByRole('button', { name: 'sign in with full access' })).toBeNull()
 })

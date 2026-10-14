@@ -104,3 +104,12 @@ test('Escape closes and f toggles full screen', () => {
   expect(h.close).toHaveBeenCalledOnce()
   expect(h.full).toHaveBeenCalledOnce()
 })
+
+test('keys are inert while a site dialog is open', () => {
+  const h = handlers()
+  renderHook(() => useQueueKeys(h))
+  render(<dialog className="q-modal" open />)
+  fireEvent.keyDown(window, { key: 'a' })
+  fireEvent.keyDown(window, { key: 'j' })
+  for (const fn of Object.values(h)) expect(fn).not.toHaveBeenCalled()
+})

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy · Mr. PR</title>
+  <link rel="icon" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+    :root { --paper: #F4F4F0; --ink: #12161F; --ink-2: #3D4452; --line: #DCDDD6; --accent: #C2410C; color-scheme: light; }
+    @media (prefers-color-scheme: dark) {
+      :root { --paper: #0F1218; --ink: #ECEDE8; --ink-2: #B9BEC9; --line: #2A303C; color-scheme: dark; }
+    }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.6 'Geist', 'Helvetica Neue', system-ui, sans-serif; }
+    main { max-width: 40em; margin: 0 auto; padding: clamp(32px, 8vw, 96px) 24px; }
+    h1 { font: 700 clamp(32px, 5vw, 44px)/1.1 'Bricolage Grotesque', system-ui, sans-serif; letter-spacing: -0.02em; margin: 0 0 24px; }
+    h2 { font-size: 18px; margin: 32px 0 8px; }
+    p, li { color: var(--ink-2); }
+    a { color: var(--accent); }
+    .back { display: inline-block; margin-bottom: 32px; color: var(--ink-2); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back" href="../">← Mr. PR</a>
+    <h1>Privacy</h1>
+    <p>Mr. PR is private by design. Here is everything it keeps, and where.</p>
+    <h2>In your browser</h2>
+    <ul>
+      <li>Your GitLab token stays in your browser. It never reaches our servers.</li>
+      <li>Mr. PR talks to GitLab straight from your browser. Your code, merge requests and comments never pass through our servers.</li>
+      <li>Your settings, projects and snoozes live in this browser too.</li>
+    </ul>
+    <h2>On our server</h2>
+    <ul>
+      <li>For each GitLab server, the ID of the sign-in application someone set up for Mr. PR, so the next person from that server can sign in directly.</li>
+      <li>Emails given for the GitHub waitlist.</li>
+      <li>Feedback you send: your message, an email if you give one, the app version and your browser.</li>
+      <li>The first time each person signed in: the GitLab server, the numeric user ID and the date.</li>
+    </ul>
+    <p>Nothing else. To have something deleted, send Feedback from the app with your request.</p>
+  </main>
+</body>
+</html>

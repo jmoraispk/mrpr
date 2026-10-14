@@ -121,7 +121,9 @@ export function SetupView({
             <dt>Confidential</dt>
             <dd><strong>Untick it</strong></dd>
             <dt>Scopes</dt>
-            <dd>Tick only <code>api</code></dd>
+            <dd>
+              Tick <code>read_api</code> and <code>api</code>
+            </dd>
           </dl>
         </li>
         <li className="setup-step">

@@ -17,18 +17,26 @@ export class GitLabClient {
   private readonly apiBase: string
   private readonly graphqlUrl: string
   private readonly auth: string | (() => Promise<string>)
+  private readonly beforeWrite?: () => Promise<void>
 
   /**
    * `auth` is a personal access token (sent as `PRIVATE-TOKEN`), or a function
    * returning an OAuth access token (sent as a bearer token). The function is
    * called for every request, so a token refreshed in between is picked up.
    */
-  constructor(apiBase: string, auth: string | (() => Promise<string>)) {
+  constructor(
+    apiBase: string,
+    auth: string | (() => Promise<string>),
+    // Called before every REST request that changes something; it may wait or refuse.
+    hooks: { beforeWrite?: () => Promise<void> } = {},
+  ) {
     this.apiBase = apiBase.replace(/\/+$/, '')
     // REST lives at /api/v4 and GraphQL beside it at /api/graphql.
     this.graphqlUrl = this.apiBase.replace(/\/v4$/, '/graphql')
     this.auth = auth
+    this.beforeWrite = hooks.beforeWrite
   }
+
 
   private url(path: string, params?: Record<string, string>): string {
     const url = new URL(`${this.apiBase}${path}`)
@@ -104,6 +112,7 @@ export class GitLabClient {
     path: string,
     options: RequestOptions = {},
   ): Promise<T> {
+    if (method !== 'GET') await this.beforeWrite?.()
     const { response, credential } = await this.send(
       method,
       this.url(path, options.params),

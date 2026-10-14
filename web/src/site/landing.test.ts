@@ -21,14 +21,41 @@ test('the landing page runs only its own script file, never inline code', () => 
   expect(scripts.every((script) => !script.textContent?.trim())).toBe(true)
 })
 
-test('the theme toggle is there for the script to drive', () => {
+test('the theme toggle and the feature tabs are there for the script to drive', () => {
   expect(page.getElementById('theme-toggle')).not.toBeNull()
   expect(page.getElementById('page')).not.toBeNull()
+  expect(page.querySelectorAll('[data-tab]').length).toBe(page.querySelectorAll('[data-pane]').length)
 })
 
-test('it promises faster work on MRs, not read-only access', () => {
-  expect(html).not.toMatch(/Read-only access/i)
-  expect(html).toMatch(/faster from the dashboard/i)
+test('read-only to start, and no promise of token sign-in', () => {
+  expect(html).toMatch(/Read-only access to start/)
+  expect(html).not.toMatch(/personal access token/i)
+  expect(html).toMatch(/Sign in with your GitLab account\./)
+})
+
+test('the GitHub waitlist has its field, its button and a status line', () => {
+  expect(page.getElementById('waitlist-email')?.getAttribute('type')).toBe('email')
+  expect(page.getElementById('waitlist-join')?.textContent).toMatch(/Join waitlist/)
+  expect(page.getElementById('waitlist-status')?.getAttribute('aria-live')).toBe('polite')
+})
+
+test('no link on the page goes nowhere', () => {
+  for (const link of page.querySelectorAll('a[href^="#"]')) {
+    const id = link.getAttribute('href')!.slice(1)
+    expect(page.getElementById(id), `#${id}`).not.toBeNull()
+  }
+  const footer = [...page.querySelectorAll('footer a')].map((a) => [a.textContent, a.getAttribute('href')])
+  expect(footer).toEqual([['Privacy', 'privacy/']])
+})
+
+test('the privacy page says what the server keeps, and runs no script', () => {
+  const privacy = readFileSync(resolve(process.cwd(), 'site/privacy/index.html'), 'utf8')
+  const doc = new DOMParser().parseFromString(privacy, 'text/html')
+  expect(doc.querySelectorAll('script')).toHaveLength(0)
+  expect(doc.title).toMatch(/^Privacy · Mr\. PR/)
+  for (const fact of [/never reaches our servers/, /waitlist/i, /Feedback/, /numeric user ID/]) {
+    expect(privacy).toMatch(fact)
+  }
 })
 
 test('it is the Mr. PR page', () => {

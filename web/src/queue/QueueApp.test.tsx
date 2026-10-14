@@ -594,3 +594,15 @@ test('Settings and Snoozed are pages of their own, with a way back to the MRs', 
   await waitFor(() => expect(document.querySelector('.q-shell')).toHaveClass('has-page'))
   expect(screen.getByRole('link', { name: '← MRs' })).toHaveAttribute('href', '#/')
 })
+
+test('an approval refused for want of posting rights says so', async () => {
+  transport.approve.mockRejectedValueOnce(
+    Object.assign(new Error('Posting needs your OK in GitLab.'), { code: 'write_access_denied' }),
+  )
+  renderApp()
+  await screen.findAllByRole('article')
+  fireEvent.keyDown(window, { key: 'a' })
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    "Couldn't approve Retry budget for webhooks: posting needs your OK in GitLab.",
+  )
+})

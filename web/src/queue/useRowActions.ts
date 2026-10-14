@@ -42,10 +42,13 @@ export function useRowActions() {
       const transport = createRuntimeTransport(targetOf(row))
       try {
         await transport.approve!()
-      } catch {
+      } catch (error) {
         setNotice({
           kind: 'error',
-          message: `Couldn't approve ${row.title}. GitLab may not let you approve this one.`,
+          message:
+            (error as { code?: string } | null)?.code === 'write_access_denied'
+              ? `Couldn't approve ${row.title}: posting needs your OK in GitLab.`
+              : `Couldn't approve ${row.title}. GitLab may not let you approve this one.`,
         })
         return
       }

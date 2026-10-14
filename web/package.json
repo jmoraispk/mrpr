@@ -15,6 +15,7 @@
     "preview:site": "vite preview --config vite.site.config.ts",
     "test:site": "playwright test --config playwright.site.config.ts",
     "lint": "oxlint",
+    "feedback": "node scripts/feedback.mjs",
     "test": "vitest",
     "preview": "vite preview"
   },

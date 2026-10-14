@@ -24,8 +24,12 @@ export function Composer({
     try {
       await onSend(body)
       onCancel()
-    } catch {
-      setError("Couldn't post it. Your text is still here; try again.")
+    } catch (error) {
+      setError(
+        (error as { code?: string } | null)?.code === 'write_access_denied'
+          ? 'Posting needs your OK in GitLab. Your text is still here.'
+          : "Couldn't post it. Your text is still here; try again.",
+      )
     } finally {
       setBusy(false)
     }

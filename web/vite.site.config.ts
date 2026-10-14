@@ -4,6 +4,10 @@ import { defineConfig, type Plugin } from 'vite'
 
 const webDir = fileURLToPath(new URL('.', import.meta.url))
 
+// The build this page came from, for feedback: the short commit on Vercel.
+process.env.VITE_APP_VERSION ??=
+  (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7) || 'dev'
+
 /** The app holds OAuth tokens, so nothing but our own code may run in it. */
 const APP_POLICY = [
   "default-src 'self'",
@@ -19,9 +23,10 @@ const APP_POLICY = [
 ].join('; ')
 
 /**
- * The landing page shares the app's origin, and with it the stored tokens, so
- * it runs only its own script file (public/landing.js: theme toggle and feature
- * tabs), never inline code, plus its own styles and web fonts.
+ * The landing and privacy pages share the app's origin, and with it the stored
+ * tokens, so they run only our own script file (public/landing.js: theme
+ * toggle, feature tabs and the waitlist), never inline code, plus their own
+ * styles and web fonts.
  */
 const LANDING_POLICY = [
   "default-src 'self'",
@@ -69,6 +74,7 @@ export default defineConfig(() => {
         input: {
           landing: `${webDir}site/index.html`,
           app: `${webDir}site/app/index.html`,
+          privacy: `${webDir}site/privacy/index.html`,
         },
       },
     },

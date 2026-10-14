@@ -6,7 +6,7 @@ export interface SiteHost {
 
 export interface SiteConfig {
   hosts: SiteHost[]
-  /** `api`: posting comments needs write access. */
+  /** `read_api`: posting asks for `api` the first time it is needed. */
   scopes: string
 }
 
@@ -18,5 +18,5 @@ export function siteConfig(
 ): SiteConfig {
   const clientId = env.VITE_GITLAB_CLIENT_ID?.trim() ?? ''
   const host = env.VITE_GITLAB_HOST?.trim() || DEFAULT_HOST
-  return { hosts: clientId ? [{ host, clientId }] : [], scopes: 'api' }
+  return { hosts: clientId ? [{ host, clientId }] : [], scopes: 'read_api' }
 }

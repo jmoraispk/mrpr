@@ -2,9 +2,10 @@ import { listHosts } from '../extension/hosts'
 import { handleMessage } from '../extension/router'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
-import { accessToken, sessionHosts, signIn, signOut } from '../site/auth'
+import { accessToken, canPost, sessionHosts, signIn, signOut } from '../site/auth'
 import type { SiteConfig } from '../site/config'
 import { showFaviconDot } from '../site/favicon'
+import { requestWriteAccess } from '../site/writeAccess'
 import { createLocalStore } from './localStore'
 import type { KeyValueStore, Platform } from './types'
 
@@ -25,8 +26,14 @@ export function createSitePlatform(
     async clientFor(host) {
       const site = siteHost(host.host)
       if (!site) throw unconfigured(host.host)
-      return new GitLabClient(host.apiBase, () => accessToken(site))
+      return new GitLabClient(host.apiBase, () => accessToken(site), {
+        // A read-only sign-in asks for posting rights the first time it posts.
+        beforeWrite: async () => {
+          if (!(await canPost(site.host))) await requestWriteAccess(site.host)
+        },
+      })
     },
+
     async connectHost({ host }) {
       const site = siteHost(host)
       if (!site) throw unconfigured(host)

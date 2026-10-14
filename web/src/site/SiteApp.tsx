@@ -6,15 +6,32 @@ import { QueueApp } from '../queue/QueueApp'
 import { hubRequest } from '../hub/api'
 import { lockedPoll, startPageSchedule } from '../inbox/pageSchedule'
 import { platform } from '../platform/platform'
-import { signIn } from './auth'
+import { rememberFullScope, signIn, unfinishedReadOnlySignIn } from './auth'
 import { siteConfig, type SiteConfig, type SiteHost } from './config'
 import { EXAMPLE_MR_URL, parseServer, type Server } from './server'
 import { rememberHost, resolveServer, adoptSite } from './servers'
+import { FeedbackButton } from './FeedbackButton'
+import { recordFirstSeen } from './firstSeen'
 import { SetupView } from './SetupView'
+import { WelcomeDialog } from './WelcomeDialog'
+import { WriteAccessGate } from './WriteAccessGate'
 
-function SignedIn() {
+function SignedIn({ config, hosts }: { config: SiteConfig; hosts: HostConfig[] }) {
   useEffect(() => startPageSchedule({ poll: lockedPoll }), [])
-  return <QueueApp />
+  const users = hosts.map((host) => `${host.host}:${host.userId}`).join(',')
+  useEffect(() => {
+    void recordFirstSeen(hosts)
+    // Once per set of signed-in users, not per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users])
+  return (
+    <>
+      <QueueApp />
+      <FeedbackButton />
+      <WelcomeDialog />
+      <WriteAccessGate config={config} />
+    </>
+  )
 }
 
 /** The mark from the landing page: a ruled page with the margin line. */
@@ -41,6 +58,17 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
   const [busy, setBusy] = useState(false)
   // Servers built into this deployment can't be set up again from here.
   const builtIn = new Set(siteConfig().hosts.map((value) => value.host))
+  // A read-only sign-in that never came back: GitLab may have shown its own
+  // error page because the server's application does not allow `read_api`.
+  const [stuck] = useState(() => {
+    const host = unfinishedReadOnlySignIn()
+    return config.hosts.find((value) => value.host === host) ?? null
+  })
+
+  async function signInWithFullAccess(site: SiteHost) {
+    await rememberFullScope(site.host)
+    await signIn(site, returnTo(), 'api')
+  }
 
   async function go(site: SiteHost, remember: boolean) {
     adoptSite(config, site)
@@ -93,6 +121,19 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
         {notice ? (
           <p className="signin-notice" role="alert">
             {notice}
+          </p>
+        ) : null}
+        {stuck ? (
+          <p className="signin-notice">
+            Didn't make it back from GitLab? If it said the requested scope is invalid,{' '}
+            <button
+              type="button"
+              className="signin-again"
+              onClick={() => void signInWithFullAccess(stuck)}
+            >
+              sign in with full access
+            </button>
+            .
           </p>
         ) : null}
         <form className="signin-link" onSubmit={(event) => void continueWith(event)}>
@@ -172,5 +213,5 @@ export function SiteApp({ config, notice }: { config: SiteConfig; notice: string
 
   if (hosts.isLoading) return <p>Loading…</p>
   if (!hosts.data?.length) return <SignIn config={config} notice={notice} />
-  return <SignedIn />
+  return <SignedIn config={config} hosts={hosts.data} />
 }
