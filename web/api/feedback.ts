@@ -1,7 +1,7 @@
 import { limiter, readJson, redis, reply } from './_http.js'
 import { saveFeedback, type FeedbackStore } from './_feedback-core.js'
 
-const writes = limiter('mrpr-feedback', 10)
+const writes = limiter('mrpr-feedback', 60)
 const store: FeedbackStore = {
   async push(key, value) {
     await redis.lpush(key, value)
