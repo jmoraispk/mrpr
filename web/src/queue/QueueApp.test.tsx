@@ -630,3 +630,16 @@ test('the 💤 on a row snoozes it without opening it, and Undo brings it back',
   await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
   await waitFor(() => expect(rowNamed('Fix flaky test')).toBeInTheDocument())
 })
+
+test('hiding the sidebar mid-drag drops the drag, and the saved width shows', async () => {
+  await fake.store.set({ sidebar: { open: true, width: 400 } })
+  renderApp()
+  await screen.findAllByRole('article')
+  const handle = screen.getByRole('separator', { name: 'Resize the sidebar' })
+  fireEvent.pointerDown(handle, { clientX: 400, pointerId: 1, button: 0 })
+  fireEvent.pointerMove(handle, { clientX: 520, pointerId: 1 })
+  fireEvent.keyDown(window, { key: 'b' })
+  fireEvent.keyDown(window, { key: 'b' })
+  await screen.findByRole('separator', { name: 'Resize the sidebar' })
+  expect((document.querySelector('.q-shell') as HTMLElement).style.getPropertyValue('--sidebar-width')).toBe('400px')
+})

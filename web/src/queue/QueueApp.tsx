@@ -79,6 +79,10 @@ export function QueueApp() {
 
   const full = route.name === 'review' && route.full
   const showSidebar = sidebar.open && !full
+  // A drag cut short by hiding the sidebar (b, f) is dropped: the saved width shows.
+  useEffect(() => {
+    if (!showSidebar) setDragWidth(null)
+  }, [showSidebar])
   // What keys act on: with the sidebar hidden, the MR on screen. Otherwise the
   // selected row while the list shows it or it is the open MR; with nothing
   // selected and nothing open, the first row.

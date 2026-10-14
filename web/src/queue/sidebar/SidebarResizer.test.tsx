@@ -51,3 +51,28 @@ test('dragging past the limits stops at them', () => {
   fireEvent.pointerMove(handle, { clientX: 400, pointerId: 1 })
   expect(onResize).toHaveBeenCalledTimes(1)
 })
+
+test('only the main button drags', () => {
+  const { handle, onResize } = show(360)
+  fireEvent.pointerDown(handle, { clientX: 360, pointerId: 1, button: 2 })
+  fireEvent.pointerMove(handle, { clientX: 420, pointerId: 1 })
+  expect(onResize).not.toHaveBeenCalled()
+})
+
+test('a drag ended by pointerCancel stops, and puts the width back', () => {
+  const { handle, onResize, onResizeEnd } = show(360)
+  fireEvent.pointerDown(handle, { clientX: 360, pointerId: 1, button: 0 })
+  fireEvent.pointerCancel(handle, { pointerId: 1 })
+  expect(onResizeEnd).toHaveBeenCalledWith(360)
+  fireEvent.pointerMove(handle, { clientX: 500, pointerId: 1 })
+  expect(onResize).not.toHaveBeenCalled()
+})
+
+test('a drag ended by lostPointerCapture stops, and puts the width back', () => {
+  const { handle, onResize, onResizeEnd } = show(360)
+  fireEvent.pointerDown(handle, { clientX: 360, pointerId: 1, button: 0 })
+  fireEvent.lostPointerCapture(handle, { pointerId: 1 })
+  expect(onResizeEnd).toHaveBeenCalledWith(360)
+  fireEvent.pointerMove(handle, { clientX: 500, pointerId: 1 })
+  expect(onResize).not.toHaveBeenCalled()
+})

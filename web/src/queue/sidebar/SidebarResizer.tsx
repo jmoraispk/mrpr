@@ -27,6 +27,8 @@ export function SidebarResizer({
       tabIndex={0}
       className="sb-resize"
       onPointerDown={(event) => {
+        // The main button only: a right-click's menu would swallow the release.
+        if (event.button !== 0) return
         event.preventDefault()
         left.current = event.currentTarget.parentElement?.getBoundingClientRect().left ?? 0
         // jsdom has no pointer capture.
@@ -39,6 +41,18 @@ export function SidebarResizer({
         if (left.current === null) return
         onResizeEnd(widthAt(event.clientX))
         left.current = null
+      }}
+      // Cancelled (a touch taken over, the window losing the pointer): end the
+      // drag and keep the width it started from.
+      onPointerCancel={() => {
+        if (left.current === null) return
+        left.current = null
+        onResizeEnd(width)
+      }}
+      onLostPointerCapture={() => {
+        if (left.current === null) return
+        left.current = null
+        onResizeEnd(width)
       }}
       onDoubleClick={() => onResizeEnd(SIDEBAR_WIDTH.default)}
       onKeyDown={(event) => {
