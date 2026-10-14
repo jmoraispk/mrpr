@@ -1,6 +1,10 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, expect, test, vi } from 'vitest'
 
+import { waitFor } from '@testing-library/react'
+
+import { AUTH_KEY } from '../site/auth'
+import { pendingWriteAccess, settleWriteAccess } from '../site/writeAccess'
 import { createMemoryStore } from '../test/fakePlatform'
 import { server } from '../test/server'
 import { installPlatform, platform } from './platform'
@@ -76,4 +80,26 @@ test('sign in again goes to the server whose session ended, not the first one co
 
   expect(new URL(assign.mock.calls[0][0]).host).toBe('gitlab.other.org')
   vi.unstubAllGlobals()
+})
+
+test('a write from a read-only sign-in waits for posting rights, then goes out', async () => {
+  const site = { host: 'gl.test', clientId: 'c' }
+  installPlatform(createSitePlatform({ hosts: [site], scopes: 'read_api' }, createMemoryStore()))
+  await platform().store.set({
+    [AUTH_KEY]: { 'gl.test': { accessToken: 'a', refreshToken: 'r', expiresAt: Date.now() + 3_600_000, scopes: ['read_api'] } },
+  })
+  let posted = false
+  server.use(
+    http.post('https://gl.test/api/v4/x', () => {
+      posted = true
+      return HttpResponse.json({})
+    }),
+  )
+  const client = await platform().clientFor({ id: 'gl.test', host: 'gl.test', apiBase: 'https://gl.test/api/v4', userId: 7, username: 'j' })
+  const write = client.request('POST', '/x')
+  await waitFor(() => expect(pendingWriteAccess()).toEqual(['gl.test']))
+  expect(posted).toBe(false)
+  settleWriteAccess('gl.test', true)
+  await write
+  expect(posted).toBe(true)
 })

@@ -186,3 +186,39 @@ test('the client scrubs its own credential out of error messages', async () => {
     ),
   ).rejects.toMatchObject({ message: 'token [redacted] rejected' })
 })
+
+test('only REST writes pass through the beforeWrite hook; reads and GraphQL never do', async () => {
+  const calls: string[] = []
+  server.use(
+    http.get('https://gl.test/api/v4/thing', () => HttpResponse.json({ ok: 1 })),
+    http.post('https://gl.test/api/v4/thing', () => HttpResponse.json({ ok: 2 })),
+    http.post('https://gl.test/api/graphql', () => HttpResponse.json({ data: { ok: 3 } })),
+  )
+  const client = new GitLabClient('https://gl.test/api/v4', async () => 't', {
+    beforeWrite: async () => {
+      calls.push('gate')
+    },
+  })
+  await client.request('GET', '/thing')
+  await client.graphql('{ ok }')
+  expect(calls).toEqual([])
+  await client.request('POST', '/thing')
+  expect(calls).toEqual(['gate'])
+})
+
+test('a refused beforeWrite stops the write before it is sent', async () => {
+  let sent = false
+  server.use(
+    http.post('https://gl.test/api/v4/thing', () => {
+      sent = true
+      return HttpResponse.json({})
+    }),
+  )
+  const client = new GitLabClient('https://gl.test/api/v4', async () => 't', {
+    beforeWrite: async () => {
+      throw new Error('no')
+    },
+  })
+  await expect(client.request('POST', '/thing')).rejects.toThrow('no')
+  expect(sent).toBe(false)
+})
