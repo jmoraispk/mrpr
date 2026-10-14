@@ -1,33 +1,24 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { relativeTime } from '../../hub/relativeTime'
 import type { QueueRow } from '../model'
 import { TagList } from '../TagList'
 import type { TagKind } from '../tags'
 
-/**
- * One MR: title, three tags, a grey line. A click expands it in place; the
- * sidebar opens it on the second click of a double-click.
- */
+/** One MR: title, three tags, a grey line. A click opens it. */
 export function MrRow({
   row,
   order,
   selected,
-  expanded,
   current,
-  onToggle,
-  children,
+  onOpen,
 }: {
   row: QueueRow
   order: TagKind[]
   selected: boolean
-  expanded: boolean
   /** The MR open on the right. */
   current: boolean
-  /** A first click, with when it happened; the sidebar opens the row on the second. */
-  onToggle: (at: number) => void
-  /** The expanded part. */
-  children: ReactNode
+  onOpen: () => void
 }) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -38,15 +29,12 @@ export function MrRow({
   return (
     <article
       ref={ref}
-      className={`sb-row${selected ? ' is-selected' : ''}${expanded ? ' is-expanded' : ''}${current ? ' is-current' : ''}`}
+      className={`sb-row${selected ? ' is-selected' : ''}${current ? ' is-current' : ''}`}
       aria-current={current ? 'true' : undefined}
       data-key={row.key}
-      // Dragging would fight selecting text in the reply box.
-      draggable={!expanded}
+      draggable
       onDragStart={(event) => event.dataTransfer.setData('text/mrpr-row', row.key)}
-      onClick={(event) => {
-        if (event.detail < 2) onToggle(event.timeStamp)
-      }}
+      onClick={onOpen}
     >
       <h3 className="sb-title">
         {unread ? <span className="sb-unread" aria-label="Unread" /> : null}
@@ -66,16 +54,6 @@ export function MrRow({
         {' · '}
         <time dateTime={row.updatedAt}>{relativeTime(row.updatedAt)}</time>
       </p>
-      {expanded ? (
-        // Clicks in here are the preview's own: they never fold or open the row.
-        <div
-          className="sb-preview"
-          onClick={(event) => event.stopPropagation()}
-          onDoubleClick={(event) => event.stopPropagation()}
-        >
-          {children}
-        </div>
-      ) : null}
     </article>
   )
 }

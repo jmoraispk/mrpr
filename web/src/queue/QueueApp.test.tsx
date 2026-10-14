@@ -179,31 +179,17 @@ test('a host error shows its sentence and offers to sign in again', async () => 
   expect(fake.connectHost).toHaveBeenCalledWith({ host: H, apiBase: `https://${H}/api/v4` })
 })
 
-test('one click expands a row in place, reading nothing; a second folds it', async () => {
-  const user = userEvent.setup()
-  items = [mention()]
-  renderApp()
-  await screen.findAllByRole('article')
-  await user.click(rowNamed('Retry budget'))
-  expect(await within(rowNamed('Retry budget')).findByText('Adds a retry budget.')).toBeInTheDocument()
-  expect(window.location.hash).toBe('')
-  expect(fake.sent.some((message) => 'op' in message && message.op === 'markRead')).toBe(false)
-  expect(transport.markLooked).not.toHaveBeenCalled()
-  // A separate click, not the second half of a double-click.
-  fireEvent.click(rowNamed('Retry budget'), { detail: 1 })
-  expect(within(rowNamed('Retry budget')).queryByText('Adds a retry budget.')).toBeNull()
-})
-
-test('a double-click opens the MR on the right, beside the list', async () => {
+test('one click opens the MR on the right, beside the list', async () => {
   const user = userEvent.setup()
   renderApp()
   await screen.findAllByRole('article')
-  await user.dblClick(rowNamed('Fix flaky test'))
+  await user.click(rowNamed('Fix flaky test'))
   expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2')
   const panel = await screen.findByRole('region', { name: 'Fix flaky test' })
   expect(await within(panel).findByText('Adds a retry budget.')).toBeInTheDocument()
   expect(sidebar()).toBeInTheDocument()
   expect(rowNamed('Fix flaky test')).toHaveAttribute('aria-current', 'true')
+  expect(selectedText()).toContain('Fix flaky test')
 })
 
 test('j moves the selection and a approves the selected row', async () => {
@@ -215,11 +201,9 @@ test('j moves the selection and a approves the selected row', async () => {
   expect(selectedText()).toContain('Fix flaky test')
 })
 
-test('Space expands the selected row; Enter opens it; d opens it since your last review', async () => {
+test('Enter opens the selected row; d opens it since your last review', async () => {
   renderApp()
   await screen.findAllByRole('article')
-  fireEvent.keyDown(window, { key: ' ' })
-  expect(await within(rowNamed('Retry budget')).findByText('Adds a retry budget.')).toBeInTheDocument()
   fireEvent.keyDown(window, { key: 'd' })
   expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1/since')
   window.location.hash = ''
@@ -365,20 +349,6 @@ test('f goes full screen without the sidebar, and Escape comes back before closi
   expect(sidebar()).toBeInTheDocument()
 })
 
-test('Escape folds the expanded row before it closes the MR', async () => {
-  const user = userEvent.setup()
-  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
-  renderApp()
-  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
-  await user.click(rowNamed('Fix flaky test'))
-  await within(rowNamed('Fix flaky test')).findByRole('button', { name: 'Open full view' })
-  fireEvent.keyDown(window, { key: 'Escape' })
-  expect(within(rowNamed('Fix flaky test')).queryByRole('button', { name: 'Open full view' })).toBeNull()
-  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1')
-  fireEvent.keyDown(window, { key: 'Escape' })
-  await waitFor(() => expect(window.location.hash).toBe('#/'))
-})
-
 test('a review link for an MR not in the list still opens, and j then picks the first row', async () => {
   window.location.hash = '#/mr/gitlab.example.com/g%2Fother/77'
   renderApp()
@@ -416,13 +386,15 @@ test('approve from the panel header outlives the row moving, and Undo works', as
   await waitFor(() => expect(transport.unapprove).toHaveBeenCalledOnce())
 })
 
-test('x on the list starts request changes in the selected row, opening nothing', async () => {
+test('x on the list opens the selected MR with request changes started', async () => {
   renderApp()
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'x' })
-  const box = await within(rowNamed('Retry budget')).findByRole('textbox', { name: 'Request changes' })
-  expect(box).toHaveValue('@ana Requesting changes: ')
-  expect(window.location.hash).toBe('')
+  const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  expect(await within(panel).findByRole('textbox', { name: 'Request changes' })).toHaveValue(
+    '@ana Requesting changes: ',
+  )
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1')
 })
 
 test('x on the open MR starts request changes in its header', async () => {
@@ -484,7 +456,7 @@ test('after opening an MR, Reply still reaches the thread waiting on you', async
   }))
   renderApp()
   await screen.findAllByRole('article')
-  await user.dblClick(rowNamed('Retry budget'))
+  await user.click(rowNamed('Retry budget'))
   const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
   // Opening read the mention in the inbox.
   await waitFor(() => expect(items[0].read).toBe(true))
@@ -572,20 +544,8 @@ test('nothing open: the right says how to open an MR; an old bucket link lands h
   window.location.hash = '#/bucket/waiting'
   renderApp()
   await screen.findAllByRole('article')
-  expect(screen.getByText('Double-click an MR to open it.')).toBeInTheDocument()
+  expect(screen.getByText('Click an MR to open it.')).toBeInTheDocument()
   expect(screen.getAllByRole('article')).toHaveLength(3)
-})
-
-test('in full screen, Escape leaves full screen even with a row expanded behind it', async () => {
-  const user = userEvent.setup()
-  renderApp()
-  await screen.findAllByRole('article')
-  await user.dblClick(rowNamed('Fix flaky test'))
-  await screen.findByRole('region', { name: 'Fix flaky test' })
-  fireEvent.keyDown(window, { key: 'f' })
-  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2/full'))
-  fireEvent.keyDown(window, { key: 'Escape' })
-  await waitFor(() => expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2'))
 })
 
 test('with the sidebar hidden, j opens the next MR and keys act on the one on screen', async () => {

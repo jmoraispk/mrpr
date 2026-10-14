@@ -1,10 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
-import type { MrOverview } from '../../gitlab/mrOverview'
 import type { QueueMr } from '../../gitlab/queueFacts'
 import { installPlatform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
@@ -12,13 +10,6 @@ import { buildQueue, type QueueRow } from '../model'
 import { useProjects } from '../state'
 import { Sidebar } from './Sidebar'
 import { useSidebarList } from './useSidebarList'
-
-const transport = vi.hoisted(() => ({
-  getOverview: vi.fn(),
-  replyToDiscussion: vi.fn(),
-  postComment: vi.fn(),
-}))
-vi.mock('../../transport/runtime', () => ({ createRuntimeTransport: () => transport }))
 
 const H = 'gitlab.example.com'
 const JOAO = { username: 'joao', name: 'Joao', avatarUrl: null, bot: false }
@@ -55,49 +46,28 @@ const rowsOf = (mrs: QueueMr[]): QueueRow[] =>
     items: [], snoozed: {}, commitsSince: {}, now: new Date('2026-10-11T12:00:00Z'),
   })
 
-function overview(title: string): MrOverview {
-  return {
-    iid: 1, title, description: 'Adds a retry budget.', draft: false, state: 'opened',
-    createdAt: '2026-10-11T00:00:00Z', updatedAt: '2026-10-11T10:00:00Z',
-    sourceBranch: 'feature', targetBranch: 'main', webUrl: '', headSha: 'h', commitCount: 1,
-    author: { username: 'ana', name: 'Ana', avatarUrl: null, bot: false },
-    reviewers: [], approvedBy: [], approvalsRequired: 1, approvalsLeft: 1, pipeline: null,
-    labels: [], additions: 1, deletions: 0, files: 1,
-    shouldBeRebased: false, rebaseInProgress: false, canPush: true, discussions: [],
-  }
-}
-
 let fake: ReturnType<typeof createFakePlatform>
 beforeEach(() => {
   fake = createFakePlatform()
   installPlatform(fake)
-  transport.getOverview.mockReset().mockImplementation(async () => overview('An MR'))
 })
 
-/** The sidebar with the selection and expansion QueueApp would keep. */
+/** The sidebar with the selection QueueApp would keep. */
 function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) => void }) {
   const [projects] = useProjects()
   const list = useSidebarList(rows, projects)
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   return (
     <Sidebar
       rows={rows}
       list={list}
       loading={false}
-      meFor={() => 'joao'}
       selectedKey={selected}
-      expandedKey={expanded}
       openKey={null}
-      onToggleRow={(row) => {
+      onOpenRow={(row) => {
         setSelected(row.key)
-        setExpanded((key) => (key === row.key ? null : row.key))
+        onOpen(row)
       }}
-      onOpenRow={onOpen}
-      onApprove={vi.fn()}
-      onSnooze={vi.fn()}
-      previewRequest={null}
-      onPreviewRequestHandled={() => {}}
       searchFocus={0}
       onSearchFocused={() => {}}
       onSearchDone={() => {}}
@@ -108,9 +78,7 @@ function Harness({ rows, onOpen }: { rows: QueueRow[]; onOpen: (row: QueueRow) =
 function show(rows: QueueRow[] = rowsOf(MRS)) {
   const onOpen = vi.fn()
   const view = render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <Harness rows={rows} onOpen={onOpen} />
-    </QueryClientProvider>,
+    <Harness rows={rows} onOpen={onOpen} />,
   )
   return { onOpen, ...view }
 }
@@ -154,36 +122,12 @@ test('a row: its title, three tags then +N, and a grey line', () => {
   expect(rowNamed('Retry budget')).toHaveTextContent(/!1 · by Ana · \+120 −10 ·/)
 })
 
-test('one click expands a row in place; a second folds it', async () => {
+test('one click opens a row', () => {
   const { onOpen } = show()
-  fireEvent.click(rowNamed('Retry budget'), { detail: 1 })
-  expect(await within(rowNamed('Retry budget')).findByText('Adds a retry budget.')).toBeInTheDocument()
-  fireEvent.click(rowNamed('Retry budget'), { detail: 1 })
-  expect(within(rowNamed('Retry budget')).queryByText('Adds a retry budget.')).toBeNull()
-  expect(onOpen).not.toHaveBeenCalled()
-})
-
-test('a double-click opens the row once and leaves it expanded', async () => {
-  const { onOpen } = show()
-  const row = rowNamed('Retry budget')
-  fireEvent.click(row, { detail: 1 })
-  fireEvent.click(row, { detail: 2 })
-  fireEvent.dblClick(row)
+  fireEvent.click(rowNamed('Fix flaky test'))
   expect(onOpen).toHaveBeenCalledOnce()
-  expect(onOpen.mock.calls[0][0]).toMatchObject({ iid: 1 })
-  expect(await within(rowNamed('Retry budget')).findByText('Adds a retry budget.')).toBeInTheDocument()
-})
-
-test('clicks inside the preview never fold the row', async () => {
-  const user = userEvent.setup()
-  const { onOpen } = show()
-  await user.click(rowNamed('Retry budget'))
-  await user.click(await within(rowNamed('Retry budget')).findByRole('button', { name: 'Request changes' }))
-  const box = within(rowNamed('Retry budget')).getByRole('textbox', { name: 'Request changes' })
-  await user.dblClick(box)
-  await user.type(box, 'ok')
-  expect(within(rowNamed('Retry budget')).getByText('Adds a retry budget.')).toBeInTheDocument()
-  expect(onOpen).not.toHaveBeenCalled()
+  expect(onOpen.mock.calls[0][0]).toMatchObject({ iid: 2 })
+  expect(screen.queryByRole('button', { name: 'Open full view' })).toBeNull()
 })
 
 test('a chip puts its tag first, numbered, and the order is saved', async () => {
@@ -248,34 +192,3 @@ test('nothing at all, and nothing but done', async () => {
   expect(titles()).toEqual(['Already approved'])
 })
 
-test('a double-click opens the row it started on, even when the list moves under the pointer', () => {
-  const { onOpen } = show()
-  fireEvent.click(rowNamed('Retry budget'), { detail: 1 })
-  fireEvent.click(rowNamed('Fix flaky test'), { detail: 1 })
-  // Folding the row above moved the list: the second click lands on another row.
-  fireEvent.click(rowNamed('Port billing'), { detail: 2 })
-  fireEvent.dblClick(rowNamed('Port billing'))
-  expect(onOpen).toHaveBeenCalledOnce()
-  expect(onOpen.mock.calls[0][0]).toMatchObject({ iid: 2 })
-})
-
-test('a double-click whose second click lands in the row’s own new preview still opens it', () => {
-  const { onOpen } = show()
-  fireEvent.click(rowNamed('Fix flaky test'), { detail: 1 })
-  const preview = rowNamed('Fix flaky test').querySelector('.sb-preview')!
-  fireEvent.click(preview, { detail: 2 })
-  fireEvent.dblClick(preview)
-  expect(onOpen).toHaveBeenCalledOnce()
-  expect(onOpen.mock.calls[0][0]).toMatchObject({ iid: 2 })
-})
-
-test('double-clicking a word in a reply box opens nothing', async () => {
-  const user = userEvent.setup()
-  const { onOpen } = show()
-  await user.click(rowNamed('Retry budget'))
-  await user.click(within(rowNamed('Retry budget')).getByRole('button', { name: 'Request changes' }))
-  const box = within(rowNamed('Retry budget')).getByRole('textbox', { name: 'Request changes' })
-  fireEvent.click(box, { detail: 1 })
-  fireEvent.click(box, { detail: 2 })
-  expect(onOpen).not.toHaveBeenCalled()
-})

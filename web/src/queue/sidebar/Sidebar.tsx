@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 
 import { toggleTag } from '../listSettings'
 import { todaysBudget, type QueueRow } from '../model'
-import type { HeaderRequest } from '../mr/MrHeader'
 import { SORTS, SORT_LABELS, type ListFilters, type SortBy } from '../order'
 import { ProjectDialog } from '../ProjectDialog'
 import { moveRow } from '../projects'
@@ -10,7 +9,6 @@ import { useProjects } from '../state'
 import { useTheme } from '../theme'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
-import { RowPreview } from './RowPreview'
 import { TagBar } from './TagBar'
 import type { SidebarList } from './useSidebarList'
 
@@ -19,27 +17,16 @@ export interface SidebarProps {
   rows: QueueRow[]
   list: SidebarList
   loading: boolean
-  /** Your username on a host. */
-  meFor: (hostId: string) => string
   selectedKey: string | null
-  expandedKey: string | null
   /** The row of the MR open on the right. */
   openKey: string | null
-  onToggleRow: (row: QueueRow) => void
   onOpenRow: (row: QueueRow) => void
-  onApprove: (row: QueueRow) => void
-  onSnooze: (row: QueueRow) => void
-  /** An action from the keyboard for the expanded row. */
-  previewRequest: HeaderRequest | null
-  onPreviewRequestHandled: () => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
   onSearchFocused: () => void
   /** Enter or ↓ in the search box: on to the results. */
   onSearchDone: () => void
 }
-
-const DOUBLE_CLICK_MS = 600
 
 const FILTER_LABELS: [keyof ListFilters, string][] = [
   ['needsMeOnly', 'Needs me only'],
@@ -52,16 +39,9 @@ export function Sidebar({
   rows,
   list,
   loading,
-  meFor,
   selectedKey,
-  expandedKey,
   openKey,
-  onToggleRow,
   onOpenRow,
-  onApprove,
-  onSnooze,
-  previewRequest,
-  onPreviewRequestHandled,
   searchFocus,
   onSearchFocused,
   onSearchDone,
@@ -70,7 +50,6 @@ export function Sidebar({
   const theme = useTheme()
   const [newProjectOpen, setNewProjectOpen] = useState(false)
   const search = useRef<HTMLInputElement>(null)
-  const firstClick = useRef<{ key: string; at: number } | null>(null)
   // Focus once per ask: the sidebar mounting again (after full screen, or b) must not take it.
   useEffect(() => {
     if (!searchFocus) return
@@ -102,24 +81,9 @@ export function Sidebar({
             row={row}
             order={list.order.tags}
             selected={row.key === selectedKey}
-            expanded={row.key === expandedKey}
             current={row.key === openKey}
-            onToggle={(at) => {
-              firstClick.current = { key: row.key, at }
-              onToggleRow(row)
-            }}
-          >
-            <RowPreview
-              row={row}
-              me={meFor(row.hostId)}
-              order={list.order.tags}
-              onApprove={onApprove}
-              onSnooze={onSnooze}
-              onOpen={() => onOpenRow(row)}
-              request={previewRequest}
-              onRequestHandled={onPreviewRequestHandled}
-            />
-          </MrRow>
+            onOpen={() => onOpenRow(row)}
+          />
         ))}
       </MrGroup>
     ))
@@ -212,21 +176,7 @@ export function Sidebar({
           onClear={() => list.setOrder({ ...list.order, tags: [] })}
         />
       </div>
-      <div
-        className="sb-groups"
-        onClickCapture={(event) => {
-          // The first click folds and expands rows, so the list can move under
-          // the pointer: the second click opens the row the first one picked.
-          const first = firstClick.current
-          firstClick.current = null
-          if (event.detail < 2 || !first || event.timeStamp - first.at > DOUBLE_CLICK_MS) return
-          event.stopPropagation()
-          const row = list.groups.flatMap((group) => group.rows).find((r) => r.key === first.key)
-          if (row) onOpenRow(row)
-        }}
-      >
-        {body}
-      </div>
+      <div className="sb-groups">{body}</div>
       <footer className="sb-foot">
         {folded ? (
           <p className="q-folded">

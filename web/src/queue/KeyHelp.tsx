@@ -1,6 +1,5 @@
 const KEYS: [string, string][] = [
   ['j / k', 'next / previous'],
-  ['Space', 'expand or fold the row'],
   ['Enter or o', 'open the MR'],
   ['a', 'approve'],
   ['r', 'reply'],
@@ -11,7 +10,7 @@ const KEYS: [string, string][] = [
   ['d', 'since last review'],
   ['/', 'search'],
   ['b or Ctrl+B', 'hide or show the sidebar'],
-  ['Esc', 'fold the row, leave full screen, or close the MR'],
+  ['Esc', 'leave full screen, or close the MR'],
   ['f', 'full screen'],
   ['?', 'this help'],
 ]

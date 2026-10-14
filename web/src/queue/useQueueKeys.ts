@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react'
 
 export interface QueueKeyHandlers {
   move(delta: 1 | -1): void
-  /** Space: expand or fold the selected row. */
-  toggle(): void
   open(): void
   approve(): void
   reply(): void
@@ -17,7 +15,7 @@ export interface QueueKeyHandlers {
   /** b or Ctrl+B: hide or show the sidebar. */
   sidebar(): void
   help(): void
-  /** Escape: fold the expanded row, else leave full screen, else close the MR. */
+  /** Escape: leave full screen, else close the MR. */
   close(): void
   /** f: full screen on or off. */
   full(): void
@@ -67,7 +65,6 @@ export function useQueueKeys(handlers: QueueKeyHandlers, enabled = true): void {
       const actions: Record<string, () => void> = {
         j: () => h.move(1),
         k: () => h.move(-1),
-        ' ': () => h.toggle(),
         Enter: () => h.open(),
         o: () => h.open(),
         a: () => h.approve(),

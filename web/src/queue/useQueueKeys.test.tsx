@@ -6,7 +6,6 @@ import { useQueueKeys } from './useQueueKeys'
 function handlers() {
   return {
     move: vi.fn(),
-    toggle: vi.fn(),
     open: vi.fn(),
     approve: vi.fn(),
     reply: vi.fn(),
@@ -26,13 +25,12 @@ function handlers() {
 test('single keys map to actions', () => {
   const h = handlers()
   renderHook(() => useQueueKeys(h))
-  for (const key of ['j', 'k', ' ', 'Enter', 'o', 'a', 'r', 'x', 'n', 's', 'm', 'd', '/', 'b', '?']) {
+  for (const key of ['j', 'k', 'Enter', 'o', 'a', 'r', 'x', 'n', 's', 'm', 'd', '/', 'b', '?']) {
     fireEvent.keyDown(window, { key })
   }
   expect(h.move.mock.calls).toEqual([[1], [-1]])
   expect(h.open).toHaveBeenCalledTimes(2)
   for (const name of [
-    'toggle',
     'approve',
     'reply',
     'changes',
@@ -95,7 +93,6 @@ test('Space and Enter on a button belong to the button', () => {
   const button = container.querySelector('button')!
   fireEvent.keyDown(button, { key: ' ' })
   fireEvent.keyDown(button, { key: 'Enter' })
-  expect(h.toggle).not.toHaveBeenCalled()
   expect(h.open).not.toHaveBeenCalled()
 })
 

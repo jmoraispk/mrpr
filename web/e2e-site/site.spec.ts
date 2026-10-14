@@ -291,7 +291,7 @@ test('sign in, see the queue, open a comment at its thread', async ({ page }) =>
   // Ana's comment on your MR is folded into its row, tagged Returned to you.
   const yours = page.getByRole('article').filter({ hasText: 'Improve parser errors' })
   await expect(yours).toContainText('Returned to you')
-  await yours.dblclick()
+  await yours.click()
   await expect(page).toHaveURL(/#\/mr\/gitlab\.example\.com\/g%2Fp\/1\/note\/11$/)
   const panel = page.getByRole('region', { name: 'Improve parser errors' })
   await expect(panel.locator('.mr-thread.is-focused [data-discussion-id="d1"]')).toBeVisible()
@@ -354,12 +354,12 @@ test('d shows only what changed since last review', async ({ page }) => {
   expect(gitlab.compares).toEqual([{ from: 'head-1', to: 'head-2', straight: 'false' }])
 })
 
-test('a double-click opens the MR beside the queue: description, the thread that matters, and inline reply', async ({
+test('one click opens the MR beside the queue: description, the thread that matters, and inline reply', async ({
   page,
 }) => {
   const gitlab = await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).dblclick()
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
   const panel = page.getByRole('region', { name: 'Retry budget for webhooks' })
   await expect(panel.getByRole('region', { name: 'Description' })).toContainText(
     'Adds a retry budget per endpoint.',
@@ -378,7 +378,7 @@ test('a double-click opens the MR beside the queue: description, the thread that
 test('Changes, full screen, and back', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).dblclick()
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
   await page.getByRole('link', { name: /^Changes/ }).click()
   await expect(page.getByRole('region', { name: 'src/retry.py' })).toBeVisible()
   await page.locator('body').click({ position: { x: 5, y: 5 } })
@@ -387,9 +387,6 @@ test('Changes, full screen, and back', async ({ page }) => {
   await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeHidden()
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/\/changes$/)
-  // The double-click left its row expanded: Escape folds it, then closes the MR.
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('button', { name: 'Open full view' })).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/#\/$/)
 })
@@ -397,24 +394,16 @@ test('Changes, full screen, and back', async ({ page }) => {
 test('rebase when GitLab says it is needed', async ({ page }) => {
   const gitlab = await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).dblclick()
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
   const details = page.getByRole('complementary', { name: 'Details' })
   await details.getByRole('button', { name: 'Rebase' }).click()
   await expect.poll(() => gitlab.rebases.length).toBe(1)
   await expect(details.getByText('Rebased')).toBeVisible({ timeout: 10_000 })
 })
 
-test('expand a row, approve from it, and put a tag first for good', async ({ page }) => {
-  const gitlab = await fakeGitLab(page)
+test('put a tag first, and it stays first after a reload', async ({ page }) => {
+  await fakeGitLab(page)
   await signIn(page)
-  const row = page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
-  await row.click()
-  await expect(row.getByText('Adds a retry budget per endpoint.')).toBeVisible()
-  expect(page.url()).not.toContain('#/mr/')
-  await row.getByRole('button', { name: 'Approve' }).click()
-  await expect(page.getByRole('status')).toContainText('Approved Retry budget for webhooks')
-  expect(gitlab.approvals).toEqual(['approve'])
-
   await page.getByRole('button', { name: /Returned to you/ }).click()
   await expect(page.getByRole('button', { name: /Returned to you/ })).toHaveAttribute('aria-pressed', 'true')
   await page.reload()

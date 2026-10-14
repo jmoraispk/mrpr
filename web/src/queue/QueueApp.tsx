@@ -51,11 +51,9 @@ export function QueueApp() {
   const list = useSidebarList(queue.rows, projects)
   const [sidebar, setSidebar] = useSidebar()
   const [selected, setSelected] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchFocus, setSearchFocus] = useState(0)
   const [headerRequest, setHeaderRequest] = useState<HeaderRequest | null>(null)
-  const [previewRequest, setPreviewRequest] = useState<HeaderRequest | null>(null)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const actions = useRowActions()
   useUnreadTitle(
@@ -99,11 +97,6 @@ export function QueueApp() {
     if (selected && index >= 0) anchor.current = { key: selected, index }
   })
 
-  const toggle = (row: QueueRow) => {
-    setSelected(row.key)
-    setPreviewRequest(null)
-    setExpanded((key) => (key === row.key ? null : row.key))
-  }
   const open = (row: QueueRow, tab: ReviewTab = 'overview') => {
     markRowRead(row)
     setSelected(row.key)
@@ -116,16 +109,11 @@ export function QueueApp() {
       },
     )
   }
-  // r, x, n and m: in the open MR's header when keys act on it, else in the selected row, expanded.
+  // r, x, n and m start their action in the MR header, opening the selected MR first.
   const ask = (request: HeaderRequest) => {
-    if (openTarget && (current === null || current.key === openRowKey)) {
-      setHeaderRequest(request)
-      return
-    }
-    if (!current) return
-    setSelected(current.key)
-    setExpanded(current.key)
-    setPreviewRequest(request)
+    if (current && current.key !== openRowKey) open(current)
+    else if (!openTarget) return
+    setHeaderRequest(request)
   }
 
   useQueueKeys(
@@ -147,19 +135,12 @@ export function QueueApp() {
         if (showSidebar) setSelected(next.key)
         else open(next)
       },
-      toggle: () => showSidebar && current && toggle(current),
       open: () => current && open(current),
       diffSince: () => current && open(current, 'since'),
       // Escape, f and b read the address as it is now: a second key can land
       // before the screen has caught up with the first.
       close() {
         const now = parseSiteRoute(window.location.hash)
-        // A row expanded in a hidden sidebar is not on screen: Escape is for what is.
-        const sidebarShown = sidebar.open && !(now.name === 'review' && now.full)
-        if (expanded && sidebarShown) {
-          setExpanded(null)
-          return
-        }
         if (now.name !== 'review') return
         window.location.hash = now.full
           ? reviewHash(now.target, { tab: now.tab, noteId: now.noteId })
@@ -227,20 +208,9 @@ export function QueueApp() {
           rows={queue.rows}
           list={list}
           loading={queue.isLoading}
-          meFor={meFor}
           selectedKey={current?.key ?? null}
-          expandedKey={expanded}
           openKey={openRowKey}
-          onToggleRow={toggle}
-          onOpenRow={(row) => {
-            // A double-click leaves its row expanded, whatever its first click did.
-            setExpanded(row.key)
-            open(row)
-          }}
-          onApprove={actions.approve}
-          onSnooze={actions.snooze}
-          previewRequest={previewRequest}
-          onPreviewRequestHandled={() => setPreviewRequest(null)}
+          onOpenRow={(row) => open(row)}
           searchFocus={searchFocus}
           onSearchFocused={() => setSearchFocus(0)}
           onSearchDone={() => {
@@ -340,10 +310,9 @@ export function QueueApp() {
           />
         ) : (
           <div className="q-welcome">
-            <p>Double-click an MR to open it.</p>
+            <p>Click an MR to open it.</p>
             <p className="q-muted">
-              <kbd>j</kbd>/<kbd>k</kbd> move · <kbd>Space</kbd> expand · <kbd>Enter</kbd> open ·{' '}
-              <kbd>?</kbd> all keys
+              <kbd>j</kbd>/<kbd>k</kbd> move · <kbd>Enter</kbd> open · <kbd>?</kbd> all keys
             </p>
           </div>
         )}

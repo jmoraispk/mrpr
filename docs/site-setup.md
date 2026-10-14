@@ -147,13 +147,7 @@ mentions and comments on it are folded into that row.
     unless Show done is on.
   - Snoozed MRs are listed under "Snoozed (N)" at the bottom, and bot MRs are
     only counted.
-- **One click** expands a row in place:
-  - the start of its description, and the comment waiting on you with a reply
-    box;
-  - Approve, Reply, Request changes, Nudge, Snooze, Move and Open full view.
-
-  Expanding doesn't mark anything read. **Double-click** (or `Enter`) opens it
-  on the right.
+- **One click** (or `Enter`) opens an MR on the right.
 - **Since last review:** opening or approving an MR remembers its head commit
   in this browser. Next time, `d` (or the "Since last review" tab) shows only
   what changed since.
@@ -161,14 +155,15 @@ mentions and comments on it are folded into that row.
   row onto a project's header). Projects live in this browser; Settings
   exports and imports them as JSON.
 - **Keys:**
-  - moving and opening: `j`/`k` move, `Space` expand, `Enter` or `o` open;
+  - moving and opening: `j`/`k` move, `Enter` or `o` open;
   - actions: `a` approve, `r` reply, `x` request changes, `n` nudge, `s` snooze
     until the MR changes, `m` move to a project, `d` since last review;
   - the screen: `/` search, `b` or `Ctrl+B` hide or show the sidebar, `f` full
-    screen, `Esc` fold the row, leave full screen or close the MR;
+    screen, `Esc` leave full screen or close the MR;
   - `?` shows all keys.
 
-  Keys act on the selected row; opening an MR selects it.
+  Keys act on the selected row; opening an MR selects it. `r`, `x`, `n` and
+  `m` open the selected MR and start the action in its header.
 - **Comments are signed.** Replies, requests for changes (a comment tagging
   the author) and nudges (a comment tagging the reviewers still waiting) end
   with "*— via Mr. PR*". Turning the signature off is on the roadmap.
