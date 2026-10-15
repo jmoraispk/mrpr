@@ -362,3 +362,9 @@ test('Mute repository asks the app to mute that repository', async () => {
   await user.click(screen.getByRole('menuitem', { name: 'Mute repository' }))
   expect(onMute).toHaveBeenCalledWith(expect.objectContaining({ id: `repo:${H}:g/docs`, repo: 'g/docs' }))
 })
+
+test('the footer counts snoozed MRs and muted repositories together', async () => {
+  await fake.store.set({ mutedGroups: { 'repo:h:g/x': 'g/x' } })
+  show()
+  expect(await screen.findByRole('link', { name: 'Snoozed (1)' })).toBeInTheDocument()
+})

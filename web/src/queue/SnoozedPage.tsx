@@ -1,13 +1,21 @@
 import type { QueueRow } from './model'
 import { reviewHash } from './route'
 
-/** MRs you snoozed: each comes back by itself when it changes, or now with Unsnooze. */
+/**
+ * MRs you snoozed: each comes back by itself when it changes, or now with
+ * Unsnooze. Then the repositories you muted, until you unmute them.
+ */
 export function SnoozedPage({
   rows,
   onUnsnooze,
+  muted,
+  onUnmute,
 }: {
   rows: QueueRow[]
   onUnsnooze: (row: QueueRow) => void
+  /** Muted repository group id → its path. */
+  muted: Record<string, string>
+  onUnmute: (id: string) => void
 }) {
   const snoozed = rows.filter((row) => row.snoozed && !row.folded)
   return (
@@ -33,6 +41,22 @@ export function SnoozedPage({
           ))}
         </ul>
       )}
+      {Object.keys(muted).length ? (
+        <section className="q-page-section" aria-label="Muted repositories">
+          <h3>Muted repositories</h3>
+          <p className="q-page-note">Hidden from the list until you unmute them.</p>
+          <ul className="q-page-list">
+            {Object.entries(muted).map(([id, name]) => (
+              <li key={id}>
+                <span>{name}</span>
+                <button type="button" onClick={() => onUnmute(id)}>
+                  Unmute
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </section>
   )
 }

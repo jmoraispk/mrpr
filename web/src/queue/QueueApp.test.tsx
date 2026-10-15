@@ -681,3 +681,16 @@ test('muting a repository says so with Undo; Undo brings it back', async () => {
   expect(await screen.findAllByRole('article')).not.toHaveLength(0)
   await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
 })
+
+test('muted repositories are listed on the Snoozed page, and Unmute brings them back', async () => {
+  const user = userEvent.setup()
+  await fake.store.set({ mutedGroups: { ['repo:' + H + ':g/sdk']: 'g/sdk' } })
+  window.location.hash = '#/snoozed'
+  renderApp()
+  const page = await screen.findByRole('region', { name: 'Snoozed' })
+  const muted = await within(page).findByRole('region', { name: 'Muted repositories' })
+  expect(within(muted).getByText('g/sdk')).toBeInTheDocument()
+  await user.click(within(muted).getByRole('button', { name: 'Unmute' }))
+  await waitFor(() => expect(within(page).queryByRole('region', { name: 'Muted repositories' })).toBeNull())
+  await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
+})

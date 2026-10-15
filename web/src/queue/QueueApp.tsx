@@ -279,7 +279,12 @@ export function QueueApp() {
             <ProjectsSettings />
           </>
         ) : route.name === 'snoozed' ? (
-          <SnoozedPage rows={queue.rows} onUnsnooze={actions.snooze} />
+          <SnoozedPage
+            rows={queue.rows}
+            onUnsnooze={actions.snooze}
+            muted={actions.muted}
+            onUnmute={actions.unmute}
+          />
         ) : route.name === 'review' ? (
           <MrPanel
             key={openKey}

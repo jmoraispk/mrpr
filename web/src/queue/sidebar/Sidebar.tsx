@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { useMutedGroups } from '../groups'
 import { useFiltersOpen } from '../listSettings'
 import type { QueueRow } from '../model'
 import {
@@ -68,6 +69,7 @@ export function Sidebar({
   const theme = useTheme()
   const [newProjectOpen, setNewProjectOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useFiltersOpen()
+  const [muted] = useMutedGroups()
   const activeFilters = Object.values(list.filters).filter(Boolean).length
   const search = useRef<HTMLInputElement>(null)
   // Focus once per ask: the sidebar mounting again (after full screen, or b) must not take it.
@@ -259,7 +261,7 @@ export function Sidebar({
           </p>
         ) : null}
         <nav aria-label="More">
-          <a href="#/snoozed">Snoozed ({snoozed})</a>
+          <a href="#/snoozed">Snoozed ({snoozed + Object.keys(muted).length})</a>
           <a href="#/settings">Settings</a>
           <button
             type="button"
