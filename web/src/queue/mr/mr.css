@@ -1,5 +1,5 @@
 /* The open MR, right of the sidebar, in the landing tokens. */
-.mr-panel { display: flex; min-width: 0; height: 100vh; flex-direction: column; background: var(--surface); }
+.mr-panel { display: flex; min-width: 0; height: 100%; flex-direction: column; background: var(--surface); }
 .mr-panel-top { flex: none; padding: 14px 20px 0; border-bottom: 1px solid var(--line-2); background: var(--surface); }
 .mr-tabs { display: flex; gap: 18px; margin-top: 10px; }
 .mr-tabs a { padding: 8px 0; color: var(--muted); font-size: 14px; text-decoration: none; }
@@ -7,6 +7,11 @@
 .mr-panel-body { min-width: 0; min-height: 0; flex: 1; overflow-y: auto; }
 /* The code view inside the panel: no top-bar row, and it fills the panel. */
 .mr-panel-body > .app-shell.is-embedded { height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+.mr-panel-body > .app-shell.is-embedded .file-rail,
+.mr-panel-body > .app-shell.is-embedded .rail-heading { background: var(--surface-2); }
+.mr-panel-body > .app-shell.is-embedded .comment-composer,
+.mr-panel-body > .app-shell.is-embedded .selection-draft { background: var(--surface); }
+.mr-panel-body > .app-shell.is-embedded .dir-row:hover { background: var(--hl); }
 .mr-error { margin: 20px; padding: 12px 14px; border: 1px solid var(--warm-ink); border-radius: 10px; background: var(--warm-bg); color: var(--warm-ink); }
 .mr-error p { margin: 0 0 8px; }
 .mr-title { margin: 0; color: var(--ink); font: 600 18px/1.3 var(--font-body); }
@@ -28,16 +33,12 @@
 .mr-main { min-width: 0; }
 .mr-description { margin-bottom: 20px; padding: 12px 14px; border: 1px solid var(--line-3); border-radius: 10px; color: var(--ink-2); line-height: 1.55; }
 .mr-description.is-clipped .mr-markdown { max-height: 18em; overflow: hidden; mask-image: linear-gradient(#000 70%, transparent); }
-.mr-description > button, .mr-hidden button, .mr-activity-head button { border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
+.mr-description > button, .mr-hidden button { border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
 .mr-markdown img { max-width: 100%; }
 .mr-markdown pre { overflow-x: auto; padding: 10px; border-radius: 8px; background: var(--soft); }
 .mr-markdown a { color: var(--link); }
 .mr-activity-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .mr-activity-head h3 { margin: 0; color: var(--ink); font-size: 15px; }
-.mr-show { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink); font-size: 13px; }
-.mr-show > label { display: inline-flex; gap: 6px; margin: 0 14px 6px 0; }
-.mr-show-scope { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; color: var(--muted); }
-.mr-show-scope button { border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
 .mr-divider { display: flex; align-items: center; gap: 10px; margin: 14px 0 8px; color: var(--accent-ink); font: 600 12px var(--font-body); }
 .mr-divider::before, .mr-divider::after { content: ''; flex: 1; height: 1px; background: var(--accent); opacity: .35; }
 .mr-event { margin: 6px 0; padding: 2px 0 2px 18px; color: var(--muted); font-size: 13px; }
@@ -84,18 +85,43 @@
   --display: var(--font-display);
 }
 
-/* The embedded code view keeps its own dark palette: inside the queue, the
-   landing tokens would otherwise win for the names both stylesheets use. */
+/* The embedded code view takes the app's colours for the current theme: the
+   review palette's names map onto the landing tokens, light or dark. */
 .q-shell .app-shell.is-embedded {
-  --ink: #e6edf3;
-  --muted: #8b98a7;
-  --accent: #c084fc;
-  --accent-bg: rgba(192, 132, 252, 0.15);
-  --accent-border: rgba(192, 132, 252, 0.5);
+  --canvas: var(--surface); --panel: var(--surface-2); --panel-raised: var(--surface);
+  --panel-soft: var(--soft); --hairline: var(--line-2); --hairline-bright: var(--line);
+  --faint: var(--muted); --delta: var(--accent);
+  --delta-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-bg: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 50%, transparent);
+  --success: var(--plus); --danger: var(--minus); --warning: #8a5a00;
   color: var(--ink);
-  background: var(--canvas);
-  color-scheme: dark;
+  background: var(--surface);
+  color-scheme: light;
   font: 14px/1.45 var(--sans);
 }
+:root[data-theme='dark'] .q-shell .app-shell.is-embedded { --warning: #d4a84f; color-scheme: dark; }
+/* Colours the code view hard-codes for its dark look, in the app's tokens. */
+.q-shell .app-shell.is-embedded .stat-deletion,
+.q-shell .app-shell.is-embedded .diff-placeholder code.removed { color: var(--minus); }
+.q-shell .app-shell.is-embedded .diff-placeholder code.added { color: var(--plus); }
+.q-shell .app-shell.is-embedded .fallback-notice { color: var(--warning); }
 /* The panel's header already names the MR. */
 .app-shell.is-embedded .heading-copy { display: none; }
+
+/* Activity threads as a chat: the opener on the left, replies on the right. */
+.mr-thread .discussion-thread.is-chat .thread-notes { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; }
+/* The code view's .thread-note rules (a grid, borders, block names) load later: outrank them. */
+.discussion-thread.is-chat .thread-note.chat-note { display: flex; gap: 8px; align-items: flex-start; max-width: 80%; padding: 0; border-top: 0; }
+.discussion-thread.is-chat .chat-meta strong { display: inline; margin: 0; font-size: inherit; }
+.discussion-thread.is-chat .chat-note.is-reply { flex-direction: row-reverse; align-self: flex-end; }
+.chat-body { min-width: 0; }
+.chat-meta { margin: 0 0 3px; color: var(--muted); font-size: 12px; }
+.chat-meta strong { color: var(--ink); font-weight: 600; }
+.chat-note.is-reply .chat-meta { text-align: right; }
+.chat-bubble { padding: 8px 12px; border: 1px solid var(--line-3); border-radius: 12px; background: var(--surface-2); color: var(--ink); overflow-wrap: anywhere; }
+.chat-note.is-opener .chat-bubble { border-top-left-radius: 4px; }
+.chat-note.is-reply .chat-bubble { border-color: color-mix(in srgb, var(--accent) 22%, var(--line-3)); border-top-right-radius: 4px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.chat-bubble > :first-child { margin-top: 0; }
+.chat-bubble > :last-child { margin-bottom: 0; }
+.chat-bubble pre { max-width: 100%; overflow-x: auto; }

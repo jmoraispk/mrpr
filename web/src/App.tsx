@@ -7,6 +7,7 @@ import { diffStats, diffStatsLabel } from './review/diffStats'
 import { projectUrlFrom } from './review/projectUrl'
 import type { ScrollRequest } from './review/DiffStream'
 import { MODE_KEY, ReviewToolbar } from './review/ReviewToolbar'
+import { summarizeChanges } from './review/changeSummary'
 import type { DiffMode } from './review/diffWorkerClient'
 import {
   discussionsQueryKey,
@@ -153,15 +154,10 @@ export function App({
       ),
     [diffs.data],
   )
-  const changeSummary = useMemo(() => {
-    const counts = { added: 0, deleted: 0, moved: 0 }
-    for (const file of diffs.data ?? []) {
-      if (file.new_file) counts.added += 1
-      else if (file.deleted_file) counts.deleted += 1
-      else if (file.renamed_file) counts.moved += 1
-    }
-    return counts
-  }, [diffs.data])
+  const changeSummary = useMemo(
+    () => summarizeChanges(diffs.data ?? []),
+    [diffs.data],
+  )
   const generalDiscussions = useMemo(
     () =>
       (discussions.data ?? []).filter((discussion) =>
@@ -337,36 +333,44 @@ export function App({
           <div className="rail-heading">
             <div>
               <span className="eyebrow">Changes</span>
-              <strong>{diffs.data.length} files</strong>
-              <span
-                className="rail-diff-stats"
-                aria-label={`Total changes: ${diffStatsLabel(totalChanges)}`}
-              >
-                <span className="stat-addition" aria-hidden="true">
-                  +{totalChanges.additions}
+              <div className="rail-summary">
+                <strong>{diffs.data.length} files</strong>
+                <span
+                  className="rail-diff-stats"
+                  aria-label={`Total changes: ${diffStatsLabel(totalChanges)}`}
+                >
+                  <span className="stat-addition" aria-hidden="true">
+                    +{totalChanges.additions}
+                  </span>
+                  <span className="stat-deletion" aria-hidden="true">
+                    −{totalChanges.deletions}
+                  </span>
                 </span>
-                <span className="stat-deletion" aria-hidden="true">
-                  −{totalChanges.deletions}
+                <span
+                  className="change-summary"
+                  aria-label={
+                    `${changeSummary.modified} modified, ` +
+                    `${changeSummary.added} new, ` +
+                    `${changeSummary.deleted} deleted` +
+                    (changeSummary.moved ? `, ${changeSummary.moved} moved` : '')
+                  }
+                >
+                  <span className="count-mod" aria-hidden="true">
+                    {changeSummary.modified} mod
+                  </span>
+                  <span className="count-new" aria-hidden="true">
+                    {changeSummary.added} new
+                  </span>
+                  <span className="count-del" aria-hidden="true">
+                    {changeSummary.deleted} del
+                  </span>
+                  {changeSummary.moved ? (
+                    <span className="count-mov" aria-hidden="true">
+                      {changeSummary.moved} mov
+                    </span>
+                  ) : null}
                 </span>
-              </span>
-              <span
-                className="change-summary"
-                aria-label={
-                  `${changeSummary.added} new, ` +
-                  `${changeSummary.deleted} deleted, ` +
-                  `${changeSummary.moved} moved`
-                }
-              >
-                <span className="count-new" aria-hidden="true">
-                  {changeSummary.added} new
-                </span>
-                <span className="count-del" aria-hidden="true">
-                  {changeSummary.deleted} del
-                </span>
-                <span className="count-mov" aria-hidden="true">
-                  {changeSummary.moved} mov
-                </span>
-              </span>
+              </div>
             </div>
             <span className="thread-count" title="Discussion count">
               {threadCount}

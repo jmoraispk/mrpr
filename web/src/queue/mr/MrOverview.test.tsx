@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import type { MrOverview, OverviewNote } from '../../gitlab/mrOverview'
-import { installPlatform, platform } from '../../platform/platform'
+import { installPlatform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { TransportProvider } from '../../transport/context'
 import type { DeltaTransport } from '../../transport/types'
@@ -176,7 +176,7 @@ test('activity: default filters, the new divider, your thread outlined, and what
   expect(within(activity).getByText(/ANA added 2 commits/)).toBeInTheDocument()
   expect(within(activity).getByText(/mentions you/)).toBeInTheDocument()
   expect(
-    within(activity).getByText(/1 hidden by your Show settings: 1 resolved thread/),
+    within(activity).getByText(/1 hidden by your Filters: 1 resolved thread/),
   ).toBeInTheDocument()
 })
 
@@ -185,29 +185,6 @@ test('Show them reveals hidden items for this view only', async () => {
   show()
   await user.click(screen.getByRole('button', { name: 'Show them' }))
   expect(screen.getByText(/LI: Typo/)).toBeInTheDocument()
-})
-
-test('⚙ Show changes what is shown, for all MRs by default', async () => {
-  const user = userEvent.setup()
-  show()
-  await user.click(screen.getByRole('button', { name: '⚙ Show' }))
-  await user.click(screen.getByRole('checkbox', { name: 'New commits' }))
-  expect(screen.queryByText(/ANA added 2 commits/)).toBeNull()
-  expect(screen.getByRole('radio', { name: 'all MRs' })).toBeChecked()
-})
-
-test('choosing this MR keeps a change to this MR only', async () => {
-  const user = userEvent.setup()
-  show()
-  await user.click(screen.getByRole('button', { name: '⚙ Show' }))
-  await user.click(screen.getByRole('radio', { name: 'this MR' }))
-  await user.click(screen.getByRole('checkbox', { name: 'New commits' }))
-  await waitFor(async () =>
-    expect(await platform().store.get('activityFilters')).toMatchObject({
-      defaults: { commits: true },
-      perMr: { 'gitlab.example.com:g/p!1': { commits: false } },
-    }),
-  )
 })
 
 test('the details column: reviewers, approvals, pipeline, labels, project, commits', () => {
@@ -225,7 +202,7 @@ test('the details column: reviewers, approvals, pipeline, labels, project, commi
   expect(within(rail).getByText('7')).toBeInTheDocument()
 })
 
-test('reply reveals a thread hidden by the Show settings and focuses its reply box', async () => {
+test('reply reveals a thread hidden by the Filters and focuses its reply box', async () => {
   show({ replyTo: 'done' })
   await waitFor(() => {
     const box = document.querySelector<HTMLTextAreaElement>(
@@ -322,7 +299,7 @@ test('a thread revealed for a reply stays shown, open and focused after the requ
   // Settle any re-render from clearing the request.
   await new Promise((resolve) => setTimeout(resolve, 20))
   expect(document.querySelector('[data-discussion-id="done"] textarea')).toHaveFocus()
-  expect(screen.queryByText(/1 hidden by your Show settings/)).toBeNull()
+  expect(screen.queryByText(/1 hidden by your Filters/)).toBeNull()
 })
 
 test('a reply posted in Overview survives the page re-rendering', async () => {
@@ -334,8 +311,6 @@ test('a reply posted in Overview survives the page re-rendering', async () => {
   await user.type(within(thread).getByRole('textbox', { name: 'Reply' }), 'On success only')
   await user.click(within(thread).getByRole('button', { name: 'Reply' }))
   expect(await within(thread).findByText('On success only')).toBeInTheDocument()
-  // Anything that re-renders the page, e.g. opening ⚙ Show.
-  await user.click(screen.getByRole('button', { name: '⚙ Show' }))
   view.rerender(
     <QueryClientProvider client={new QueryClient()}>
       <TransportProvider transport={transport}>
@@ -345,4 +320,39 @@ test('a reply posted in Overview survives the page re-rendering', async () => {
     </QueryClientProvider>,
   )
   expect(screen.getByText('On success only')).toBeInTheDocument()
+})
+
+test('the MR page has no ⚙ Show: what Activity shows is set under Filters in the sidebar', () => {
+  show()
+  expect(screen.queryByRole('button', { name: /Show$/ })).toBeNull()
+})
+
+test('Activity threads read like a chat: the opener on the left, everyone else on the right', () => {
+  show({
+    overview: overview({
+      discussions: [
+        {
+          id: 'chat',
+          resolvable: true,
+          resolved: false,
+          notes: [
+            note(301, 'li', 'Why does this retry forever?', '2026-10-11T08:00:00Z'),
+            note(302, 'joao', 'It stops after the budget.', '2026-10-11T08:30:00Z'),
+            note(303, 'li', 'Then say so in the docstring.', '2026-10-11T09:00:00Z'),
+          ],
+        },
+      ],
+    }),
+  })
+  const thread = document.querySelector('[data-discussion-id="chat"]') as HTMLElement
+  expect(thread).toHaveClass('is-chat')
+  const sides = [...thread.querySelectorAll('.chat-note')].map((el) =>
+    el.classList.contains('is-reply') ? 'right' : 'left',
+  )
+  expect(sides).toEqual(['left', 'right', 'left'])
+  const names = [...thread.querySelectorAll('.chat-meta strong')].map((el) => el.textContent)
+  expect(names).toEqual(['LI', 'JOAO', 'LI'])
+  expect(thread.querySelector('.chat-meta time')).toHaveAttribute('dateTime', '2026-10-11T08:00:00Z')
+  // Reply and Resolve stay below the bubbles.
+  expect(within(thread).getByRole('textbox', { name: 'Reply' })).toBeInTheDocument()
 })

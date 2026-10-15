@@ -13,7 +13,7 @@ test('Feedback opens one text box and an optional email, and says thanks once se
   render(<FeedbackButton send={send} />)
   await user.click(screen.getByRole('button', { name: 'Feedback' }))
   const dialog = screen.getByRole('dialog', { name: 'Feedback' })
-  expect(dialog).toHaveTextContent('Only what you type is sent, with the app version and your browser.')
+  expect(dialog).not.toHaveTextContent('Only what you type is sent')
   await user.type(screen.getByRole('textbox', { name: "What's rough or missing?" }), 'Nudges are great')
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(send).toHaveBeenCalledWith({ message: 'Nudges are great', email: '' })

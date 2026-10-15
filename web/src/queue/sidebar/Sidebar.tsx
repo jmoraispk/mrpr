@@ -1,16 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { toggleTag } from '../listSettings'
-import { todaysBudget, type QueueRow } from '../model'
-import { SORTS, SORT_LABELS, type ListFilters, type SortBy } from '../order'
+import { useMutedGroups } from '../groups'
+import { useFiltersOpen } from '../listSettings'
+import type { QueueRow } from '../model'
+import {
+  directionLabel,
+  FIRST_DESCENDING,
+  SORTS,
+  SORT_LABELS,
+  TAB_LABELS,
+  TABS,
+  type RowGroup,
+  type SortBy,
+} from '../order'
 import { ProjectDialog } from '../ProjectDialog'
 import { moveRow } from '../projects'
 import { useProjects } from '../state'
 import { useTheme } from '../theme'
+import { FiltersPanel } from './FiltersPanel'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
 import { SidebarResizer } from './SidebarResizer'
-import { TagBar } from './TagBar'
 import type { SidebarList } from './useSidebarList'
 
 export interface SidebarProps {
@@ -21,8 +31,12 @@ export interface SidebarProps {
   selectedKey: string | null
   /** The row of the MR open on the right. */
   openKey: string | null
+  /** The open MR's look key, for the Activity filters; null with no MR open. */
+  activityKey: string | null
   onOpenRow: (row: QueueRow) => void
   onSnoozeRow: (row: QueueRow) => void
+  /** ⋮ → Mute repository on a repository's group. */
+  onMuteGroup: (group: RowGroup) => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
   onSearchFocused: () => void
@@ -33,12 +47,6 @@ export interface SidebarProps {
   onResizeEnd: (width: number) => void
 }
 
-const FILTER_LABELS: [keyof ListFilters, string][] = [
-  ['needsMeOnly', 'Needs me only'],
-  ['hideDrafts', 'Hide drafts'],
-  ['showDone', 'Show done'],
-]
-
 /** Every MR, grouped by project, with the filters, sort and tag chips that order them. */
 export function Sidebar({
   rows,
@@ -46,8 +54,10 @@ export function Sidebar({
   loading,
   selectedKey,
   openKey,
+  activityKey,
   onOpenRow,
   onSnoozeRow,
+  onMuteGroup,
   searchFocus,
   onSearchFocused,
   onSearchDone,
@@ -58,6 +68,9 @@ export function Sidebar({
   const [projects, setProjects] = useProjects()
   const theme = useTheme()
   const [newProjectOpen, setNewProjectOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useFiltersOpen()
+  const [muted] = useMutedGroups()
+  const activeFilters = Object.values(list.filters).filter(Boolean).length
   const search = useRef<HTMLInputElement>(null)
   // Focus once per ask: the sidebar mounting again (after full screen, or b) must not take it.
   useEffect(() => {
@@ -73,22 +86,42 @@ export function Sidebar({
   const folded = rows.filter((row) => row.folded).length
   const snoozed = rows.filter((row) => row.snoozed && !row.folded).length
 
+  // A project's rename is the project's own; a repository's is a display name in this browser.
+  const renameGroup = (group: RowGroup, value: string): boolean => {
+    const name = value.trim()
+    if (group.projectId) {
+      if (!name) return false
+      setProjects(projects.map((project) => (project.id === group.projectId ? { ...project, name } : project)))
+      return true
+    }
+    const names = { ...list.names }
+    if (!name || name === group.repo) delete names[group.id]
+    else names[group.id] = name
+    list.setNames(names)
+    return true
+  }
+
   let body
   if (loading) body = <p className="sb-empty">Loading your queue…</p>
   else if (list.groups.length > 0) {
-    body = list.groups.map((group) => (
+    body = list.groups.map((group, index) => (
       <MrGroup
         key={group.id}
         group={group}
         collapsed={list.collapsed.includes(group.id)}
         onToggle={() => list.toggleGroup(group.id)}
         onDropRow={(key) => setProjects(moveRow(projects, key, group.projectId))}
+        onDropGroup={(id, place) => list.moveGroup(id, group.id, place)}
+        onRename={(value) => renameGroup(group, value)}
+        onMute={group.repo ? () => onMuteGroup(group) : undefined}
+        onMove={(delta) => list.shiftGroup(group.id, delta)}
+        canUp={index > 0}
+        canDown={index < list.groups.length - 1}
       >
         {group.rows.map((row) => (
           <MrRow
             key={row.key}
             row={row}
-            order={list.order.tags}
             selected={row.key === selectedKey}
             current={row.key === openKey}
             onOpen={() => onOpenRow(row)}
@@ -109,7 +142,7 @@ export function Sidebar({
   } else {
     body = (
       <p className="sb-empty">
-        Nothing waiting on you.
+        {list.tab === 'mine' ? 'No open MRs from you.' : 'Nothing waiting on you.'}
         {!list.filters.showDone && hiddenDone ? (
           <>
             {' '}
@@ -131,7 +164,6 @@ export function Sidebar({
         <p className="sb-need">
           {needsYou} need{needsYou === 1 ? 's' : ''} you
         </p>
-        <p className="sb-budget">~{todaysBudget(rows)} min today</p>
       </header>
       <div className="sb-controls">
         <input
@@ -154,39 +186,74 @@ export function Sidebar({
             }
           }}
         />
-        <fieldset className="sb-filters">
-          <legend className="visually-hidden">Filters</legend>
-          {FILTER_LABELS.map(([key, label]) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={list.filters[key]}
-                onChange={(event) => list.setFilters({ ...list.filters, [key]: event.target.checked })}
-              />
-              {label}
-            </label>
+        <div className="sb-tabs" role="tablist" aria-label="Whose MRs">
+          {TABS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              className="sb-tab"
+              aria-selected={list.tab === id}
+              tabIndex={list.tab === id ? 0 : -1}
+              data-tab={id}
+              onClick={() => list.setTab(id)}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+                event.preventDefault()
+                const next = TABS[(TABS.indexOf(id) + 1) % TABS.length]
+                list.setTab(next)
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)
+                  ?.focus()
+              }}
+            >
+              {TAB_LABELS[id]} ({list.counts[id]})
+            </button>
           ))}
-        </fieldset>
-        <label className="sb-sort">
-          Sort
-          <select
-            value={list.order.sortBy}
-            onChange={(event) => list.setOrder({ ...list.order, sortBy: event.target.value as SortBy })}
+        </div>
+        <div className="sb-sort-row">
+          <label className="sb-sort">
+            Sort
+            <select
+              value={list.order.sortBy}
+              onChange={(event) => {
+                const sortBy = event.target.value as SortBy
+                list.setOrder({ sortBy, descending: FIRST_DESCENDING[sortBy] })
+              }}
+            >
+              {SORTS.map((sort) => (
+                <option key={sort} value={sort}>
+                  {SORT_LABELS[sort]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="sb-direction"
+            aria-label={directionLabel(list.order)}
+            title={`${directionLabel(list.order)} · click to flip`}
+            onClick={() => list.setOrder({ ...list.order, descending: !list.order.descending })}
           >
-            {SORTS.map((sort) => (
-              <option key={sort} value={sort}>
-                {SORT_LABELS[sort]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <TagBar
-          chips={list.chips}
-          onToggle={(kind) => list.setOrder(toggleTag(list.order, kind))}
-          onClear={() => list.setOrder({ ...list.order, tags: [] })}
-        />
+            {list.order.descending ? '↓' : '↑'}
+          </button>
+          <button
+            type="button"
+            className="sb-filters-toggle"
+            aria-expanded={filtersOpen}
+            aria-controls="sb-filters-panel"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            Filters{activeFilters ? ` · ${activeFilters}` : ''} {filtersOpen ? '▴' : '▾'}
+          </button>
+        </div>
+        {filtersOpen ? (
+          <FiltersPanel filters={list.filters} onFilters={list.setFilters} activityKey={activityKey} />
+        ) : null}
       </div>
-      <div className="sb-groups">{body}</div>
+      <div className="sb-groups" role="tabpanel" aria-label={TAB_LABELS[list.tab]}>
+        {body}
+      </div>
       <footer className="sb-foot">
         {folded ? (
           <p className="q-folded">
@@ -194,7 +261,7 @@ export function Sidebar({
           </p>
         ) : null}
         <nav aria-label="More">
-          <a href="#/snoozed">Snoozed ({snoozed})</a>
+          <a href="#/snoozed">Snoozed ({snoozed + Object.keys(muted).length})</a>
           <a href="#/settings">Settings</a>
           <button
             type="button"

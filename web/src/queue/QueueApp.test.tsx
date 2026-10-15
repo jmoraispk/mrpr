@@ -145,30 +145,35 @@ const rowNamed = (title: string) =>
   screen.getAllByRole('article').find((row) => row.textContent?.includes(title))!
 const selectedText = () => document.querySelector('.sb-row.is-selected')?.textContent ?? ''
 
-test('the sidebar says what needs you, today’s budget and the folded bot MRs', async () => {
+test('the sidebar says what needs you and the folded bot MRs', async () => {
   renderApp()
   await screen.findAllByRole('article')
   const side = sidebar()!
   expect(within(side).getByText('2 need you')).toBeInTheDocument()
-  // 130 lines ≈ 5 min, plus 5 lines ≈ 1 min.
-  expect(within(side).getByText('~6 min today')).toBeInTheDocument()
+  expect(within(side).queryByText(/min today/)).toBeNull()
   expect(within(side).getByText('1 bot MR folded away')).toBeInTheDocument()
 })
 
-test('MRs are grouped by repository, what needs you first, each with its tags', async () => {
+test('MRs are grouped by repository, each row without labels', async () => {
   renderApp()
   const rows = await screen.findAllByRole('article')
   expect(rows.map((row) => row.querySelector('.sb-title-text')?.textContent)).toEqual([
     'Retry budget for webhooks',
     'Fix flaky test',
+  ])
+  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 2/ })).toBeInTheDocument()
+  expect(within(rows[0]).getByText(/· Ana ·/)).toBeInTheDocument()
+  expect(rows[0].querySelector('.q-tag')).toBeNull()
+})
+
+test('your own MRs are under From me', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('tab', { name: /^From me/ }))
+  expect(screen.getAllByRole('article').map((row) => row.querySelector('.sb-title-text')?.textContent)).toEqual([
     'Port billing',
   ])
-  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 3/ })).toBeInTheDocument()
-  expect(within(rows[0]).getByText('Blocking 1 person')).toBeInTheDocument()
-  expect(within(rows[0]).getByText(/by Ana/)).toBeInTheDocument()
-  expect(within(rows[1]).getByText('Quick win · ~1 min')).toBeInTheDocument()
-  // Days counted from now, so only the name is fixed.
-  expect(within(rows[2]).getByText(/^Waiting on others/)).toBeInTheDocument()
 })
 
 test('a host error shows its sentence and offers to sign in again', async () => {
@@ -237,11 +242,11 @@ test('opening a review lands on the waiting thread and reads what was folded int
 test('dropping a row on a project’s header moves it there', async () => {
   await fake.store.set({
     projects: [
-      { id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: [], labels: [] }, pinned: [`${H}:3`] },
+      { id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: [], labels: [] }, pinned: [`${H}:2`] },
     ],
   })
   renderApp()
-  const target = await screen.findByRole('button', { name: /Payments/ })
+  const target = await screen.findByRole('button', { name: /^Payments/ })
   const data = new Map<string, string>()
   const dataTransfer = {
     setData: (type: string, value: string) => data.set(type, value),
@@ -251,7 +256,7 @@ test('dropping a row on a project’s header moves it there', async () => {
   fireEvent.dragOver(target, { dataTransfer })
   fireEvent.drop(target, { dataTransfer })
   await waitFor(async () =>
-    expect(await fake.store.get('projects')).toMatchObject([{ pinned: [`${H}:3`, `${H}:1`] }]),
+    expect(await fake.store.get('projects')).toMatchObject([{ pinned: [`${H}:2`, `${H}:1`] }]),
   )
 })
 
@@ -468,6 +473,13 @@ test('after opening an MR, Reply still reaches the thread waiting on you', async
 })
 
 test('after the selected row leaves the list, j goes on to the next one, not back to the top', async () => {
+  // A third MR from someone else, so the list goes on after the one that leaves.
+  hosts[0].mrs[2] = {
+    ...hosts[0].mrs[2],
+    roles: ['reviewer'],
+    author: { username: 'ana', name: 'Ana', avatarUrl: null, bot: false },
+    reviewers: [{ username: 'joao', name: 'Joao', state: 'UNREVIEWED' }],
+  }
   transport.approve.mockImplementationOnce(async () => {
     hosts[0].mrs[1] = {
       ...hosts[0].mrs[1],
@@ -518,7 +530,7 @@ test('j skips a folded group', async () => {
   hosts[0].mrs.push(mr(5, { project: 'g/web', title: 'Web tweak', createdAt: '2026-10-08T00:00:00Z' }))
   renderApp()
   await screen.findAllByRole('article')
-  await user.click(screen.getByRole('button', { name: /g\/web/ }))
+  await user.click(screen.getByRole('button', { name: /^g\/web\s*\d/ }))
   fireEvent.keyDown(window, { key: 'j' })
   expect(selectedText()).toContain('Fix flaky test')
 })
@@ -528,7 +540,7 @@ test('b and Ctrl+B hide and show the sidebar, and it stays as you left it', asyn
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'b' })
   await waitFor(() => expect(sidebar()).toBeNull())
-  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false, width: 360 }))
+  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false, width: 400 }))
   fireEvent.keyDown(window, { key: 'b', ctrlKey: true })
   await waitFor(() => expect(sidebar()).toBeInTheDocument())
 })
@@ -545,7 +557,7 @@ test('nothing open: the right says how to open an MR; an old bucket link lands h
   renderApp()
   await screen.findAllByRole('article')
   expect(screen.getByText('Click an MR to open it.')).toBeInTheDocument()
-  expect(screen.getAllByRole('article')).toHaveLength(3)
+  expect(screen.getAllByRole('article')).toHaveLength(2)
 })
 
 test('with the sidebar hidden, j opens the next MR and keys act on the one on screen', async () => {
@@ -642,4 +654,53 @@ test('hiding the sidebar mid-drag drops the drag, and the saved width shows', as
   fireEvent.keyDown(window, { key: 'b' })
   await screen.findByRole('separator', { name: 'Resize the sidebar' })
   expect((document.querySelector('.q-shell') as HTMLElement).style.getPropertyValue('--sidebar-width')).toBe('400px')
+})
+
+test('a muted repository leaves the list and every count, even with its MR open', async () => {
+  await fake.store.set({ mutedGroups: { [`repo:${H}:g/sdk`]: 'g/sdk' } })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  renderApp()
+  expect(await screen.findByRole('region', { name: 'Fix flaky test' })).toBeInTheDocument()
+  const side = sidebar()!
+  await waitFor(() => expect(within(side).getByText('0 need you')).toBeInTheDocument())
+  expect(within(side).queryByRole('article')).toBeNull()
+  fireEvent.keyDown(window, { key: 'j' })
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2')
+})
+
+test('muting a repository says so with Undo; Undo brings it back', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('button', { name: 'Options for g/sdk' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Mute repository' }))
+  const notice = await screen.findByRole('status')
+  expect(notice).toHaveTextContent('Muted g/sdk')
+  await waitFor(() => expect(screen.queryByRole('article')).toBeNull())
+  await user.click(within(notice).getByRole('button', { name: 'Undo' }))
+  expect(await screen.findAllByRole('article')).not.toHaveLength(0)
+  await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
+})
+
+test('muted repositories are listed on the Snoozed page, and Unmute brings them back', async () => {
+  const user = userEvent.setup()
+  await fake.store.set({ mutedGroups: { ['repo:' + H + ':g/sdk']: 'g/sdk' } })
+  window.location.hash = '#/snoozed'
+  renderApp()
+  const page = await screen.findByRole('region', { name: 'Snoozed' })
+  const muted = await within(page).findByRole('region', { name: 'Muted repositories' })
+  expect(within(muted).getByText('g/sdk')).toBeInTheDocument()
+  await user.click(within(muted).getByRole('button', { name: 'Unmute' }))
+  await waitFor(() => expect(within(page).queryByRole('region', { name: 'Muted repositories' })).toBeNull())
+  await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
+})
+
+test('with its repository muted, the open MR still answers a', async () => {
+  await fake.store.set({ mutedGroups: { ['repo:' + H + ':g/sdk']: 'g/sdk' } })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  renderApp()
+  expect(await screen.findByRole('region', { name: 'Fix flaky test' })).toBeInTheDocument()
+  await waitFor(() => expect(within(sidebar()!).getByText('0 need you')).toBeInTheDocument())
+  fireEvent.keyDown(window, { key: 'a' })
+  await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
 })

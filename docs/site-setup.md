@@ -123,32 +123,33 @@ After signing in, the app is two panels: every merge request in a sidebar on
 the left, and the one you open on the right. Each MR is one row; replies,
 mentions and comments on it are folded into that row.
 
-- **Groups:** your projects first, then one group per repository for the rest.
-  Click a group's header to fold it; folded groups stay folded.
-- **Labels** say what an MR asks of you:
-  - **Blocking N people:** your approval is the last one missing. It counts
-    the author and the reviewers who already approved. It is a best guess:
-    GitLab's approval rules may not count your approval.
-  - **Waiting on you:** your review, or a reply waiting on you.
-  - **Changes addressed:** new commits after you requested changes.
-  - **Returned to you** and **Waiting on others** (your MRs).
-  - **Quick win** (30 changed lines or fewer) and **Needs rebase**.
-
-  A row shows three tags, then "+N".
-- **Order:** by default, what needs you comes first, then what came back to
-  you, then what waits on others. Within each, the order is who is blocked,
-  then how long it has waited. **Sort** offers Recently updated, Oldest first
-  and Smallest first.
-- **Put tags first:** click a tag chip and MRs with that tag come first. Click
-  more chips to add them after it, numbered 1, 2, 3, and click a chip again to
-  take it off. Your order and sort apply to every group and are kept in this
-  browser.
-- **Filters:**
-  - Search (`/`) matches title, `!number`, author, repository and tags.
-  - Needs me only, Hide drafts and Show done are toggles; done MRs are hidden
-    unless Show done is on.
-  - Snoozed MRs are listed under "Snoozed (N)" at the bottom, and bot MRs are
-    only counted.
+- **Tabs:** **From me** lists the MRs you opened; **From others** everything
+  else (reviews, mentions, replies). Each shows how many it holds with the
+  current search and filters.
+- **Rows** show the title, then `!number · author · +added −removed · 2d`
+  (when it last changed: `now`, `5m`, `1h`, `1d`, `1w`, `3mo`, `1y`). An MR
+  that needs you (your review, a reply, blocking, changes addressed,
+  returned to you) has an accent bar on its left edge; an unread dot marks new
+  comments. The labels behind that (Blocking N, Waiting on you, Changes
+  addressed, Returned to you, Waiting on others, Quick win, Needs rebase)
+  show in the MR's header.
+- **Sort:** Last changed (newest first), Age (oldest first) or Size
+  (smallest first); the ↑/↓ button beside it flips the direction.
+- **Filters** (beside Sort) opens one panel: Needs me only, Hide drafts and
+  Show done for the list, then what an MR's Activity shows (unresolved and
+  resolved threads, new commits, bot comments, other activity). With an MR
+  open, Activity choices apply to that MR; **Apply to all MRs** makes them
+  the default. Done MRs are hidden unless Show done is on. Search (`/`)
+  matches title, `!number`, author and repository.
+- **Groups:** your projects and repositories, in an order you choose: drag a
+  group's header above or below another, or use its **⋮** menu (Move up,
+  Move down). **Rename…** gives a repository a display name in this browser
+  (clear it to get the real name back) or renames a project. **Mute
+  repository** hides a repository's MRs until you unmute it from the Snoozed
+  page; MRs of it you put in a project stay there. Click a header to fold the
+  group; folded groups stay folded.
+- Snoozed MRs and muted repositories are listed under "Snoozed (N)" at the
+  bottom, and bot MRs are only counted.
 - **One click** (or `Enter`) opens an MR on the right.
 - **Since last review:** opening or approving an MR remembers its head commit
   in this browser. Next time, `d` (or the "Since last review" tab) shows only
@@ -178,12 +179,14 @@ The MR opens on the right, beside the sidebar. `f` makes it full screen
 - **Overview** (first): the description as GitLab would show it, and the
   Activity: threads and events in time order, with a "New since last review"
   divider, threads involving you outlined, and a reply box on each thread.
-  **⚙ Show** picks what Activity shows (unresolved and resolved threads, new
-  commits, bot comments, other activity), for this MR or for all MRs; anything
-  hidden is counted, with "Show them". On the right: reviewers, approvals,
+  Threads read like a chat: whoever started the thread on the left, replies
+  on the right. What Activity shows is set under **Filters** in the sidebar;
+  anything hidden is counted, with "Show them". On the right: reviewers, approvals,
   pipeline, labels, project and commits, and **Rebase** when GitLab says the
   branch needs it and you can push to it.
-- **Changes:** the code, with inline comments shown.
+- **Changes:** the code, with inline comments shown, in the app's light or
+  dark colours. Its file count reads `19 files · +806 −29 · 15 MOD 4 NEW 0 DEL`
+  (`N MOV` when files were renamed).
 - **Since last review:** only what changed since you last looked.
 
 ## Feedback, waitlist and first visits
@@ -206,7 +209,7 @@ from `web/`, after `vercel env pull .env.local`. Each is limited per IP address:
 - Tokens are stored in the visitor's browser (`localStorage`), last two hours,
   and refresh automatically. Signing out revokes the current token.
 - The app ships a Content Security Policy allowing only its own scripts and
-  connections to the configured GitLab host; the landing and privacy pages run only their own script file, never inline code
+  connections to its own origin and any https server (for the GitLab servers you sign in to); the landing and privacy pages run only their own script file, never inline code
   at all. `vercel.json` adds `frame-ancestors 'none'` so neither can be framed.
   Never add a third-party script.
 - Whoever can push to `main` controls the code that holds visitors' tokens.

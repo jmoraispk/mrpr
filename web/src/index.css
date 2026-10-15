@@ -513,6 +513,21 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+.rail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.rail-summary .change-summary {
+  margin-top: 0;
+}
+
+.change-summary .count-mod {
+  color: var(--muted);
+}
+
 .change-summary .count-new {
   color: var(--success);
 }

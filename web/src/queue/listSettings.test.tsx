@@ -10,7 +10,8 @@ import {
   normalizeListFilters,
   normalizeListOrder,
   normalizeSidebar,
-  toggleTag,
+  normalizeTab,
+  SIDEBAR_WIDTH,
   useListOrder,
 } from './listSettings'
 
@@ -30,53 +31,48 @@ test('stored filters keep what is valid and default the rest', () => {
   })
 })
 
-test('a stored order drops unknown tags, repeats and sorts', () => {
-  expect(normalizeListOrder(null)).toEqual(DEFAULT_LIST_ORDER)
-  expect(
-    normalizeListOrder({ tags: ['needs-rebase', 'nonsense', 'needs-rebase', 7, 'blocking'], sortBy: 'sideways' }),
-  ).toEqual({ tags: ['needs-rebase', 'blocking'], sortBy: 'waiting' })
-  expect(normalizeListOrder({ tags: 'needs-rebase', sortBy: 'oldest' })).toEqual({
-    tags: [],
-    sortBy: 'oldest',
-  })
-})
-
 test('the sidebar is open unless stored closed; collapsed groups are distinct strings', () => {
-  expect(normalizeSidebar(undefined)).toEqual({ open: true, width: 360 })
-  expect(normalizeSidebar({ open: false })).toEqual({ open: false, width: 360 })
+  expect(normalizeSidebar(undefined)).toEqual({ open: true, width: 400 })
+  expect(normalizeSidebar({ open: false })).toEqual({ open: false, width: 400 })
   expect(normalizeSidebar({ open: 'no', width: 420 })).toEqual({ open: true, width: 420 })
   expect(normalizeCollapsed(['a', 3, 'a', 'b'])).toEqual(['a', 'b'])
   expect(normalizeCollapsed({})).toEqual([])
 })
 
-test('clicking a tag adds it last; clicking it again takes it off', () => {
-  const once = toggleTag(DEFAULT_LIST_ORDER, 'needs-rebase')
-  const twice = toggleTag(once, 'blocking')
-  expect(twice.tags).toEqual(['needs-rebase', 'blocking'])
-  expect(toggleTag(twice, 'needs-rebase').tags).toEqual(['blocking'])
-})
-
 test('the order is saved in this browser and shared across the page', async () => {
   const first = renderHook(() => useListOrder())
   const second = renderHook(() => useListOrder())
-  act(() => first.result.current[1]({ tags: ['returned'], sortBy: 'smallest' }))
+  act(() => first.result.current[1]({ sortBy: 'size', descending: false }))
   await waitFor(() =>
-    expect(second.result.current[0]).toEqual({ tags: ['returned'], sortBy: 'smallest' }),
+    expect(second.result.current[0]).toEqual({ sortBy: 'size', descending: false }),
   )
-  await expect(fake.store.get('listOrder')).resolves.toEqual({
-    tags: ['returned'],
-    sortBy: 'smallest',
-  })
-})
-
-test('an old tag order drops the labels that no longer exist', () => {
-  expect(
-    normalizeListOrder({ tags: ['draft', 'new-commits', 'needs-review', 'returned'], sortBy: 'waiting' }),
-  ).toEqual({ tags: ['returned'], sortBy: 'waiting' })
+  await expect(fake.store.get('listOrder')).resolves.toEqual({ sortBy: 'size', descending: false })
 })
 
 test('a stored width is kept within its limits', () => {
   expect(normalizeSidebar({ open: true, width: 9999 })).toEqual({ open: true, width: 600 })
   expect(normalizeSidebar({ open: true, width: 10 })).toEqual({ open: true, width: 260 })
-  expect(normalizeSidebar({ open: true, width: 'wide' })).toEqual({ open: true, width: 360 })
+  expect(normalizeSidebar({ open: true, width: 'wide' })).toEqual({ open: true, width: 400 })
+})
+
+test('the sidebar is 400 wide by default; the old default of 360 reads as 400', () => {
+  expect(SIDEBAR_WIDTH.default).toBe(400)
+  expect(normalizeSidebar({ open: true, width: 360 })).toEqual({ open: true, width: 400 })
+  expect(normalizeSidebar({ open: false, width: 361 })).toEqual({ open: false, width: 361 })
+  expect(normalizeSidebar('junk')).toEqual({ open: true, width: 400 })
+})
+
+test('the list order: a sort and a direction; anything else, old shapes included, is Last changed, newest first', () => {
+  expect(DEFAULT_LIST_ORDER).toEqual({ sortBy: 'changed', descending: true })
+  expect(normalizeListOrder({ sortBy: 'size', descending: true })).toEqual({ sortBy: 'size', descending: true })
+  expect(normalizeListOrder({ tags: ['returned'], sortBy: 'waiting' })).toEqual(DEFAULT_LIST_ORDER)
+  expect(normalizeListOrder({ sortBy: 'age' })).toEqual(DEFAULT_LIST_ORDER)
+  expect(normalizeListOrder('junk')).toEqual(DEFAULT_LIST_ORDER)
+})
+
+test('the sidebar tab: From others unless From me was chosen', () => {
+  expect(normalizeTab('mine')).toBe('mine')
+  expect(normalizeTab('others')).toBe('others')
+  expect(normalizeTab('junk')).toBe('others')
+  expect(normalizeTab(undefined)).toBe('others')
 })

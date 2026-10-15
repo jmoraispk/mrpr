@@ -1,20 +1,21 @@
 import type { QueueRow } from './model'
 import { projectOf, type Project } from './projects'
-import { TAG_PRIORITY, tagText, type TagKind } from './tags'
 
-export type SortBy = 'waiting' | 'updated' | 'oldest' | 'smallest'
-export const SORTS: SortBy[] = ['waiting', 'updated', 'oldest', 'smallest']
+export type SortBy = 'changed' | 'age' | 'size'
+export const SORTS: SortBy[] = ['changed', 'age', 'size']
 export const SORT_LABELS: Record<SortBy, string> = {
-  waiting: "Who's waiting on you",
-  updated: 'Recently updated',
-  oldest: 'Oldest first',
-  smallest: 'Smallest first',
+  changed: 'Last changed',
+  age: 'Age',
+  size: 'Size',
 }
+/** Which way each sort starts: the newest change, the oldest MR, the smallest diff. */
+export const FIRST_DESCENDING: Record<SortBy, boolean> = { changed: true, age: false, size: false }
 
-/** Tags to put first, in order, and the sort for everything after them. */
+/** The sort and which way it runs. */
 export interface ListOrder {
-  tags: TagKind[]
   sortBy: SortBy
+  /** Largest key first: newest for Last changed and Age, largest for Size. */
+  descending: boolean
 }
 
 export interface ListFilters {
@@ -23,61 +24,59 @@ export interface ListFilters {
   showDone: boolean
 }
 
+/** Whose MRs the sidebar lists: yours, or everyone else's. */
+export type SidebarTab = 'mine' | 'others'
+export const TABS: SidebarTab[] = ['mine', 'others']
+export const TAB_LABELS: Record<SidebarTab, string> = { mine: 'From me', others: 'From others' }
+
 /** One project, or one repository no project claims, with its rows in list order. */
 export interface RowGroup {
   id: string
   /** The project these rows belong to; null for a repository's group. */
   projectId: string | null
+  /** The repository's path for a repository's group; null for a project. */
+  repo: string | null
   name: string
   color: string | null
   rows: QueueRow[]
   needsYou: number
 }
 
-export interface TagChip {
-  kind: TagKind
-  count: number
-  /** Its place in your tag order, from 1; null when not chosen. */
-  position: number | null
-}
-
-const ATTENTION_RANK = { 'needs-you': 0, returned: 1, waiting: 2, done: 3 } as const
 const time = (iso: string) => Date.parse(iso) || 0
-const created = (row: QueueRow) => time(row.mr?.createdAt ?? row.updatedAt)
-// Rows without facts have no size: they go last when smallest comes first.
-const size = (row: QueueRow) =>
-  row.mr ? row.mr.additions + row.mr.deletions : Number.MAX_SAFE_INTEGER
-
 type Compare = (a: QueueRow, b: QueueRow) => number
 const newest: Compare = (a, b) => time(b.updatedAt) - time(a.updatedAt)
 
-const SORT_COMPARE: Record<SortBy, Compare> = {
-  waiting: (a, b) =>
-    ATTENTION_RANK[a.attention] - ATTENTION_RANK[b.attention] || b.score - a.score || newest(a, b),
-  updated: newest,
-  oldest: (a, b) => created(a) - created(b) || newest(a, b),
-  smallest: (a, b) => size(a) - size(b) || newest(a, b),
+// What each sort compares; null when a row has no such value (no size without MR facts).
+const SORT_KEY: Record<SortBy, (row: QueueRow) => number | null> = {
+  changed: (row) => time(row.updatedAt),
+  age: (row) => time(row.mr?.createdAt ?? row.updatedAt),
+  size: (row) => (row.mr ? row.mr.additions + row.mr.deletions : null),
 }
 
-/** Rows with your first chosen tag, then your second, …, then the rest; each part by the sort. */
+/** What the ↑/↓ button says about the order now. */
+export function directionLabel(order: ListOrder): string {
+  if (order.sortBy === 'size') return order.descending ? 'Largest first' : 'Smallest first'
+  return order.descending ? 'Newest first' : 'Oldest first'
+}
+
+/** Rows by the sort, in its direction; rows without a value last; ties newest first, then by key. */
 export function sortRows(rows: QueueRow[], order: ListOrder): QueueRow[] {
-  const place = (row: QueueRow) => {
-    const index = order.tags.findIndex((kind) => row.tags.some((tag) => tag.kind === kind))
-    return index < 0 ? order.tags.length : index
-  }
-  const compare = SORT_COMPARE[order.sortBy]
-  return [...rows].sort((a, b) => place(a) - place(b) || compare(a, b) || a.key.localeCompare(b.key))
+  const key = SORT_KEY[order.sortBy]
+  const sign = order.descending ? -1 : 1
+  return [...rows].sort((a, b) => {
+    const x = key(a)
+    const y = key(b)
+    if (x !== y) {
+      if (x === null) return 1
+      if (y === null) return -1
+      return sign * (x - y)
+    }
+    return newest(a, b) || a.key.localeCompare(b.key)
+  })
 }
 
 function haystack(row: QueueRow): string {
-  return [
-    row.title,
-    `!${row.iid}`,
-    row.mr?.author.name ?? '',
-    row.mr?.author.username ?? '',
-    row.project,
-    ...row.tags.map(tagText),
-  ]
+  return [row.title, `!${row.iid}`, row.mr?.author.name ?? '', row.mr?.author.username ?? '', row.project]
     .join('\n')
     .toLowerCase()
 }
@@ -114,12 +113,14 @@ export function groupRows(rows: QueueRow[], projects: Project[]): RowGroup[] {
   const group = (
     id: string,
     projectId: string | null,
+    repo: string | null,
     name: string,
     color: string | null,
     list: QueueRow[],
   ): RowGroup => ({
     id,
     projectId,
+    repo,
     name,
     color,
     rows: list,
@@ -128,26 +129,8 @@ export function groupRows(rows: QueueRow[], projects: Project[]): RowGroup[] {
   const groups: RowGroup[] = []
   for (const project of projects) {
     const list = byProject.get(project.id)
-    if (list?.length) groups.push(group(project.id, project.id, project.name, project.color, list))
+    if (list?.length) groups.push(group(project.id, project.id, null, project.name, project.color, list))
   }
-  for (const [id, list] of byRepo) groups.push(group(id, null, list[0].project, null, list))
+  for (const [id, list] of byRepo) groups.push(group(id, null, list[0].project, list[0].project, null, list))
   return groups
-}
-
-/** One chip per tag on a listed row, and every chosen tag, chosen ones first. */
-export function tagChips(rows: QueueRow[], chosen: TagKind[]): TagChip[] {
-  const counts = new Map<TagKind, number>()
-  for (const row of rows) {
-    for (const kind of new Set(row.tags.map((tag) => tag.kind))) {
-      counts.set(kind, (counts.get(kind) ?? 0) + 1)
-    }
-  }
-  return [
-    ...chosen.map((kind, index) => ({ kind, count: counts.get(kind) ?? 0, position: index + 1 })),
-    ...TAG_PRIORITY.filter((kind) => !chosen.includes(kind) && counts.has(kind)).map((kind) => ({
-      kind,
-      count: counts.get(kind)!,
-      position: null,
-    })),
-  ]
 }

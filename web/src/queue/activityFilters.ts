@@ -36,31 +36,41 @@ export function normalizeFilterStore(value: unknown): FilterStore {
   return { defaults: asFilters(record.defaults) ?? { ...DEFAULT_FILTERS }, perMr }
 }
 
-/** The ⚙ Show settings for one MR: its own override, else the default for all MRs. */
-export function useActivityFilters(lookKey: string) {
+const same = (a: Filters, b: Filters) => FILTER_KEYS.every((key) => a[key] === b[key])
+
+/**
+ * What Activity shows. With an MR open (a look key), a change is that MR's
+ * own copy; Apply to all MRs makes it the default. With none open, a change
+ * edits the default.
+ */
+export function useActivityFilters(lookKey: string | null) {
   const [store, setStore] = useStored<FilterStore>(KEY, EMPTY, normalizeFilterStore)
-  const own = store.perMr[lookKey]
+  const own = lookKey ? store.perMr[lookKey] : undefined
+  const filters = own ?? store.defaults
   const without = () => {
     const perMr = { ...store.perMr }
-    delete perMr[lookKey]
+    if (lookKey) delete perMr[lookKey]
     return perMr
   }
   return {
-    filters: own ?? store.defaults,
-    scope: (own ? 'mr' : 'all') as 'mr' | 'all',
-    setFilter(key: FilterKey, value: boolean, scope: 'mr' | 'all') {
-      if (scope === 'all') {
-        // Changing the default also drops this MR's override, so the change shows here.
-        setStore({ defaults: { ...store.defaults, [key]: value }, perMr: without() })
-      } else {
-        setStore({
-          ...store,
-          perMr: { ...store.perMr, [lookKey]: { ...(own ?? store.defaults), [key]: value } },
-        })
+    filters,
+    /** This MR has choices of its own that differ from the default. */
+    differs: Boolean(own && !same(own, store.defaults)),
+    setFilter(key: FilterKey, value: boolean) {
+      const next = { ...filters, [key]: value }
+      if (!lookKey) {
+        setStore({ ...store, defaults: next })
+        return
       }
+      // A copy that matches the default is no copy at all.
+      setStore({
+        ...store,
+        perMr: same(next, store.defaults) ? without() : { ...store.perMr, [lookKey]: next },
+      })
     },
-    reset() {
-      setStore({ ...store, perMr: without() })
+    applyToAll() {
+      if (!own) return
+      setStore({ defaults: own, perMr: without() })
     },
   }
 }

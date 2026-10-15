@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 
 import type { QueueMr } from '../gitlab/queueFacts'
 import type { InboxItem } from '../inbox/types'
-import { buildQueue, rowKey, todaysBudget, type QueueInput } from './model'
+import { buildQueue, rowKey, type QueueInput } from './model'
 
 const NOW = new Date('2026-10-11T12:00:00.000Z')
 const H = 'gitlab.example.com'
@@ -105,14 +105,6 @@ test('unread items for an MR without facts still make a row', () => {
   expect(rows).toMatchObject([{ iid: 9, attention: 'needs-you', mr: null }])
 })
 
-test('today’s budget adds up what needs you', () => {
-  const rows = run([
-    mr(1, { additions: 100, deletions: 0 }),
-    mr(2, { additions: 25, deletions: 0 }),
-    mr(3, { reviewers: [{ username: 'joao', name: 'J', state: 'APPROVED' }] }),
-  ])
-  expect(todaysBudget(rows)).toBe(5)
-})
 const kinds = (row: ReturnType<typeof run>[number]) => row.tags.map((tag) => tag.kind)
 const byIid = (rows: ReturnType<typeof run>, iid: number) => rows.find((row) => row.iid === iid)!
 
