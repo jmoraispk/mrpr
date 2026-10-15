@@ -29,7 +29,9 @@ function belongsToTarget(event: KeyboardEvent): boolean {
     element.tagName === 'INPUT' ||
     element.tagName === 'TEXTAREA' ||
     element.tagName === 'SELECT' ||
-    element.isContentEditable
+    element.isContentEditable ||
+    // jsdom lacks isContentEditable; a rich reply box is a contenteditable element.
+    Boolean(element.closest?.('[contenteditable="true"]'))
   ) {
     return true
   }

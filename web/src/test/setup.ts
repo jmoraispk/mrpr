@@ -33,3 +33,13 @@ afterEach(() => {
   window.location.hash = ''
 })
 afterAll(() => server.close())
+
+// jsdom has no layout: give ProseMirror (the rich reply box) empty rects to measure.
+const noRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList
+const emptyRect = () => new DOMRect(0, 0, 0, 0)
+Range.prototype.getClientRects = noRects
+Range.prototype.getBoundingClientRect = emptyRect
+if (!('getClientRects' in Text.prototype)) {
+  Object.assign(Text.prototype, { getClientRects: noRects, getBoundingClientRect: emptyRect })
+}
+document.elementFromPoint ??= () => null
