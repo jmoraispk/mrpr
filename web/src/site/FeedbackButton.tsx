@@ -83,9 +83,6 @@ export function FeedbackButton({
                   autoComplete="email"
                 />
               </label>
-              <p className="q-modal-note">
-                Only what you type is sent, with the app version and your browser.
-              </p>
               {PROBLEMS[state] ? (
                 <p className="mutation-error" role="alert">
                   {PROBLEMS[state]}

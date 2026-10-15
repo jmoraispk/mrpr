@@ -632,3 +632,25 @@ test('Changes uses the app’s light colours, with the file count on one line', 
   const summaryBox = await rail.locator('.change-summary').boundingBox()
   expect(Math.abs(filesBox!.y - summaryBox!.y)).toBeLessThan(12)
 })
+
+test('an open MR fills the window: the page never scrolls, and Feedback floats in the corner', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await fakeGitLab(page)
+  await signIn(page)
+  // A notice sits above the panel: it used to push the page past the window.
+  await page.getByRole('button', { name: 'Snooze Retry budget for webhooks' }).click()
+  await expect(page.getByRole('status')).toContainText('Snoozed')
+  await page.getByRole('tab', { name: /^From me/ }).click()
+  // Opens at a comment, which scrolls its thread into view.
+  await page.getByRole('article').filter({ hasText: 'Improve parser errors' }).click()
+  await expect(page.getByRole('region', { name: 'Improve parser errors' }).getByText('Why does this throw?')).toBeVisible()
+  const scroll = await page.evaluate(() => ({
+    top: document.scrollingElement!.scrollTop,
+    height: document.scrollingElement!.scrollHeight,
+  }))
+  expect(scroll.top).toBe(0)
+  expect(scroll.height).toBeLessThanOrEqual(800)
+  const box = (await page.getByRole('button', { name: 'Feedback' }).boundingBox())!
+  expect(box.x + box.width).toBeGreaterThan(1280 - 40)
+  expect(box.y + box.height).toBeGreaterThan(800 - 40)
+})

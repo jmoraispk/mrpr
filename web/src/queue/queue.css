@@ -2,7 +2,9 @@
 .q-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width, 360px) minmax(0, 1fr);
-  min-height: 100vh;
+  /* Exactly the window: each side scrolls itself, so nothing ever scrolls the page. */
+  height: 100vh;
+  overflow: hidden;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
@@ -23,7 +25,11 @@
   border-radius: 4px;
   vertical-align: middle;
 }
-.q-main-area { min-width: 0; background: var(--surface); }
+/* The right side is exactly the window's height: notices and errors stack above
+   the MR, which takes what is left. */
+.q-main-area { display: flex; min-width: 0; height: 100vh; min-height: 0; flex-direction: column; overflow-y: auto; background: var(--surface); }
+.q-main-area > * { flex: none; }
+.q-main-area > .mr-panel { flex: 1; min-height: 0; }
 .q-main-area > .hub-error { margin: 12px 20px 0; }
 .q-plus { color: var(--plus); }
 .q-minus { color: var(--minus); }
@@ -186,4 +192,4 @@
 .q-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .q-modal-actions button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
 .q-modal-actions .q-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
-.q-feedback { position: fixed; right: 16px; bottom: 16px; z-index: 6; padding: 8px 14px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--ink); font: 500 14px var(--font-body); box-shadow: 0 6px 20px -10px rgba(18, 22, 31, 0.4); cursor: pointer; }
+.q-feedback { position: fixed; right: 16px; bottom: 16px; z-index: 20; padding: 8px 14px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--ink); font: 500 14px var(--font-body); box-shadow: 0 6px 20px -10px rgba(18, 22, 31, 0.4); cursor: pointer; }
