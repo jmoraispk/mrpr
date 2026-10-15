@@ -1,6 +1,9 @@
 import type { Editor } from '@tiptap/react'
 import { act, waitFor } from '@testing-library/react'
 
+// The editor is loaded lazily; under a full parallel test run that can take a while.
+const LAZY = { timeout: 5000 }
+
 /** The Tiptap editor behind a live rich reply box (Tiptap sets it on its element). */
 export function richEditor(box: HTMLElement): Editor {
   const editor = (box as HTMLElement & { editor?: Editor }).editor
@@ -21,7 +24,7 @@ export async function activeBox(box: HTMLElement): Promise<HTMLElement> {
       throw new Error('editor not ready')
     }
     return live
-  })
+  }, LAZY)
 }
 
 /** Types plain text at the end: jsdom cannot drive contenteditable typing. */
@@ -41,5 +44,5 @@ export function liveBox(label?: string): Promise<HTMLElement> {
     )
     if (!live || !(live as HTMLElement & { editor?: Editor }).editor) throw new Error('no live box')
     return live
-  })
+  }, LAZY)
 }

@@ -1,11 +1,9 @@
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeEach, expect, test } from 'vitest'
 
-import { createFakeBrowser } from '../test/fakeBrowser'
+import { installTestPlatform } from '../test/fakePlatform'
 import type { HostInbox, InboxItem, InboxState } from './types'
 
-const fake = createFakeBrowser()
-vi.mock('webextension-polyfill', () => ({ default: fake }))
-await import('../test/installExtensionPlatform')
+let fake = installTestPlatform()
 
 const {
   commitHost,
@@ -20,7 +18,9 @@ const {
   updateInbox,
 } = await import('./store')
 
-beforeEach(() => fake.reset())
+beforeEach(() => {
+  fake = installTestPlatform()
+})
 
 function item(hostId: string, n: number, read = false): InboxItem {
   return {
@@ -112,7 +112,7 @@ test('concurrent updates are applied one after the other', async () => {
 
 test('settings default to hiding bots', async () => {
   expect(await loadSettings()).toEqual({ hideBots: true })
-  fake.data.inboxSettings = { hideBots: false }
+  await fake.store.set({ inboxSettings: { hideBots: false } })
   expect(await loadSettings()).toEqual({ hideBots: false })
 })
 

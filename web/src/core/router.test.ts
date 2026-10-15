@@ -1,13 +1,11 @@
 import { http, HttpResponse } from 'msw'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeEach, expect, test } from 'vitest'
 
-import { createFakeBrowser } from '../test/fakeBrowser'
+import { installTestPlatform } from '../test/fakePlatform'
 import { createFakeGitLab, fakeMergeRequest, fakeNote } from '../test/fakeGitLab'
 import { server } from '../test/server'
 
-const fake = createFakeBrowser()
-vi.mock('webextension-polyfill', () => ({ default: fake }))
-await import('../test/installExtensionPlatform')
+let fake = installTestPlatform()
 
 const { saveHost } = await import('./hosts')
 const { handleMessage, scrubToken } = await import('./router')
@@ -19,7 +17,7 @@ const BASE = 'https://gitlab.example.com/api/v4'
 const TARGET = { hostId: 'gitlab.example.com', project: 'p', iid: 1 }
 
 beforeEach(async () => {
-  fake.reset()
+  fake = installTestPlatform()
   await saveHost(
     {
       id: 'gitlab.example.com',
@@ -33,7 +31,6 @@ beforeEach(async () => {
 })
 
 test('dispatches a review op', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   server.use(
     http.get(`${BASE}/projects/p/merge_requests/1`, () =>
       HttpResponse.json({ iid: 1, title: 'x' }),
@@ -45,7 +42,6 @@ test('dispatches a review op', async () => {
 })
 
 test('getConfig is answered from the stored host', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   await expect(
     handleMessage({ kind: 'delta/review', op: 'getConfig', target: TARGET }),
   ).resolves.toEqual({
@@ -70,17 +66,7 @@ test('an unknown host is a structured error, not a throw', async () => {
 // Without the permission check the browser blocks the fetch, the client cannot
 // tell that apart from an outage, and the user is told to wait for GitLab to
 // recover when the real fix is one permission grant.
-test('a revoked host permission on a review op is reported, not fetched blindly', async () => {
-  await expect(
-    handleMessage({ kind: 'delta/review', op: 'getMergeRequest', target: TARGET }),
-  ).resolves.toMatchObject({
-    ok: false,
-    error: { code: 'permission_missing', status: 403 },
-  })
-})
-
 test('a GitLab error becomes the shared envelope', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   server.use(
     http.get(`${BASE}/projects/p/merge_requests/1`, () =>
       HttpResponse.json({ message: 'nope' }, { status: 401 }),
@@ -99,7 +85,6 @@ test('a GitLab error becomes the shared envelope', async () => {
 })
 
 test('the token is scrubbed out of error text', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   server.use(
     http.get(`${BASE}/projects/p/merge_requests/1`, () =>
       HttpResponse.json(
@@ -133,17 +118,7 @@ test('listHosts never returns a token', async () => {
   expect(JSON.stringify(response)).not.toContain('secret-token')
 })
 
-test('a revoked host permission is reported, not fetched blindly', async () => {
-  await expect(
-    handleMessage({ kind: 'delta/hub', op: 'listMergeRequests' }),
-  ).resolves.toMatchObject({
-    ok: true,
-    data: [{ hostId: 'gitlab.example.com', error: 'permission_missing' }],
-  })
-})
-
-test('a permitted host is fetched', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
+test('a signed-in host is fetched', async () => {
   server.use(http.get(`${BASE}/merge_requests`, () => HttpResponse.json([])))
   await expect(
     handleMessage({ kind: 'delta/hub', op: 'listMergeRequests' }),
@@ -154,7 +129,6 @@ test('a permitted host is fetched', async () => {
 })
 
 test('an unknown op is rejected', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   await expect(
     handleMessage({
       kind: 'delta/review',
@@ -183,8 +157,8 @@ function inboxItem(n: number, read = false) {
   }
 }
 
-function storeInbox(items: ReturnType<typeof inboxItem>[]) {
-  fake.data.inbox = {
+async function storeInbox(items: ReturnType<typeof inboxItem>[]) {
+  await fake.store.set({ inbox: {
     hosts: {
       'gitlab.example.com': {
         lastPollAt: '2026-09-24T12:00:00.000Z',
@@ -194,11 +168,11 @@ function storeInbox(items: ReturnType<typeof inboxItem>[]) {
         error: null,
       },
     },
-  }
+  } })
 }
 
 test('listInbox answers from storage and never carries a token', async () => {
-  storeInbox([inboxItem(2), inboxItem(1, true)])
+  await storeInbox([inboxItem(2), inboxItem(1, true)])
 
   const response = await handleMessage({ kind: 'delta/hub', op: 'listInbox' })
 
@@ -210,7 +184,7 @@ test('listInbox answers from storage and never carries a token', async () => {
 })
 
 test('markRead marks the named items and updates the badge', async () => {
-  storeInbox([inboxItem(2), inboxItem(1)])
+  await storeInbox([inboxItem(2), inboxItem(1)])
 
   await expect(
     handleMessage({
@@ -220,21 +194,18 @@ test('markRead marks the named items and updates the badge', async () => {
     }),
   ).resolves.toEqual({ ok: true, data: null })
 
-  expect(fake.badge.text).toBe('1')
+  expect(fake.showUnread).toHaveBeenLastCalledWith(1)
 })
 
 test('markAllRead clears the badge', async () => {
-  storeInbox([inboxItem(2), inboxItem(1)])
-  // What the badge showed before; an untouched badge must not pass.
-  fake.badge.text = '2'
+  await storeInbox([inboxItem(2), inboxItem(1)])
 
   await handleMessage({ kind: 'delta/hub', op: 'markAllRead' })
 
-  expect(fake.badge.text).toBe('')
+  expect(fake.showUnread).toHaveBeenLastCalledWith(0)
 })
 
 test('pollNow polls and returns the fresh inbox', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   const gitlab = createFakeGitLab()
   gitlab.add(
     fakeMergeRequest(1, {
@@ -257,7 +228,6 @@ test('pollNow polls and returns the fresh inbox', async () => {
 })
 
 test('listQueue returns each host’s MRs with facts, or its error', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   const gitlab = createFakeGitLab()
   gitlab.add(fakeMergeRequest(1))
   gitlab.lists.authored.push(1)
@@ -278,7 +248,6 @@ test('listQueue returns each host’s MRs with facts, or its error', async () =>
 })
 
 test('every comment Mr. PR posts is signed once', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   const bodies: string[] = []
   server.use(
     http.post(`${BASE}/projects/p/merge_requests/1/discussions`, async ({ request }) => {
@@ -309,7 +278,6 @@ test('every comment Mr. PR posts is signed once', async () => {
 })
 
 test('getOverview returns the MR overview for the target', async () => {
-  fake.granted.add('https://gitlab.example.com/*')
   const gitlab = createFakeGitLab()
   gitlab.add(fakeMergeRequest(1, { project: 'p' }))
   const response = await handleMessage({

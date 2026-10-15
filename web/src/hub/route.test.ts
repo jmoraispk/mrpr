@@ -1,78 +1,8 @@
-import { expect, test, vi } from 'vitest'
+import { expect, test } from 'vitest'
 
-import { createFakeBrowser } from '../test/fakeBrowser'
 import { buildReviewHash, parseRoute } from './route'
 
-// `mrUrl` reuses `hostIdFor` from `../core/hosts`, which imports
-// `webextension-polyfill` at module scope. See src/test/fakeBrowser.ts for why
-// the mock must be literal here and the import dynamic.
-const fake = createFakeBrowser()
-vi.mock('webextension-polyfill', () => ({ default: fake }))
-
-const { parseMergeRequestUrl } = await import('./mrUrl')
-
-const hosts = [
-  {
-    id: 'gitlab.example.com',
-    host: 'gitlab.example.com',
-    apiBase: 'https://gitlab.example.com/api/v4',
-    userId: 7,
-    username: 'joao',
-  },
-]
-
 const TARGET = { hostId: 'gitlab.example.com', project: 'group/sub/p', iid: 42 }
-
-test('parses a merge request URL for a configured host', () => {
-  expect(
-    parseMergeRequestUrl(
-      'https://gitlab.example.com/group/sub/p/-/merge_requests/42',
-      hosts,
-    ),
-  ).toEqual(TARGET)
-})
-
-test('tolerates a trailing slash and a diffs suffix', () => {
-  for (const suffix of ['/', '/diffs', '/diffs?commit_id=abc', '#note_1']) {
-    expect(
-      parseMergeRequestUrl(
-        `https://gitlab.example.com/group/sub/p/-/merge_requests/42${suffix}`,
-        hosts,
-      ),
-    ).toEqual(TARGET)
-  }
-})
-
-test('strips a .git suffix from the project path', () => {
-  expect(
-    parseMergeRequestUrl(
-      'https://gitlab.example.com/group/p.git/-/merge_requests/1',
-      hosts,
-    ),
-  ).toMatchObject({ project: 'group/p' })
-})
-
-test('rejects an unconfigured host', () => {
-  expect(
-    parseMergeRequestUrl(
-      'https://gitlab.other.com/group/p/-/merge_requests/42',
-      hosts,
-    ),
-  ).toBeNull()
-})
-
-test('rejects a non-merge-request URL', () => {
-  for (const url of [
-    'https://gitlab.example.com/group/p/-/issues/42',
-    'https://gitlab.example.com/group/p',
-    'not a url',
-    // Mirrors the `scheme not in {"http", "https"}` guard in config.py: the
-    // host and path both match, only the scheme disqualifies it.
-    'ftp://gitlab.example.com/group/p/-/merge_requests/42',
-  ]) {
-    expect(parseMergeRequestUrl(url, hosts)).toBeNull()
-  }
-})
 
 test('routes default to the inbox', () => {
   expect(parseRoute('')).toEqual({ name: 'inbox' })

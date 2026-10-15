@@ -19,12 +19,6 @@ class ResizeObserverStub {
 
 vi.stubGlobal('ResizeObserver', ResizeObserverStub)
 
-// `__DELTA_DEV__` only exists as a build-time define (web/scripts/build-extension.mjs),
-// so under vitest the bare identifier is undeclared and reading it throws a
-// ReferenceError. Default it to what a release build sees; the one test that
-// cares about the development branch stubs it true for itself.
-vi.stubGlobal('__DELTA_DEV__', false)
-
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   cleanup()

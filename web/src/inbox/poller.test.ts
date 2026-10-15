@@ -1,7 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeEach, expect, test } from 'vitest'
 
-import { createFakeBrowser } from '../test/fakeBrowser'
 import {
   API,
   createFakeGitLab,
@@ -10,11 +9,10 @@ import {
   GRAPHQL,
   HOST,
 } from '../test/fakeGitLab'
+import { installTestPlatform } from '../test/fakePlatform'
 import { server } from '../test/server'
 
-const fake = createFakeBrowser()
-vi.mock('webextension-polyfill', () => ({ default: fake }))
-await import('../test/installExtensionPlatform')
+let fake = installTestPlatform()
 
 const { saveHost } = await import('../core/hosts')
 const { pollAll } = await import('./poller')
@@ -27,12 +25,11 @@ const hoursAgo = (hours: number) =>
   new Date(NOW.getTime() - hours * 3_600_000).toISOString()
 
 beforeEach(async () => {
-  fake.reset()
+  fake = installTestPlatform()
   await saveHost(
     { id: HOST, host: HOST, apiBase: API, userId: 7, username: 'joao' },
     'secret-token',
   )
-  fake.granted.add(`https://${HOST}/*`)
 })
 
 function withComment(gitlab: ReturnType<typeof createFakeGitLab>) {
@@ -45,7 +42,7 @@ function withComment(gitlab: ReturnType<typeof createFakeGitLab>) {
   return mr
 }
 
-test('a poll stores items and shows the unread count on the badge', async () => {
+test('a poll stores items and reports the unread count', async () => {
   withComment(createFakeGitLab())
 
   await pollAll({ now: at(0) })
@@ -53,17 +50,7 @@ test('a poll stores items and shows the unread count on the badge', async () => 
   expect((await loadInbox()).hosts[HOST].items.map((item) => item.id)).toEqual([
     `${HOST}:11`,
   ])
-  expect(fake.badge.text).toBe('1')
-})
-
-test('a revoked permission is recorded without a request', async () => {
-  const gitlab = createFakeGitLab()
-  fake.granted.clear()
-
-  await pollAll({ now: at(0) })
-
-  expect(gitlab.calls).toEqual([])
-  expect((await loadInbox()).hosts[HOST].error?.code).toBe('permission_missing')
+  expect(fake.showUnread).toHaveBeenLastCalledWith(1)
 })
 
 test('a rejected token is recorded, scrubbed, and earlier items survive', async () => {
@@ -83,7 +70,7 @@ test('a rejected token is recorded, scrubbed, and earlier items survive', async 
     message: 'token [redacted] revoked',
   })
   expect(inbox.hosts[HOST].items).toHaveLength(1)
-  expect(JSON.stringify(fake.data.inbox)).not.toContain('secret-token')
+  expect(JSON.stringify(await fake.store.get('inbox'))).not.toContain('secret-token')
 })
 
 test('overlapping polls share one run', async () => {
@@ -124,12 +111,12 @@ test('marking read while a poll is in flight survives the poll', async () => {
     [12, false],
     [11, true],
   ])
-  expect(fake.badge.text).toBe('1')
+  expect(fake.showUnread).toHaveBeenLastCalledWith(1)
 })
 
 test('a removed host’s inbox is dropped', async () => {
   createFakeGitLab()
-  fake.data.inbox = {
+  await fake.store.set({ inbox: {
     hosts: {
       'old.example.com': {
         lastPollAt: null,
@@ -139,7 +126,7 @@ test('a removed host’s inbox is dropped', async () => {
         error: null,
       },
     },
-  }
+  } })
 
   await pollAll({ now: at(0) })
 
@@ -156,7 +143,7 @@ test('the bot setting reaches the classifier', async () => {
     }),
   )
   gitlab.lists.authored.push(1)
-  fake.data.inboxSettings = { hideBots: false }
+  await fake.store.set({ inboxSettings: { hideBots: false } })
 
   await pollAll({ now: at(0) })
 

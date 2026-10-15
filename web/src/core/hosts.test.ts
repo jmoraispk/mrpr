@@ -1,10 +1,8 @@
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeEach, expect, test } from 'vitest'
 
-import { createFakeBrowser } from '../test/fakeBrowser'
+import { installTestPlatform } from '../test/fakePlatform'
 
-const fake = createFakeBrowser()
-vi.mock('webextension-polyfill', () => ({ default: fake }))
-await import('../test/installExtensionPlatform')
+let fake = installTestPlatform()
 
 const {
   getHost,
@@ -24,7 +22,7 @@ const config = {
 }
 
 beforeEach(() => {
-  fake.reset()
+  fake = installTestPlatform()
 })
 
 test('an id is derived from the host', () => {
@@ -57,5 +55,5 @@ test('removing a host wipes its token', async () => {
 test('tokens live under a separate storage key from configs', async () => {
   await saveHost(config, 'secret')
   await expect(getToken(config.id)).resolves.toBe('secret')
-  expect(JSON.stringify(fake.data.hosts)).not.toContain('secret')
+  expect(JSON.stringify(await fake.store.get('hosts'))).not.toContain('secret')
 })

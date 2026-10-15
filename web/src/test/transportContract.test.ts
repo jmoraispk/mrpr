@@ -1,21 +1,19 @@
-import { expect, test, vi } from 'vitest'
+import { expect, test } from 'vitest'
 
-import { createFakeBrowser } from './fakeBrowser'
+import { installPlatform } from '../platform/platform'
+import { createFakePlatform } from './fakePlatform'
 import type { DeltaResponse } from '../core/messages'
 
-const fake = createFakeBrowser() as ReturnType<typeof createFakeBrowser> & {
-  runtime: { sendMessage: (message: unknown) => Promise<DeltaResponse> }
-}
 const sent: unknown[] = []
 let reply: () => Promise<DeltaResponse>
-fake.runtime = {
-  sendMessage: async (message) => {
-    sent.push(message)
-    return reply()
-  },
-}
-vi.mock('webextension-polyfill', () => ({ default: fake }))
-await import('../test/installExtensionPlatform')
+installPlatform(
+  createFakePlatform({
+    send: async (message) => {
+      sent.push(message)
+      return reply()
+    },
+  }),
+)
 
 const { createRuntimeTransport } = await import('../transport/runtime')
 

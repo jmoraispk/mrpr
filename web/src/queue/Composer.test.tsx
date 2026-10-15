@@ -3,14 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 
 import { ApiError } from '../api/client'
-import { richEditor, typeRich } from '../test/richReply'
+import { liveBox, richEditor, typeRich } from '../test/richReply'
 import { Composer } from './Composer'
 
 test('a post refused for want of posting rights says so, and keeps the text', async () => {
   const user = userEvent.setup()
   const refused = new ApiError(403, 'Posting needs your OK in GitLab.', 'write_access_denied')
   render(<Composer label="Reply" initial="" onCancel={() => {}} onSend={() => Promise.reject(refused)} />)
-  const input = await typeRich(await screen.findByRole('textbox', { name: 'Reply' }), 'Looks good')
+  const input = await typeRich(await liveBox('Reply'), 'Looks good')
   await user.click(screen.getByRole('button', { name: 'Post' }))
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Posting needs your OK in GitLab. Your text is still here.',
@@ -31,11 +31,7 @@ test('the composer is a rich box that starts with its mention and posts Markdown
       }}
     />,
   )
-  const input = await waitFor(() => {
-    const live = document.querySelector<HTMLElement>('.rich-reply-input')
-    if (!live) throw new Error('not yet')
-    return live
-  })
+  const input = await liveBox('Request changes')
   expect(input).toHaveAttribute('aria-label', 'Request changes')
   await typeRich(input, 'rename _this_')
   await user.click(screen.getByRole('button', { name: 'Post' }))

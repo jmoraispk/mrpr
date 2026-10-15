@@ -63,8 +63,6 @@ export default defineConfig(() => {
     envDir: webDir,
     base: process.env.DELTA_SITE_BASE ?? '/',
     plugins: [react(), contentSecurityPolicy()],
-    // DevReload references the extension's dev flag; the site never has it.
-    define: { __DELTA_DEV__: 'false' },
     build: {
       outDir: `${webDir}dist-site`,
       emptyOutDir: true,
