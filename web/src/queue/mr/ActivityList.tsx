@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { DiscussionThread } from '../../review/DiscussionThread'
 import type { ReviewTarget } from '../../transport/types'
@@ -59,15 +59,14 @@ export function ActivityList({
     void queryClient.invalidateQueries({ queryKey: QUEUE_QUERY_KEY })
     void queryClient.invalidateQueries({ queryKey: ['overview', overviewKey], refetchType: 'none' })
   }, [queryClient, overviewKey])
-  // A reply asked for from the header: focus that thread's reply box.
+  // A reply asked for from the header: that thread's reply box starts focused.
+  const [replyFocus, setReplyFocus] = useState<string | null>(null)
   useEffect(() => {
     if (!replyTo) return
-    const box = document.querySelector<HTMLTextAreaElement>(
-      `[data-discussion-id="${CSS.escape(replyTo)}"] textarea`,
-    )
-    if (!box) return
-    box.focus()
-    box.scrollIntoView?.({ block: 'center' })
+    const thread = document.querySelector(`[data-discussion-id="${CSS.escape(replyTo)}"]`)
+    if (!thread) return
+    setReplyFocus(replyTo)
+    thread.scrollIntoView?.({ block: 'center' })
     onReplied()
   }, [replyTo, activity, onReplied])
 
@@ -134,6 +133,7 @@ export function ActivityList({
                       variant="chat"
                       discussion={toThreadDiscussion(item.discussion)}
                       onChanged={refresh}
+                      autoFocusReply={item.discussion.id === replyFocus}
                     />
                   </details>
                 ) : (
@@ -141,6 +141,7 @@ export function ActivityList({
                     variant="chat"
                     discussion={toThreadDiscussion(item.discussion)}
                     onChanged={refresh}
+                    autoFocusReply={item.discussion.id === replyFocus}
                   />
                 )}
               </div>

@@ -32,3 +32,14 @@ export async function typeRich(box: HTMLElement, text: string): Promise<HTMLElem
   })
   return live
 }
+
+/** Waits for a live (started) rich reply box, the one with this label if given. */
+export function liveBox(label?: string): Promise<HTMLElement> {
+  return waitFor(() => {
+    const live = [...document.querySelectorAll<HTMLElement>('.rich-reply-input')].find(
+      (element) => !label || element.getAttribute('aria-label') === label,
+    )
+    if (!live || !(live as HTMLElement & { editor?: Editor }).editor) throw new Error('no live box')
+    return live
+  })
+}

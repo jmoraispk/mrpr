@@ -9,6 +9,7 @@ import type { Discussion, DiscussionNote } from '../api/types'
 import { shortTime } from '../hub/relativeTime'
 import { useTransport } from '../transport/context'
 import { discussionsQueryKey } from './discussionCache'
+import { ReplyBox } from './ReplyBox'
 import { ReviewerMark } from './ReviewerMark'
 
 const remarkPlugins = [remarkGfm]
@@ -21,6 +22,8 @@ interface DiscussionThreadProps {
   onChanged?: () => void
   /** 'chat': bubbles, the opener left and everyone else right (the MR page's Activity). */
   variant?: 'default' | 'chat'
+  /** Start with the reply box focused (a reply asked for from the MR header). */
+  autoFocusReply?: boolean
 }
 
 function updateCachedDiscussion(
@@ -38,6 +41,7 @@ export function DiscussionThread({
   rangeLabel,
   onChanged,
   variant = 'default',
+  autoFocusReply = false,
 }: DiscussionThreadProps) {
   const chat = variant === 'chat'
   const queryClient = useQueryClient()
@@ -128,8 +132,8 @@ export function DiscussionThread({
     },
   })
 
-  function submitReply(event: FormEvent) {
-    event.preventDefault()
+  function submitReply(event?: FormEvent) {
+    event?.preventDefault()
     const body = draft.trim()
     if (body && !reply.isPending) reply.mutate(body)
   }
@@ -213,16 +217,13 @@ export function DiscussionThread({
       </div>
 
       <form className="reply-form" onSubmit={submitReply}>
-        <label>
-          <span>Reply</span>
-          <textarea
-            aria-label="Reply"
-            maxLength={1_000_000}
-            rows={2}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-        </label>
+        <ReplyBox
+          label="Reply"
+          value={draft}
+          onChange={setDraft}
+          onSubmit={() => submitReply()}
+          autoFocus={autoFocusReply}
+        />
         <div className="thread-actions">
           {resolvableNote ? (
             <button

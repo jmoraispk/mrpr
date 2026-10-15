@@ -10,6 +10,7 @@ import { installPlatform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { nudgeText, requestChangesText } from '../commentText'
 import type { QueueRow } from '../model'
+import { liveBox, richEditor, typeRich } from '../../test/richReply'
 import { MrHeader, type HeaderRequest } from './MrHeader'
 
 const transport = vi.hoisted(() => ({
@@ -153,9 +154,9 @@ test('request changes opens a composer tagging the author, and posts it', async 
   const user = userEvent.setup()
   show(row())
   await user.click(screen.getByRole('button', { name: 'Request changes' }))
-  const box = screen.getByRole('textbox')
-  expect(box).toHaveValue('@ana Requesting changes: ')
-  await user.type(box, 'add the invoice ID to the error')
+  const box = await liveBox('Request changes')
+  expect(richEditor(box).getText()).toBe('@ana Requesting changes: ')
+  await typeRich(box, 'add the invoice ID to the error')
   expect(screen.getByText('Signed — via Mr. PR')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Post' }))
   expect(transport.postComment).toHaveBeenCalledWith(
@@ -168,17 +169,17 @@ test('a failed post keeps the text and says so', async () => {
   transport.postComment.mockRejectedValueOnce(new Error('500'))
   show(row())
   await user.click(screen.getByRole('button', { name: 'Request changes' }))
-  await user.type(screen.getByRole('textbox'), 'x')
+  const box = await typeRich(await liveBox('Request changes'), 'x')
   await user.click(screen.getByRole('button', { name: 'Post' }))
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't post it")
-  expect(screen.getByRole('textbox')).toHaveValue('@ana Requesting changes: x')
+  expect(richEditor(box).getText()).toBe('@ana Requesting changes: x')
 })
 
 test('nudge appears on waiting rows and tags the reviewers still waiting', async () => {
   const user = userEvent.setup()
   show(row({ tags: [{ kind: 'waiting-on-others', days: 0 }] }))
   await user.click(screen.getByRole('button', { name: 'Nudge' }))
-  expect(screen.getByRole('textbox')).toHaveValue(
+  expect(richEditor(await liveBox()).getText()).toBe(
     "@john friendly nudge, this one's ready for your review whenever you have a moment.",
   )
 })
@@ -229,10 +230,10 @@ test('approve and snooze are handed to the queue, which can undo them', async ()
   expect(onSnooze).toHaveBeenCalledOnce()
 })
 
-test('a key request runs once: x opens request changes', () => {
+test('a key request runs once: x opens request changes', async () => {
   const handled = vi.fn()
   render(header(row(), OVERVIEW, 'changes', handled))
-  expect(screen.getByRole('textbox')).toHaveValue('@ana Requesting changes: ')
+  expect(richEditor(await liveBox('Request changes')).getText()).toBe('@ana Requesting changes: ')
   expect(handled).toHaveBeenCalledOnce()
 })
 

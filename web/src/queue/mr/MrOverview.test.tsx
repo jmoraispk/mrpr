@@ -9,6 +9,7 @@ import { installPlatform, platform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { TransportProvider } from '../../transport/context'
 import type { DeltaTransport } from '../../transport/types'
+import { typeRich } from '../../test/richReply'
 import { QUEUE_QUERY_KEY } from '../useQueue'
 import { MrOverviewView } from './MrOverview'
 
@@ -226,9 +227,7 @@ test('the details column: reviewers, approvals, pipeline, labels, project, commi
 test('reply reveals a thread hidden by the Filters and focuses its reply box', async () => {
   show({ replyTo: 'done' })
   await waitFor(() => {
-    const box = document.querySelector<HTMLTextAreaElement>(
-      '[data-discussion-id="done"] textarea',
-    )
+    const box = document.querySelector<HTMLElement>('[data-discussion-id="done"] .rich-reply-input')
     expect(box).not.toBeNull()
     expect(box).toHaveFocus()
   })
@@ -273,7 +272,7 @@ test('replying in a thread posts through the review op', async () => {
   const thread = screen
     .getByText('Should the budget reset?')
     .closest('[data-discussion-id]') as HTMLElement
-  await user.type(within(thread).getByRole('textbox', { name: 'Reply' }), 'On success only')
+  await typeRich(within(thread).getByRole('textbox', { name: 'Reply' }), 'On success only')
   await user.click(within(thread).getByRole('button', { name: 'Reply' }))
   expect(transport.replyToDiscussion).toHaveBeenCalledWith('open', 'On success only')
 })
@@ -313,13 +312,11 @@ test('a thread revealed for a reply stays shown, open and focused after the requ
     </QueryClientProvider>,
   )
   await waitFor(() =>
-    expect(
-      document.querySelector('[data-discussion-id="done"] textarea'),
-    ).toHaveFocus(),
+    expect(document.querySelector('[data-discussion-id="done"] .rich-reply-input')).toHaveFocus(),
   )
   // Settle any re-render from clearing the request.
   await new Promise((resolve) => setTimeout(resolve, 20))
-  expect(document.querySelector('[data-discussion-id="done"] textarea')).toHaveFocus()
+  expect(document.querySelector('[data-discussion-id="done"] .rich-reply-input')).toHaveFocus()
   expect(screen.queryByText(/1 hidden by your Filters/)).toBeNull()
 })
 
@@ -329,7 +326,7 @@ test('a reply posted in Overview survives the page re-rendering', async () => {
   const thread = screen
     .getByText('Should the budget reset?')
     .closest('[data-discussion-id]') as HTMLElement
-  await user.type(within(thread).getByRole('textbox', { name: 'Reply' }), 'On success only')
+  await typeRich(within(thread).getByRole('textbox', { name: 'Reply' }), 'On success only')
   await user.click(within(thread).getByRole('button', { name: 'Reply' }))
   expect(await within(thread).findByText('On success only')).toBeInTheDocument()
   view.rerender(
@@ -404,7 +401,7 @@ test('a reply reads the list again at once, and does not read the whole MR again
     </QueryClientProvider>,
   )
   const thread = screen.getByText('Should the budget reset?').closest('[data-discussion-id]') as HTMLElement
-  await user.type(within(thread).getByRole('textbox', { name: 'Reply' }), 'Only on success')
+  await typeRich(within(thread).getByRole('textbox', { name: 'Reply' }), 'Only on success')
   await user.click(within(thread).getByRole('button', { name: 'Reply' }))
   expect(await within(thread).findByText('Only on success')).toBeInTheDocument()
   await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: QUEUE_QUERY_KEY }))

@@ -8,6 +8,7 @@ import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
 import type { InboxItem } from '../inbox/types'
 import { installPlatform } from '../platform/platform'
 import { createFakePlatform } from '../test/fakePlatform'
+import { liveBox, richEditor, typeRich } from '../test/richReply'
 import { QueueApp } from './QueueApp'
 
 // Every row action goes through the runtime transport. The overview follows
@@ -397,22 +398,18 @@ test('x on the list opens the selected MR with request changes started', async (
   renderApp()
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'x' })
-  const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
-  expect(await within(panel).findByRole('textbox', { name: 'Request changes' })).toHaveValue(
-    '@ana Requesting changes: ',
-  )
+  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  expect(richEditor(await liveBox('Request changes')).getText()).toBe('@ana Requesting changes: ')
   expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1')
 })
 
 test('x on the open MR starts request changes in its header', async () => {
   window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
   renderApp()
-  const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  await screen.findByRole('region', { name: 'Retry budget for webhooks' })
   await waitFor(() => expect(selectedText()).toContain('Retry budget'))
   fireEvent.keyDown(window, { key: 'x' })
-  expect(await within(panel).findByRole('textbox', { name: 'Request changes' })).toHaveValue(
-    '@ana Requesting changes: ',
-  )
+  expect(richEditor(await liveBox('Request changes')).getText()).toBe('@ana Requesting changes: ')
 })
 
 test('approving an MR that is not in the queue still works and says so', async () => {
@@ -470,7 +467,7 @@ test('after opening an MR, Reply still reaches the thread waiting on you', async
   const actions = await waitFor(() => panel.querySelector('.mr-actions') as HTMLElement)
   await user.click(within(actions).getByRole('button', { name: 'Reply' }))
   await waitFor(() =>
-    expect(document.querySelector('[data-discussion-id="d1"] textarea')).toHaveFocus(),
+    expect(document.querySelector('[data-discussion-id="d1"] .rich-reply-input')).toHaveFocus(),
   )
 })
 
@@ -774,12 +771,14 @@ test('a reply survives leaving the MR and coming back at once', async () => {
   window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
   renderApp()
   const box = await waitFor(() => {
-    const found = document.querySelector('[data-discussion-id="d1"] textarea') as HTMLTextAreaElement
+    const found = document.querySelector<HTMLElement>('[data-discussion-id="d1"] [role="textbox"]')
     expect(found).not.toBeNull()
-    return found
+    return found!
   })
-  await user.type(box, 'Only on success')
-  await user.click(within(box.closest('[data-discussion-id]') as HTMLElement).getByRole('button', { name: 'Reply' }))
+  await typeRich(box, 'Only on success')
+  await user.click(
+    within(document.querySelector('[data-discussion-id="d1"]') as HTMLElement).getByRole('button', { name: 'Reply' }),
+  )
   await waitFor(() => expect(replied).toBe(true))
   window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
   await screen.findByRole('region', { name: 'Fix flaky test' })

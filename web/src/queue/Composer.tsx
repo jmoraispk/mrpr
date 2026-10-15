@@ -1,4 +1,6 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+
+import { ReplyBox } from '../review/ReplyBox'
 
 /** A comment box for reply, request changes and nudge. Posts are signed by the router. */
 export function Composer({
@@ -12,13 +14,12 @@ export function Composer({
   onSend: (body: string) => Promise<unknown>
   onCancel: () => void
 }) {
-  const id = useId()
   const [body, setBody] = useState(initial)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  async function submit(event: FormEvent) {
-    event.preventDefault()
+  async function submit(event?: FormEvent) {
+    event?.preventDefault()
     if (!body.trim() || busy) return
     setBusy(true)
     try {
@@ -37,17 +38,15 @@ export function Composer({
 
   return (
     <form className="q-composer" onSubmit={(event) => void submit(event)}>
-      <label className="q-composer-label" htmlFor={id}>
-        {label}
-      </label>
-      <textarea
-        id={id}
+      <p className="q-composer-label">{label}</p>
+      {/* Starts with the prefilled mention, the cursor after it. */}
+      <ReplyBox
+        label={label}
         value={body}
+        onChange={setBody}
+        onSubmit={() => void submit()}
         autoFocus
-        rows={4}
-        onChange={(event) => setBody(event.target.value)}
-        // Start typing after the prefilled mention.
-        onFocus={(event) => event.target.setSelectionRange(body.length, body.length)}
+        initial={initial}
       />
       <p className="q-signed">Signed — via Mr. PR</p>
       {error ? (

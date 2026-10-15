@@ -3,7 +3,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, expect, test } from 'vitest'
@@ -20,6 +20,7 @@ import type { BackendSelection } from '../review/selection'
 import { TransportProvider } from '../transport/context'
 import { createHttpTransport } from '../transport/http'
 import { TestProviders } from './fixtures'
+import { richEditor, typeRich } from './richReply'
 import { server } from './server'
 
 const transport = createHttpTransport()
@@ -90,7 +91,7 @@ test('replies and resolves a discussion', async () => {
     wrapper: TestProviders,
   })
 
-  await user.type(screen.getByLabelText('Reply'), 'Fixed now.')
+  await typeRich(screen.getByRole('textbox', { name: 'Reply' }), 'Fixed now.')
   await user.click(screen.getByRole('button', { name: 'Reply' }))
   expect(await screen.findByText('Fixed now.')).toBeVisible()
 
@@ -511,4 +512,24 @@ test('keeps the comment draft when posting fails', async () => {
 
   expect(await screen.findByRole('alert')).toBeVisible()
   expect(editor).toHaveValue('Do not lose this draft.')
+})
+
+test('a reply is posted as Markdown from the rich box, and the box empties after', async () => {
+  const posted: string[] = []
+  server.use(
+    http.post('/api/discussions/discussion-1/notes', async ({ request }) => {
+      const body = (await request.json()) as { body: string }
+      posted.push(body.body)
+      return HttpResponse.json({ id: 3, body: body.body, author: { name: 'You', username: 'you' } }, { status: 201 })
+    }),
+  )
+  const user = userEvent.setup()
+  render(<DiscussionThread discussion={discussion} />, { wrapper: TestProviders })
+  const input = await typeRich(screen.getByRole('textbox', { name: 'Reply' }), 'see ')
+  act(() => {
+    richEditor(input).chain().focus('end').toggleBold().insertContent('this').run()
+  })
+  await user.click(screen.getByRole('button', { name: 'Reply' }))
+  await waitFor(() => expect(posted.at(-1)).toBe('see **this**'))
+  await waitFor(() => expect(richEditor(input).isEmpty).toBe(true))
 })
