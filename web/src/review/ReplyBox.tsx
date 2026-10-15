@@ -20,6 +20,8 @@ const RichReply = lazy(() => import('./RichReply'))
  */
 export function ReplyBox(props: ReplyBoxProps) {
   const [active, setActive] = useState(false)
+  // What was typed while the editor was still loading; the editor starts with it.
+  const [typed, setTyped] = useState<string | null>(null)
   const live = active || props.autoFocus || Boolean(props.value) || Boolean(props.initial)
   if (!live) {
     return (
@@ -36,8 +38,29 @@ export function ReplyBox(props: ReplyBoxProps) {
     )
   }
   return (
-    <Suspense fallback={<div className="rich-reply is-loading" aria-busy="true" />}>
-      <RichReply {...props} autoFocus={props.autoFocus || active} />
+    <Suspense
+      fallback={
+        // A real field while the editor downloads, so keys typed meanwhile
+        // land here (never on the queue's shortcuts) and carry into it.
+        <textarea
+          className="rich-reply is-loading"
+          aria-label={props.label}
+          aria-busy="true"
+          autoFocus={props.autoFocus || active}
+          onFocus={(event) => {
+            const end = event.currentTarget.value.length
+            event.currentTarget.setSelectionRange(end, end)
+          }}
+          value={typed ?? props.initial ?? ''}
+          onChange={(event) => {
+            setTyped(event.target.value)
+            props.onChange(event.target.value)
+          }}
+          disabled={props.disabled}
+        />
+      }
+    >
+      <RichReply {...props} initial={typed ?? props.initial} autoFocus={props.autoFocus || active} />
     </Suspense>
   )
 }

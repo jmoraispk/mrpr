@@ -2297,7 +2297,14 @@ button.primary-action {
 }
 
 .rich-reply.is-loading {
-  min-height: 84px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 98px;
+  padding: 40px 10px 8px;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+  resize: none;
 }
 
 .rich-reply:focus-within {

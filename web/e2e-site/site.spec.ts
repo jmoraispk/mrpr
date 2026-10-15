@@ -905,3 +905,22 @@ test('the header composer reads in the light theme: light box, dark text', async
   await expect(box).toHaveCSS('background-color', 'rgb(250, 250, 247)')
   await expect(box.locator('.rich-reply-input')).toHaveCSS('color', 'rgb(18, 22, 31)')
 })
+
+test('keys typed while the editor downloads stay in the box, never approve or snooze', async ({ page }) => {
+  const gitlab = await fakeGitLab(page, { scope: 'api' })
+  // A slow connection: the editor's code arrives a moment after the click.
+  await page.route(/RichReply[^/]*\.js$/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    await route.continue()
+  })
+  await signIn(page)
+  const row = page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
+  await row.click()
+  await page.getByRole('button', { name: 'Request changes' }).click()
+  await page.keyboard.type(' as said')
+  const live = page.locator('.mr-compose .rich-reply-input')
+  await expect(live).toBeFocused()
+  await expect(live).toContainText('as said')
+  expect(gitlab.approvals).toEqual([])
+  await expect(row).toBeVisible()
+})
