@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { MrOverview } from '../../gitlab/mrOverview'
-import { relativeTime } from '../../hub/relativeTime'
+import { When } from './When'
 
 const STATE_WORDS: Record<string, string> = {
   UNREVIEWED: 'to review',
@@ -105,7 +105,7 @@ export function DetailsRail({
       <section>
         <h3>Commits</h3>
         <p>{overview.commitCount}</p>
-        <p className="mr-muted">updated {relativeTime(overview.updatedAt)}</p>
+        <p className="mr-muted">updated <When iso={overview.updatedAt} /></p>
       </section>
       {rebase}
     </aside>

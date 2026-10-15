@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect } from 'react'
 
-import { relativeTime } from '../../hub/relativeTime'
 import { DiscussionThread } from '../../review/DiscussionThread'
 import type { ReviewTarget } from '../../transport/types'
 import { firstNote, toThreadDiscussion, type Activity } from '../activity'
 import { reviewHash } from '../route'
+import { When } from './When'
 
 const EMPTY: ReadonlySet<string> = new Set()
 
@@ -94,7 +94,7 @@ export function ActivityList({
             {item.kind === 'event' ? (
               <p className={`mr-event${item.isNew ? ' is-new' : ''}`}>
                 {item.note.author?.name ?? 'GitLab'} {item.note.body.split('\n')[0]} ·{' '}
-                {relativeTime(item.at)}
+                <When iso={item.at} />
               </p>
             ) : (
               <div

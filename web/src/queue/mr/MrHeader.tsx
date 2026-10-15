@@ -2,7 +2,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import type { MrOverview } from '../../gitlab/mrOverview'
-import { relativeTime } from '../../hub/relativeTime'
 import { createRuntimeTransport } from '../../transport/runtime'
 import type { ReviewTarget } from '../../transport/types'
 import { TagList } from '../TagList'
@@ -13,6 +12,7 @@ import { ProjectPicker } from '../ProjectPicker'
 import { waitingOnYou } from '../activity'
 import { latestWaiting } from '../readState'
 import { QUEUE_QUERY_KEY } from '../useQueue'
+import { When } from './When'
 
 /** An action asked for from the keyboard, run once by the header. */
 export type HeaderRequest = 'reply' | 'changes' | 'nudge' | 'move'
@@ -111,8 +111,7 @@ export function MrHeader({
             {' · '}
             {authorName} wants to merge <code>{overview.sourceBranch}</code> →{' '}
             <code>{overview.targetBranch}</code>
-            {' · '}opened {relativeTime(overview.createdAt)} · updated{' '}
-            {relativeTime(overview.updatedAt)}
+            {' · '}opened <When iso={overview.createdAt} /> · updated <When iso={overview.updatedAt} />
           </>
         ) : null}
       </p>

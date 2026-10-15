@@ -356,3 +356,16 @@ test('Activity threads read like a chat: the opener on the left, everyone else o
   // Reply and Resolve stay below the bubbles.
   expect(within(thread).getByRole('textbox', { name: 'Reply' })).toBeInTheDocument()
 })
+
+test('the details column and Activity events use short times', () => {
+  show()
+  const rail = screen.getByRole('complementary', { name: 'Details' })
+  expect(rail.textContent).not.toMatch(/ago|just now/)
+  expect(within(rail).getByText(/^updated/).querySelector('time')).not.toBeNull()
+  const events = [...document.querySelectorAll('.mr-event')]
+  expect(events.length).toBeGreaterThan(0)
+  for (const event of events) {
+    expect(event.textContent).not.toMatch(/ago|just now/)
+    expect(event.querySelector('time')?.getAttribute('title')).toBeTruthy()
+  }
+})
