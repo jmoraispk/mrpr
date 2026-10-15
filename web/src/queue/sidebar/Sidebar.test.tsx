@@ -61,12 +61,14 @@ function Harness({
   onOpen,
   onSnooze,
   onMute,
+  onRefresh,
   activityKey,
 }: {
   rows: QueueRow[]
   onOpen: (row: QueueRow) => void
   onSnooze: (row: QueueRow) => void
   onMute: (group: RowGroup) => void
+  onRefresh: () => void
   activityKey: string | null
 }) {
   const [projects] = useProjects()
@@ -80,6 +82,9 @@ function Harness({
       selectedKey={selected}
       openKey={null}
       activityKey={activityKey}
+      updatedAt={Date.now()}
+      refreshing={false}
+      onRefresh={onRefresh}
       onSnoozeRow={onSnooze}
       onMuteGroup={onMute}
       onOpenRow={(row) => {
@@ -100,10 +105,11 @@ function show(rows: QueueRow[] = rowsOf(MRS), activityKey: string | null = null)
   const onOpen = vi.fn()
   const onSnooze = vi.fn()
   const onMute = vi.fn()
+  const onRefresh = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} activityKey={activityKey} />,
+    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} onRefresh={onRefresh} activityKey={activityKey} />,
   )
-  return { onOpen, onSnooze, onMute, ...view }
+  return { onOpen, onSnooze, onMute, onRefresh, ...view }
 }
 
 const filtersButton = () => screen.getByRole('button', { name: /^Filters/ })
@@ -383,4 +389,14 @@ test('a project header refuses a link dragged from another page, and a dropped f
   // Cancelled: the browser does not open the file in place of Mr. PR.
   expect(fireEvent.drop(repoHead, { dataTransfer: files })).toBe(false)
   expect(groupNames()).toEqual(['Payments', 'g/sdk'])
+})
+
+test('the refresh button sits in the header, and Sort sits above the tabs', () => {
+  const { onRefresh } = show()
+  const head = document.querySelector('.sb-head') as HTMLElement
+  fireEvent.click(within(head).getByRole('button', { name: /^Refresh/ }))
+  expect(onRefresh).toHaveBeenCalledOnce()
+  const sort = screen.getByRole('combobox', { name: /^Sort/ })
+  const tabs = screen.getByRole('tablist', { name: 'Whose MRs' })
+  expect(sort.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })

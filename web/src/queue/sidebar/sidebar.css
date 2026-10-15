@@ -67,3 +67,7 @@
 .sb-menu button:hover:not(:disabled), .sb-menu button:focus-visible { background: var(--hl); outline: none; }
 .sb-menu button:disabled { color: var(--muted); cursor: default; opacity: 0.6; }
 @media (hover: none) { .sb-menu-button { opacity: 1; } }
+
+.sb-refresh { padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: 12px var(--font-mono); cursor: pointer; }
+.sb-refresh:hover:not(:disabled) { background: var(--soft); color: var(--ink); }
+.sb-refresh:disabled { cursor: default; }

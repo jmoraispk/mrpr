@@ -238,6 +238,9 @@ export function QueueApp() {
           searchFocus={searchFocus}
           onSearchFocused={() => setSearchFocus(0)}
           width={width}
+          updatedAt={queue.updatedAt}
+          refreshing={queue.refreshing}
+          onRefresh={queue.refresh}
           onResize={setDragWidth}
           onResizeEnd={(next) => {
             setDragWidth(null)

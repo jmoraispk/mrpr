@@ -704,3 +704,14 @@ test('with its repository muted, the open MR still answers a', async () => {
   fireEvent.keyDown(window, { key: 'a' })
   await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
 })
+
+test('↻ polls GitLab and reads the MRs again now', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('button', { name: /^Refresh/ }))
+  expect(fake.sent).toContainEqual({ kind: 'delta/hub', op: 'pollNow', payload: { maxAgeMs: 0 } })
+  await waitFor(() =>
+    expect(fake.sent.filter((message: { op?: string }) => message.op === 'listQueue').length).toBeGreaterThan(1),
+  )
+})

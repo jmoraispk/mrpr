@@ -13,7 +13,7 @@ import { useLastLook, useSnoozed } from './state'
 export const QUEUE_QUERY_KEY = ['queue'] as const
 const NO_HOSTS: QueueHost[] = []
 
-/** Everything the queue screen shows, refreshed with the inbox and every two minutes. */
+/** Everything the queue screen shows, refreshed with the inbox and every minute. */
 export function useQueue() {
   const queryClient = useQueryClient()
   const inbox = useInbox()
@@ -22,7 +22,7 @@ export function useQueue() {
   const facts = useQuery({
     queryKey: QUEUE_QUERY_KEY,
     queryFn: () => hubRequest<QueueHost[]>('listQueue'),
-    refetchInterval: 120_000,
+    refetchInterval: 60_000,
     staleTime: 30_000,
   })
   // A poll that changed the inbox likely changed the MRs too.
@@ -81,5 +81,13 @@ export function useQueue() {
     inbox: inbox.data,
     isLoading: facts.isLoading,
     error: facts.error,
+    /** When the MRs were last read (ms), 0 before the first answer. */
+    updatedAt: facts.dataUpdatedAt,
+    refreshing: facts.isFetching,
+    /** Poll GitLab and read the MRs again, now. */
+    refresh() {
+      void hubRequest('pollNow', { maxAgeMs: 0 }).catch(() => undefined)
+      void queryClient.invalidateQueries({ queryKey: QUEUE_QUERY_KEY })
+    },
   }
 }

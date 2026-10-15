@@ -20,6 +20,7 @@ import { useTheme } from '../theme'
 import { FiltersPanel } from './FiltersPanel'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
+import { RefreshButton } from './RefreshButton'
 import { SidebarResizer } from './SidebarResizer'
 import type { SidebarList } from './useSidebarList'
 
@@ -43,6 +44,10 @@ export interface SidebarProps {
   /** Enter or ↓ in the search box: on to the results. */
   onSearchDone: () => void
   width: number
+  /** When the list was last read (ms), whether it is being read, and a way to read it now. */
+  updatedAt: number
+  refreshing: boolean
+  onRefresh: () => void
   onResize: (width: number) => void
   onResizeEnd: (width: number) => void
 }
@@ -62,6 +67,9 @@ export function Sidebar({
   onSearchFocused,
   onSearchDone,
   width,
+  updatedAt,
+  refreshing,
+  onRefresh,
   onResize,
   onResizeEnd,
 }: SidebarProps) {
@@ -164,6 +172,7 @@ export function Sidebar({
         <p className="sb-need">
           {needsYou} need{needsYou === 1 ? 's' : ''} you
         </p>
+        <RefreshButton updatedAt={updatedAt} refreshing={refreshing} onRefresh={onRefresh} />
       </header>
       <div className="sb-controls">
         <input
@@ -186,31 +195,6 @@ export function Sidebar({
             }
           }}
         />
-        <div className="sb-tabs" role="tablist" aria-label="Whose MRs">
-          {TABS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              className="sb-tab"
-              aria-selected={list.tab === id}
-              tabIndex={list.tab === id ? 0 : -1}
-              data-tab={id}
-              onClick={() => list.setTab(id)}
-              onKeyDown={(event) => {
-                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-                event.preventDefault()
-                const next = TABS[(TABS.indexOf(id) + 1) % TABS.length]
-                list.setTab(next)
-                event.currentTarget.parentElement
-                  ?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)
-                  ?.focus()
-              }}
-            >
-              {TAB_LABELS[id]} ({list.counts[id]})
-            </button>
-          ))}
-        </div>
         <div className="sb-sort-row">
           <label className="sb-sort">
             Sort
@@ -250,6 +234,31 @@ export function Sidebar({
         {filtersOpen ? (
           <FiltersPanel filters={list.filters} onFilters={list.setFilters} activityKey={activityKey} />
         ) : null}
+        <div className="sb-tabs" role="tablist" aria-label="Whose MRs">
+          {TABS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              className="sb-tab"
+              aria-selected={list.tab === id}
+              tabIndex={list.tab === id ? 0 : -1}
+              data-tab={id}
+              onClick={() => list.setTab(id)}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+                event.preventDefault()
+                const next = TABS[(TABS.indexOf(id) + 1) % TABS.length]
+                list.setTab(next)
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)
+                  ?.focus()
+              }}
+            >
+              {TAB_LABELS[id]} ({list.counts[id]})
+            </button>
+          ))}
+        </div>
       </div>
       <div className="sb-groups" role="tabpanel" aria-label={TAB_LABELS[list.tab]}>
         {body}

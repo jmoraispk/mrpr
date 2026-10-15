@@ -7,16 +7,16 @@ afterEach(() => {
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
 })
 
-test('polls every two minutes while the page is open', () => {
+test('polls every minute while the page is open', () => {
   vi.useFakeTimers()
   const poll = vi.fn(async () => {})
   const stop = startPageSchedule({ poll })
 
-  vi.advanceTimersByTime(119_000)
+  vi.advanceTimersByTime(59_000)
   expect(poll).not.toHaveBeenCalled()
   vi.advanceTimersByTime(1_000)
   expect(poll).toHaveBeenCalledWith({})
-  vi.advanceTimersByTime(120_000)
+  vi.advanceTimersByTime(60_000)
   expect(poll).toHaveBeenCalledTimes(2)
 
   stop()
