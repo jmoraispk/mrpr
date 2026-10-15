@@ -892,3 +892,16 @@ test('All MRs shows another open MR from your repository', async ({ page }) => {
   await page.getByRole('checkbox', { name: 'All MRs' }).check()
   await expect(page.getByRole('article').filter({ hasText: 'Tidy retries' })).toBeVisible()
 })
+
+test('the header composer reads in the light theme: light box, dark text', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  await fakeGitLab(page, { scope: 'api' })
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  await page.getByRole('button', { name: 'Request changes' }).click()
+  const box = page.locator('.mr-compose .rich-reply')
+  await expect(box.locator('.rich-reply-input')).toBeFocused()
+  // --surface-2 and --ink in the light tokens, not the review screen's dark navy.
+  await expect(box).toHaveCSS('background-color', 'rgb(250, 250, 247)')
+  await expect(box.locator('.rich-reply-input')).toHaveCSS('color', 'rgb(18, 22, 31)')
+})

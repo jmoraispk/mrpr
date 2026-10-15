@@ -72,7 +72,8 @@
 .mr-rebasing, .mr-rebased { color: var(--muted); font-size: 13px; }
 
 /* Threads reuse the code view's component; give it the queue's palette here. */
-.q-shell .mr-overview {
+.q-shell .mr-overview,
+.q-shell .mr-panel-top {
   --canvas: var(--surface);
   --panel: var(--surface);
   --panel-raised: var(--surface-2);
