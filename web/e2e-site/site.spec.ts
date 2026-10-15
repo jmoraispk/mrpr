@@ -176,6 +176,34 @@ async function fakeGitLab(
           },
         })
       }
+      if (query.startsWith('query RepoMrs')) {
+        // All MRs: one more open MR in g/q nobody asked you about.
+        const data: Record<string, unknown> = {}
+        for (const [alias, path] of Object.entries(body.variables ?? {})) {
+          data[alias] = {
+            mergeRequests: {
+              nodes:
+                path === 'g/q'
+                  ? [
+                      facts(
+                        {
+                          ...REVIEW,
+                          id: 'gid://gitlab/MergeRequest/400',
+                          iid: '4',
+                          title: 'Tidy retries',
+                          webUrl: `${GITLAB}/g/q/-/merge_requests/4`,
+                        },
+                        'li',
+                        [],
+                        [3, 1],
+                      ),
+                    ]
+                  : [],
+            },
+          }
+        }
+        return json({ data })
+      }
       if (query.startsWith('query Facts')) {
         return json({
           data: {
@@ -424,7 +452,10 @@ test('one click opens the MR beside the queue: description, the thread that matt
   await expect(panel.getByText('Typo')).toHaveCount(0)
   await expect(panel.getByText(/1 hidden by your Filters/)).toBeVisible()
   const thread = panel.locator('[data-discussion-id="d5"]')
-  await thread.getByRole('textbox', { name: 'Reply' }).fill('Only on success')
+  // The reply box is idle until clicked, then a rich editor.
+  await thread.getByRole('textbox', { name: 'Reply' }).click()
+  await expect(thread.locator('.rich-reply-input')).toBeFocused()
+  await page.keyboard.type('Only on success')
   await thread.getByRole('button', { name: 'Reply' }).click()
   await expect.poll(() => gitlab.replies.at(-1)).toBe('Only on success\n\n*— via Mr. PR*')
   // The list stays beside it.
@@ -828,4 +859,36 @@ test('row marks: the open MR is a tint with no border, the bar means needs you, 
   await expect(row).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   // Needs you: the inset bar, alone.
   await expect(row).toHaveCSS('box-shadow', /inset/)
+})
+
+test('a reply typed with Ctrl+B and a list posts Markdown', async ({ page }) => {
+  const gitlab = await fakeGitLab(page, { scope: 'api' })
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  const thread = page.locator('[data-discussion-id="d5"]')
+  await thread.getByRole('textbox', { name: 'Reply' }).click()
+  // The idle field turns into the editor on click.
+  const live = thread.locator('.rich-reply-input')
+  await expect(live).toBeFocused()
+  await page.keyboard.type('Plan: ')
+  await page.keyboard.press('Control+b')
+  await page.keyboard.type('now')
+  await page.keyboard.press('Control+b')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('- first')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('second')
+  await expect(live.locator('strong')).toHaveText('now')
+  await expect(live.locator('li')).toHaveCount(2)
+  await page.keyboard.press('Control+Enter')
+  await expect.poll(() => gitlab.replies.at(-1)).toBe('Plan: **now**\n\n- first\n- second\n\n*— via Mr. PR*')
+})
+
+test('All MRs shows another open MR from your repository', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+  await expect(page.getByRole('article').filter({ hasText: 'Tidy retries' })).toHaveCount(0)
+  await page.getByRole('button', { name: /^Filters/ }).click()
+  await page.getByRole('checkbox', { name: 'All MRs' }).check()
+  await expect(page.getByRole('article').filter({ hasText: 'Tidy retries' })).toBeVisible()
 })

@@ -128,15 +128,19 @@ mentions and comments on it are folded into that row.
   (when it last changed: `now`, `5m`, `1h`, `1d`, `1w`, `3mo`, `1y`). An MR
   that needs you (your review, a reply, blocking, changes addressed,
   returned to you) has an accent bar on its left edge; an unread dot marks new
-  comments. The labels behind that (Blocking N, Waiting on you, Changes
+  comments. The open MR is a tinted row, and the j/k cursor a thin outline.
+  Every row has a faint snooze button. The labels behind that (Blocking N, Waiting on you, Changes
   addressed, Returned to you, Waiting on others, Quick win, Needs rebase)
   show in the MR's header.
 - **Sort:** Last changed (newest first), Age (oldest first) or Size
   (smallest first); the ↑/↓ button beside it flips the direction. Sort and
   Filters sit above the tabs and apply to both. Times are short: `now`, `5m`,
   `2d`, `1w`; hover one for the full date.
-- **Filters** (beside Sort) opens one panel: Needs me only, Hide drafts and
-  Show done for the list, then what an MR's Activity shows (unresolved and
+- **Filters** (beside Sort) opens one panel. **Show** picks which MRs:
+  **Authored by me** and **I'm the reviewer** (both on by default), or **All
+  MRs**: every open MR in the repositories already in your list (up to 20),
+  read only while it is on. MRs you only heard about through a notification
+  always show. Then Needs me only, Hide drafts and Show done for the list, then what an MR's Activity shows (unresolved and
   resolved threads, new commits, bot comments, other activity). With an MR
   open, Activity choices apply to that MR; **Apply to all MRs** makes them
   the default. Done MRs are hidden unless Show done is on. Search (`/`)
@@ -174,6 +178,11 @@ mentions and comments on it are folded into that row.
 
   Keys act on the selected row; opening an MR selects it. `r`, `x`, `n` and
   `m` open the selected MR and start the action in its header.
+- **Writing:** reply boxes format as you type. Ctrl+B bold, Ctrl+I italic,
+  Ctrl+Shift+X strikethrough, Ctrl+E code, Ctrl+K link (Cmd on a Mac), or the
+  buttons above the box; `- ` or `1. ` starts a list. There is no underline,
+  as GitLab Markdown has none. Ctrl+Enter sends. What is posted is Markdown.
+  A box starts its editor only when you click into it.
 - **Comments are signed.** Replies, requests for changes (a comment tagging
   the author) and nudges (a comment tagging the reviewers still waiting) end
   with "*— via Mr. PR*". Turning the signature off is on the roadmap.
