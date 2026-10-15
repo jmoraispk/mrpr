@@ -1,12 +1,15 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 
-import type { QueueHost } from '../gitlab/queueFacts'
+import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
 import { hubRequest } from '../hub/api'
 import { useInbox } from '../hub/useInbox'
 import { INBOX_KEY } from '../inbox/store'
 import { platform } from '../platform/platform'
 import { createRuntimeTransport } from '../transport/runtime'
+import { reposToList } from './allMrs'
+import { useMutedGroups } from './groups'
+import { useListFilters } from './listSettings'
 import { buildQueue, lookKeyFor, rowKey } from './model'
 import { useLastLook, useSnoozed } from './state'
 
@@ -19,6 +22,8 @@ export function useQueue() {
   const inbox = useInbox()
   const [snoozed] = useSnoozed()
   const lastLook = useLastLook()
+  const [filters] = useListFilters()
+  const [muted] = useMutedGroups()
   const facts = useQuery({
     queryKey: QUEUE_QUERY_KEY,
     queryFn: () => hubRequest<QueueHost[]>('listQueue'),
@@ -64,18 +69,43 @@ export function useQueue() {
   })
   const commitsKey = JSON.stringify(commitsSince)
 
-  const rows = useMemo(
-    () =>
-      buildQueue({
-        hosts,
-        items: inbox.data?.items ?? [],
-        closed: inbox.data?.closed ?? [],
-        snoozed,
-        commitsSince: JSON.parse(commitsKey) as Record<string, number>,
-        now: new Date(),
-      }),
-    [hosts, inbox.data, snoozed, commitsKey],
+  const build = (from: QueueHost[]) =>
+    buildQueue({
+      hosts: from,
+      items: inbox.data?.items ?? [],
+      closed: inbox.data?.closed ?? [],
+      snoozed,
+      commitsSince: JSON.parse(commitsKey) as Record<string, number>,
+      now: new Date(),
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const base = useMemo(() => build(hosts), [hosts, inbox.data, snoozed, commitsKey])
+
+  // All MRs: every open MR of the repositories already listed, fetched only while it is on.
+  const repos = useMemo(
+    () => (filters.allMrs ? reposToList(base, muted) : {}),
+    [filters.allMrs, base, muted],
   )
+  const repoKey = JSON.stringify(repos)
+  const extra = useQuery({
+    queryKey: [...QUEUE_QUERY_KEY, 'repos', repoKey],
+    queryFn: () => hubRequest<Record<string, QueueMr[]>>('listRepoMrs', { repos }),
+    enabled: filters.allMrs && repoKey !== '{}',
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
+  const rows = useMemo(() => {
+    if (!filters.allMrs || !extra.data) return base
+    const more = extra.data
+    // An MR already yours or a review keeps its own role: only new ids are added.
+    return build(
+      hosts.map((host) => {
+        const known = new Set(host.mrs.map((mr) => mr.id))
+        return { ...host, mrs: [...host.mrs, ...(more[host.hostId] ?? []).filter((mr) => !known.has(mr.id))] }
+      }),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.allMrs, extra.data, base, hosts])
   return {
     rows,
     hosts,
@@ -84,7 +114,7 @@ export function useQueue() {
     error: facts.error,
     /** When the MRs were last read (ms), 0 before the first answer. */
     updatedAt: facts.dataUpdatedAt,
-    refreshing: facts.isFetching,
+    refreshing: facts.isFetching || extra.isFetching,
     /** Poll GitLab and read the MRs again, now. */
     refresh() {
       void hubRequest('pollNow', { maxAgeMs: 0 }).catch(() => undefined)

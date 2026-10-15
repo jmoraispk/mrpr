@@ -108,6 +108,7 @@ export function createFakeGitLab() {
   }
   const events: { noteableId: number; createdAt: string; type?: string }[] = []
   const calls: string[] = []
+  const repoQueries: { query: string; variables: Record<string, string> }[] = []
   const eventQueries: Record<string, string>[] = []
   const involvedQueries: string[] = []
   const watchedQueries: string[] = []
@@ -283,6 +284,16 @@ export function createFakeGitLab() {
         },
       })
     }),
+    gitlab.query('RepoMrs', ({ query, variables }) => {
+      calls.push('RepoMrs')
+      repoQueries.push({ query, variables: variables as Record<string, string> })
+      const data: Record<string, unknown> = {}
+      for (const [alias, path] of Object.entries(variables as Record<string, string>)) {
+        const open = [...mrs.values()].filter((mr) => mr.project === path && mr.state === 'opened')
+        data[alias] = { mergeRequests: { nodes: open.map((mr) => factsNode(mr.id)) } }
+      }
+      return HttpResponse.json({ data })
+    }),
     gitlab.query('Involved', async ({ query }) => {
       calls.push('Involved')
       involvedQueries.push(query)
@@ -365,6 +376,7 @@ export function createFakeGitLab() {
     eventQueries,
     involvedQueries,
     watchedQueries,
+    repoQueries,
     add(mr: FakeMergeRequest) {
       mrs.set(mr.id, mr)
       return mr

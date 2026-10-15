@@ -78,11 +78,13 @@ const mention = (discussionId = 'd'): InboxItem => ({
 
 let hosts: QueueHost[]
 let items: InboxItem[] = []
+let repoMrs: QueueMr[] = []
 let fake: ReturnType<typeof createFakePlatform>
 
 beforeEach(() => {
   window.location.hash = ''
   items = []
+  repoMrs = []
   Object.values(transport).forEach((fn) => fn.mockClear())
   transport.getOverview.mockReset().mockImplementation(async (target: { iid: number }) =>
     overview(hosts[0].mrs.find((value) => value.iid === target.iid)?.title ?? 'An MR'),
@@ -116,6 +118,7 @@ beforeEach(() => {
       if (message.kind !== 'delta/hub') return { ok: true, data: null }
       // A fresh copy, as a real hub sends: tests change `hosts` in place.
       if (message.op === 'listQueue') return { ok: true, data: structuredClone(hosts) }
+      if (message.op === 'listRepoMrs') return { ok: true, data: { [H]: structuredClone(repoMrs) } }
       if (message.op === 'listInbox') {
         return { ok: true, data: { hosts: [], items, unread: items.length } }
       }
@@ -791,4 +794,27 @@ test('an old Snoozed link replaces itself, so Back does not bring it back', asyn
   renderApp()
   await waitFor(() => expect(window.location.hash).toBe('#/'))
   expect(history.length).toBe(before)
+})
+
+test('All MRs adds the other open MRs of your repositories once, and only while it is on', async () => {
+  const user = userEvent.setup()
+  repoMrs = [
+    mr(7, {
+      title: 'Someone else’s change',
+      roles: [],
+      reviewers: [],
+      author: { username: 'li', name: 'Li', avatarUrl: null, bot: false },
+    }),
+    mr(2, { title: 'Fix flaky test', roles: [] }),
+  ]
+  renderApp()
+  await screen.findAllByRole('article')
+  expect(fake.sent.some((message: { op?: string }) => message.op === 'listRepoMrs')).toBe(false)
+  await user.click(screen.getByRole('button', { name: /^Filters/ }))
+  await user.click(screen.getByRole('checkbox', { name: 'All MRs' }))
+  expect(await screen.findByText('Someone else’s change')).toBeInTheDocument()
+  expect(screen.getAllByText('Fix flaky test')).toHaveLength(1)
+  expect(rowNamed('Someone else’s change')).not.toHaveClass('is-needs-you')
+  await user.click(screen.getByRole('checkbox', { name: 'All MRs' }))
+  await waitFor(() => expect(screen.queryByText('Someone else’s change')).toBeNull())
 })

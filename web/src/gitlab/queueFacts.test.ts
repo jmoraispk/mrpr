@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 
 import { API, createFakeGitLab, fakeMergeRequest } from '../test/fakeGitLab'
 import { GitLabClient } from './client'
-import { fetchQueueMrs } from './queueFacts'
+import { fetchQueueMrs, fetchRepoMrs } from './queueFacts'
 
 test('authored and review-requested MRs come back once each, with their facts', async () => {
   const gitlab = createFakeGitLab()
@@ -58,4 +58,22 @@ test('a reviewer listed twice is kept once', async () => {
   gitlab.lists.reviewing.push(3)
   const [mr] = await fetchQueueMrs(new GitLabClient(API, 'secret'))
   expect(mr.reviewers).toEqual([{ username: 'ana', name: 'ANA', state: 'APPROVED' }])
+})
+
+test('All MRs reads open MRs two repositories per request, with the paths as variables, role-less', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(1, { project: 'g/a' }))
+  gitlab.add(fakeMergeRequest(2, { project: 'g/b' }))
+  gitlab.add(fakeMergeRequest(3, { project: 'g/c' }))
+  gitlab.add(fakeMergeRequest(4, { project: 'g/c', state: 'merged' }))
+
+  const mrs = await fetchRepoMrs(new GitLabClient(API, 'secret'), ['g/a', 'g/b', 'g/c'])
+
+  expect(gitlab.repoQueries.map((value) => Object.values(value.variables))).toEqual([['g/a', 'g/b'], ['g/c']])
+  expect(gitlab.repoQueries[0].query).not.toContain('g/a')
+  expect(mrs.map((mr) => [mr.id, mr.project, mr.roles])).toEqual([
+    [1, 'g/a', []],
+    [2, 'g/b', []],
+    [3, 'g/c', []],
+  ])
 })

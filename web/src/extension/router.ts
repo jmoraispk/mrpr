@@ -9,7 +9,7 @@ import {
 import { GitLabError } from '../gitlab/errors'
 import { listAuthored, listReviewRequested } from '../gitlab/mergeRequests'
 import { fetchMrOverview } from '../gitlab/mrOverview'
-import { fetchQueueMrs, type QueueHost } from '../gitlab/queueFacts'
+import { fetchQueueMrs, fetchRepoMrs, type QueueHost, type QueueMr } from '../gitlab/queueFacts'
 import {
   approve,
   commitsSince,
@@ -180,6 +180,27 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
           }
         }),
       )
+    }
+    case 'listRepoMrs': {
+      const { repos } = payload as { repos: Record<string, string[]> }
+      const hosts = await listHosts()
+      const out: Record<string, QueueMr[]> = {}
+      await Promise.all(
+        hosts
+          .filter((host) => repos[host.id]?.length)
+          .map(async (host) => {
+            try {
+              out[host.id] = await fetchRepoMrs(
+                await platform().clientFor(host),
+                repos[host.id].slice(0, 20),
+              )
+            } catch {
+              // All MRs is extra: a failure leaves the list as it was.
+              out[host.id] = []
+            }
+          }),
+      )
+      return out
     }
     case 'listInbox':
       return inboxView(await loadInbox(), await listHosts())

@@ -143,3 +143,38 @@ export async function fetchQueueMrs(
   for (const raw of data.currentUser.reviewing.nodes) add(raw, 'reviewer')
   return [...byId.values()]
 }
+
+const REPO_BATCH = 2
+
+/**
+ * Every open MR (up to 50 each, newest first) of these repositories, for All
+ * MRs. Two repositories per request keeps each under GitLab's complexity
+ * limit; the paths go as variables. Roles are empty: nobody asked you.
+ */
+export async function fetchRepoMrs(
+  client: GitLabClient,
+  projects: string[],
+  signal?: AbortSignal,
+): Promise<QueueMr[]> {
+  const out: QueueMr[] = []
+  for (let start = 0; start < projects.length; start += REPO_BATCH) {
+    const chunk = projects.slice(start, start + REPO_BATCH)
+    const variables = Object.fromEntries(chunk.map((path, index) => [`p${start + index}`, path]))
+    const names = Object.keys(variables)
+    const query = `query RepoMrs(${names.map((name) => `$${name}: ID!`).join(', ')}) {
+${names
+  .map(
+    (name) =>
+      `  ${name}: project(fullPath: $${name}) { mergeRequests(state: opened, first: 50, sort: UPDATED_DESC) { nodes { ${FIELDS} } } }`,
+  )
+  .join('\n')}
+}`
+    const data = await client.graphql<
+      Record<string, { mergeRequests: { nodes: RawMr[] } } | null>
+    >(query, variables, signal)
+    for (const name of names) {
+      for (const raw of data[name]?.mergeRequests.nodes ?? []) out.push(toQueueMr(raw))
+    }
+  }
+  return out
+}
