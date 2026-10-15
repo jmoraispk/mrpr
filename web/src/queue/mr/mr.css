@@ -4,7 +4,9 @@
 .mr-tabs { display: flex; gap: 18px; margin-top: 10px; }
 .mr-tabs a { padding: 8px 0; color: var(--muted); font-size: 14px; text-decoration: none; }
 .mr-tabs a[aria-current='page'] { border-bottom: 2px solid var(--accent); color: var(--ink); font-weight: 600; }
-.mr-panel-body { min-width: 0; min-height: 0; flex: 1; overflow-y: auto; }
+/* Positioned, so absolutely placed descendants (visually hidden labels) stay inside its scroll
+   box instead of stretching the page. */
+.mr-panel-body { position: relative; min-width: 0; min-height: 0; flex: 1; overflow-y: auto; }
 /* The code view inside the panel: no top-bar row, and it fills the panel. */
 .mr-panel-body > .app-shell.is-embedded { height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); }
 .mr-panel-body > .app-shell.is-embedded .file-rail,

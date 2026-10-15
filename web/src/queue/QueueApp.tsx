@@ -67,6 +67,16 @@ export function QueueApp() {
     [view, queue.rows, muted, projects, rows],
   )
   const list = useSidebarList(listRows, projects, isMine, view, muted)
+  // Only the list and the MR scroll. Should anything scroll the page itself
+  // (a scrollIntoView reaching past its panel), put it back.
+  useEffect(() => {
+    const snap = () => {
+      const root = document.scrollingElement ?? document.documentElement
+      if (root.scrollTop || root.scrollLeft) window.scrollTo(0, 0)
+    }
+    window.addEventListener('scroll', snap)
+    return () => window.removeEventListener('scroll', snap)
+  }, [])
   useEffect(() => {
     if (route.name !== 'snoozed') return
     setView('snoozed')

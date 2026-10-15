@@ -5,6 +5,8 @@
   /* Exactly the window: each side scrolls itself, so nothing ever scrolls the page. */
   height: 100vh;
   overflow: hidden;
+  /* Every absolutely placed descendant is contained, and clipped, here. */
+  position: relative;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);

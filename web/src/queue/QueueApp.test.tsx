@@ -727,3 +727,15 @@ test('↻ polls GitLab and reads the MRs again now', async () => {
     expect(fake.sent.filter((message: { op?: string }) => message.op === 'listQueue').length).toBeGreaterThan(1),
   )
 })
+
+test('if anything scrolls the page itself, it snaps back to the top', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  const root = document.scrollingElement ?? document.documentElement
+  const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  Object.defineProperty(root, 'scrollTop', { configurable: true, value: 120 })
+  fireEvent.scroll(window)
+  expect(scrollTo).toHaveBeenCalledWith(0, 0)
+  Object.defineProperty(root, 'scrollTop', { configurable: true, value: 0 })
+  scrollTo.mockRestore()
+})

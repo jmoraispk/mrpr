@@ -76,6 +76,8 @@ async function fakeGitLab(
     scope?: string
     /** What GitLab grants at each token request in turn, overriding what was asked. */
     grants?: string[]
+    /** A full day's volume: 30 more MRs to review, a long description, many threads. */
+    many?: boolean
   } = {},
 ) {
   const tokenRequests: Record<string, string>[] = []
@@ -133,7 +135,9 @@ async function fakeGitLab(
               mergeRequest: {
                 iid: review ? '2' : '1',
                 title: review ? REVIEW.title : MR.title,
-                description: review ? 'Adds a **retry budget** per endpoint.' : 'Clearer parser errors.',
+                description: options.many
+                  ? 'Long description line.\n\n'.repeat(150)
+                  : review ? 'Adds a **retry budget** per endpoint.' : 'Clearer parser errors.',
                 draft: false, state: 'opened', createdAt: NOW, updatedAt: NOW,
                 sourceBranch: review ? 'retry' : 'parser', targetBranch: 'main',
                 webUrl: review ? REVIEW.webUrl : MR.webUrl,
@@ -151,6 +155,14 @@ async function fakeGitLab(
                   pageInfo: { hasNextPage: false, endCursor: null },
                   nodes: review
                     ? [
+                        ...(options.many
+                          ? Array.from({ length: 20 }, (_, n) => ({
+                              id: `gid://gitlab/Discussion/d${100 + n}`,
+                              resolvable: true,
+                              resolved: false,
+                              notes: { nodes: [note(1000 + n, 'li', `Thread ${n}: ${'a fairly long remark. '.repeat(12)}`)] },
+                            }))
+                          : []),
                         { id: 'gid://gitlab/Discussion/d5', resolvable: true, resolved: false, notes: { nodes: [note(51, 'li', 'Should the budget reset on success?'), note(52, 'ana', 'Good question, looking.')] } },
                         { id: 'gid://gitlab/Discussion/d6', resolvable: true, resolved: true, notes: { nodes: [note(61, 'li', 'Typo')] } },
                         { id: 'gid://gitlab/Discussion/d7', resolvable: false, resolved: false, notes: { nodes: [note(71, 'ana', 'added 2 commits', { system: true, systemNoteIconName: 'commit' })] } },
@@ -173,6 +185,23 @@ async function fakeGitLab(
                 nodes: [
                   facts(REVIEW, 'ana', [['joao', 'UNREVIEWED']], [120, 10]),
                   facts(TIDY, 'ana', [['joao', 'APPROVED']], [5, 1]),
+                  ...(options.many
+                    ? Array.from({ length: 30 }, (_, n) =>
+                        facts(
+                          {
+                            ...REVIEW,
+                            id: `gid://gitlab/MergeRequest/${1000 + n}`,
+                            iid: String(100 + n),
+                            title: `Busy MR ${n} with a fairly long title to fill the row`,
+                            webUrl: `${GITLAB}/g/r${n % 5}/-/merge_requests/${100 + n}`,
+                            project: { fullPath: `g/r${n % 5}` },
+                          },
+                          'ana',
+                          [['joao', 'UNREVIEWED']],
+                          [20 + n, n],
+                        ),
+                      )
+                    : []),
                 ],
               },
             },
@@ -740,4 +769,29 @@ test('the red counts in a light Changes view are dark enough to read', async ({ 
   const rail = page.getByRole('complementary', { name: 'Changed files' })
   // --minus in the light tokens (#A1361A), not the dark view's #ef7777.
   await expect(rail.locator('.rail-summary .stat-deletion')).toHaveCSS('color', 'rgb(161, 54, 26)')
+})
+
+test('at full size, opening at a comment or clicking a row that vanishes never shifts the page', async ({ page }) => {
+  await page.setViewportSize({ width: 2000, height: 1500 })
+  await fakeGitLab(page, { many: true })
+  await signIn(page)
+  const shifted = () =>
+    page.evaluate(() => ({
+      top: document.scrollingElement!.scrollTop,
+      height: document.scrollingElement!.scrollHeight,
+      shell: document.querySelector('.q-shell')!.getBoundingClientRect().top,
+    }))
+  // The last row, scrolled to and opened.
+  const last = page.getByRole('article').last()
+  await last.scrollIntoViewIfNeeded()
+  await last.click()
+  await page.waitForTimeout(500)
+  expect(await shifted()).toEqual({ top: 0, height: 1500, shell: 0 })
+  // Your MR, opened at Ana's comment: its row vanishes from the unread list as it opens.
+  await page.getByRole('tab', { name: /^From me/ }).click()
+  await page.getByRole('article').filter({ hasText: 'Improve parser errors' }).click()
+  await expect(page.getByText('Why does this throw?')).toBeVisible()
+  await page.waitForTimeout(500)
+  expect(await shifted()).toEqual({ top: 0, height: 1500, shell: 0 })
+  await expect(page.locator('.sb-head')).toBeInViewport()
 })
