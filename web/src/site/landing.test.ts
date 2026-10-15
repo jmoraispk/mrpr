@@ -27,8 +27,9 @@ test('the theme toggle and the feature tabs are there for the script to drive', 
   expect(page.querySelectorAll('[data-tab]').length).toBe(page.querySelectorAll('[data-pane]').length)
 })
 
-test('read-only to start, and no promise of token sign-in', () => {
-  expect(html).toMatch(/Read-only access to start/)
+test('no read-only promise, no promise of token sign-in, and the full API access is explained', () => {
+  expect(html).not.toMatch(/read-only/i)
+  expect(html).toMatch(/Why does Mr. PR ask GitLab for full API access\?/)
   expect(html).not.toMatch(/personal access token/i)
   expect(html).toMatch(/Sign in with your GitLab account\./)
 })

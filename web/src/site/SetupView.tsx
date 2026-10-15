@@ -122,7 +122,7 @@ export function SetupView({
             <dd><strong>Untick it</strong></dd>
             <dt>Scopes</dt>
             <dd>
-              Tick <code>read_api</code> and <code>api</code>
+              Tick <code>api</code>
             </dd>
           </dl>
         </li>

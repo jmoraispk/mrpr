@@ -600,7 +600,7 @@ test('the landing page theme toggle works under its security policy', async ({ p
   expect(blocked).toEqual([])
 })
 
-test('sign-in to the deployment’s own server asks for api at once, so approving needs no second step', async ({ page }) => {
+test('sign-in asks for api at once, so approving needs no second step', async ({ page }) => {
   const gitlab = await fakeGitLab(page)
   await signIn(page)
   expect(gitlab.authorizeRequests[0].scope).toBe('api')

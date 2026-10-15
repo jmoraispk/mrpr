@@ -6,7 +6,7 @@ export interface SiteHost {
 
 export interface SiteConfig {
   hosts: SiteHost[]
-  /** `read_api`: posting asks for `api` the first time it is needed. The built-in host is asked for `api` at once (see signIn). */
+  /** `api`, for every server: Mr. PR approves, replies and nudges as you. */
   scopes: string
 }
 
@@ -18,5 +18,5 @@ export function siteConfig(
 ): SiteConfig {
   const clientId = env.VITE_GITLAB_CLIENT_ID?.trim() ?? ''
   const host = env.VITE_GITLAB_HOST?.trim() || DEFAULT_HOST
-  return { hosts: clientId ? [{ host, clientId }] : [], scopes: 'read_api' }
+  return { hosts: clientId ? [{ host, clientId }] : [], scopes: 'api' }
 }

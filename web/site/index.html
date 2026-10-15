@@ -68,7 +68,6 @@ input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{o
         </a>
         <a href="#waitlist" style="color: var(--ink); text-decoration: none; font-weight: 600; font-size: 17px; padding: 15px 22px; border-radius: 10px; border: 1.5px solid var(--ink); min-height: 52px; box-sizing: border-box; display: inline-flex; align-items: center">GitHub? Join the waitlist</a>
       </div>
-      <p style="margin: 0; font-size: 14px; color: var(--muted)">Works with gitlab.com and self-managed GitLab. Read-only access to start.</p>
     </div>
 
     <!-- product mockup -->
@@ -499,6 +498,10 @@ input:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{o
         <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
           <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>Does it work with self-managed GitLab?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
           <p style="margin: 14px 0 0; color: var(--ink-2); max-width: 40em">Yes. Sign in with your GitLab account. Because Mr. PR talks to GitLab straight from your browser, it works with any instance your browser can reach, even one behind your company VPN.</p>
+        </details>
+        <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
+          <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>Why does Mr. PR ask GitLab for full API access?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>
+          <p style="margin: 14px 0 0; color: var(--ink-2); max-width: 40em">Approving, replying and requesting changes need it: GitLab has no narrower permission that allows them. Mr. PR is a static site that acts only when you click: it posts nothing on its own, there is no AI reading your code, and your access token never leaves your browser.</p>
         </details>
         <details style="border-bottom: 1px solid var(--line); padding: 22px 0">
           <summary style="display: flex; justify-content: space-between; gap: 24px; font-size: 19px; font-weight: 600"><span>Do you store my source code?</span><span class="faq-plus" aria-hidden="true" style="font-size: 24px; line-height: 1; transition: transform 0.15s">+</span></summary>

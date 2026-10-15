@@ -82,7 +82,7 @@ test('a pasted id is remembered, then sign-in starts and will publish', async ()
   expect(signIn).toHaveBeenCalledWith(
     { host: 'gitlab.other.org', clientId: ID },
     expect.any(String),
-    'read_api',
+    'api',
     undefined,
     { publish: {} },
   )
@@ -99,7 +99,7 @@ test('setting up again fixes this browser only, and publishes nothing', async ()
   expect(signIn).toHaveBeenCalledWith(
     { host: 'gitlab.other.org', clientId: ID },
     expect.any(String),
-    'read_api',
+    'api',
     undefined,
     {},
   )
