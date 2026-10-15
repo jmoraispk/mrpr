@@ -143,3 +143,13 @@ test('your projects first, in your order; then one group per repository, by its 
   expect(groups[0]).toMatchObject({ repo: null })
   expect(repoGroupId(rows[0])).toBe('repo:h:g/zeta')
 })
+
+test('the snoozed view keeps snoozed and done rows, still never folded ones', () => {
+  const rows = [
+    row(1, { attention: 'needs-you', snoozed: true }),
+    row(2, { attention: 'done', snoozed: true }),
+    row(3, { attention: 'needs-you', folded: true, snoozed: true }),
+  ]
+  expect(iids(filterRows(rows, NONE, '', 'snoozed'))).toEqual([1, 2])
+  expect(iids(filterRows(rows, NONE, ''))).toEqual([])
+})

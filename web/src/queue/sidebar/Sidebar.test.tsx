@@ -8,6 +8,8 @@ import { installPlatform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { buildQueue, type QueueRow } from '../model'
 import type { RowGroup } from '../order'
+import { useMutedGroups } from '../groups'
+import type { SidebarView } from '../order'
 import { useProjects } from '../state'
 import { Sidebar } from './Sidebar'
 import { useSidebarList } from './useSidebarList'
@@ -63,6 +65,7 @@ function Harness({
   onMute,
   onRefresh,
   activityKey,
+  view,
 }: {
   rows: QueueRow[]
   onOpen: (row: QueueRow) => void
@@ -70,9 +73,11 @@ function Harness({
   onMute: (group: RowGroup) => void
   onRefresh: () => void
   activityKey: string | null
+  view: SidebarView
 }) {
   const [projects] = useProjects()
-  const list = useSidebarList(rows, projects, isMine)
+  const [muted] = useMutedGroups()
+  const list = useSidebarList(rows, projects, isMine, view, muted)
   const [selected, setSelected] = useState<string | null>(null)
   return (
     <Sidebar
@@ -87,6 +92,9 @@ function Harness({
       onRefresh={onRefresh}
       onSnoozeRow={onSnooze}
       onMuteGroup={onMute}
+      view={view}
+      onToggleView={() => {}}
+      onUnmuteGroup={() => {}}
       onOpenRow={(row) => {
         setSelected(row.key)
         onOpen(row)
@@ -101,13 +109,13 @@ function Harness({
   )
 }
 
-function show(rows: QueueRow[] = rowsOf(MRS), activityKey: string | null = null) {
+function show(rows: QueueRow[] = rowsOf(MRS), activityKey: string | null = null, sidebarView: SidebarView = 'active') {
   const onOpen = vi.fn()
   const onSnooze = vi.fn()
   const onMute = vi.fn()
   const onRefresh = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} onRefresh={onRefresh} activityKey={activityKey} />,
+    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} onRefresh={onRefresh} activityKey={activityKey} view={sidebarView} />,
   )
   return { onOpen, onSnooze, onMute, onRefresh, ...view }
 }
@@ -124,7 +132,7 @@ test('the header counts what needs you; the footer, the rest', () => {
   expect(within(sidebar).getByText('3 need you')).toBeInTheDocument()
   expect(within(sidebar).queryByText(/min today/)).toBeNull()
   expect(within(sidebar).getByText('1 bot MR folded away')).toBeInTheDocument()
-  expect(within(sidebar).getByRole('link', { name: 'Snoozed (0)' })).toHaveAttribute('href', '#/snoozed')
+  expect(within(sidebar).getByRole('button', { name: 'Snoozed (0)' })).toHaveAttribute('aria-pressed', 'false')
   expect(within(sidebar).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '#/settings')
 })
 
@@ -230,7 +238,10 @@ test('nothing at all, and nothing but done', async () => {
 
 test('the snooze button snoozes and never opens the row', () => {
   const { onOpen, onSnooze } = show()
-  fireEvent.click(screen.getByRole('button', { name: 'Snooze Fix flaky test' }))
+  const button = screen.getByRole('button', { name: 'Snooze Fix flaky test' })
+  expect(button.querySelector('svg')).not.toBeNull()
+  expect(button.textContent).not.toContain('💤')
+  fireEvent.click(button)
   expect(onSnooze).toHaveBeenCalledOnce()
   expect(onSnooze.mock.calls[0][0]).toMatchObject({ iid: 2 })
   expect(onOpen).not.toHaveBeenCalled()
@@ -372,7 +383,7 @@ test('Mute repository asks the app to mute that repository', async () => {
 test('the footer counts snoozed MRs and muted repositories together', async () => {
   await fake.store.set({ mutedGroups: { 'repo:h:g/x': 'g/x' } })
   show()
-  expect(await screen.findByRole('link', { name: 'Snoozed (1)' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: 'Snoozed (1)' })).toBeInTheDocument()
 })
 
 test('a project header refuses a link dragged from another page, and a dropped file never leaves the app', async () => {
@@ -399,4 +410,17 @@ test('the refresh button sits in the header, and Sort sits above the tabs', () =
   const sort = screen.getByRole('combobox', { name: /^Sort/ })
   const tabs = screen.getByRole('tablist', { name: 'Whose MRs' })
   expect(sort.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+test('in the snoozed view, a snoozed row offers Unsnooze and nothing snoozed says so', () => {
+  const snoozed = rowsOf(MRS).map((row) => (row.iid === 2 ? { ...row, snoozed: true } : row))
+  const { onSnooze } = show(snoozed.filter((row) => row.snoozed), null, 'snoozed')
+  fireEvent.click(screen.getByRole('button', { name: 'Unsnooze Fix flaky test' }))
+  expect(onSnooze).toHaveBeenCalledOnce()
+  expect(screen.getByRole('button', { name: /^Active \(\d+\)$/ })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('an empty snoozed view says Nothing snoozed.', () => {
+  show([], null, 'snoozed')
+  expect(screen.getByText('Nothing snoozed.')).toBeInTheDocument()
 })

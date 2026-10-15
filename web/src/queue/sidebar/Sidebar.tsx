@@ -10,7 +10,9 @@ import {
   SORT_LABELS,
   TAB_LABELS,
   TABS,
+  filterRows,
   type RowGroup,
+  type SidebarView,
   type SortBy,
 } from '../order'
 import { ProjectDialog } from '../ProjectDialog'
@@ -38,6 +40,11 @@ export interface SidebarProps {
   onSnoozeRow: (row: QueueRow) => void
   /** ⋮ → Mute repository on a repository's group. */
   onMuteGroup: (group: RowGroup) => void
+  /** ⋮ → Unmute on a muted repository's group (snoozed view). */
+  onUnmuteGroup: (id: string) => void
+  /** Which list the sidebar shows, and the footer's toggle between them. */
+  view: SidebarView
+  onToggleView: () => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
   onSearchFocused: () => void
@@ -63,6 +70,9 @@ export function Sidebar({
   onOpenRow,
   onSnoozeRow,
   onMuteGroup,
+  onUnmuteGroup,
+  view,
+  onToggleView,
   searchFocus,
   onSearchFocused,
   onSearchDone,
@@ -93,6 +103,8 @@ export function Sidebar({
   const hiddenDone = live.filter((row) => row.attention === 'done').length
   const folded = rows.filter((row) => row.folded).length
   const snoozed = rows.filter((row) => row.snoozed && !row.folded).length
+  // What the Active list would hold, both tabs, without a search.
+  const activeCount = filterRows(rows, list.filters, '').length
 
   // A project's rename is the project's own; a repository's is a display name in this browser.
   const renameGroup = (group: RowGroup, value: string): boolean => {
@@ -121,7 +133,9 @@ export function Sidebar({
         onDropRow={(key) => setProjects(moveRow(projects, key, group.projectId))}
         onDropGroup={(id, place) => list.moveGroup(id, group.id, place)}
         onRename={(value) => renameGroup(group, value)}
-        onMute={group.repo ? () => onMuteGroup(group) : undefined}
+        onMute={
+          group.repo ? () => (group.muted ? onUnmuteGroup(group.id) : onMuteGroup(group)) : undefined
+        }
         onMove={(delta) => list.shiftGroup(group.id, delta)}
         canUp={index > 0}
         canDown={index < list.groups.length - 1}
@@ -134,10 +148,13 @@ export function Sidebar({
             current={row.key === openKey}
             onOpen={() => onOpenRow(row)}
             onSnooze={() => onSnoozeRow(row)}
+            action={view === 'snoozed' ? (row.snoozed ? 'unsnooze' : null) : 'snooze'}
           />
         ))}
       </MrGroup>
     ))
+  } else if (view === 'snoozed' && !list.narrowed) {
+    body = <p className="sb-empty">Nothing snoozed.</p>
   } else if (list.narrowed) {
     body = (
       <p className="sb-empty">
@@ -270,7 +287,16 @@ export function Sidebar({
           </p>
         ) : null}
         <nav aria-label="More">
-          <a href="#/snoozed">Snoozed ({snoozed + Object.keys(muted).length})</a>
+          <button
+            type="button"
+            className="sb-view-toggle"
+            aria-pressed={view === 'snoozed'}
+            onClick={onToggleView}
+          >
+            {view === 'snoozed'
+              ? `Active (${activeCount})`
+              : `Snoozed (${snoozed + Object.keys(muted).length})`}
+          </button>
           <a href="#/settings">Settings</a>
           <button
             type="button"

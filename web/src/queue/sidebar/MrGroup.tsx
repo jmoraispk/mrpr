@@ -34,7 +34,7 @@ export function MrGroup({
   onDropGroup: (id: string, place: Place) => void
   /** Save a name; false keeps the field open (a project's name cannot be empty). */
   onRename: (name: string) => boolean
-  /** Only a repository's group can be muted. */
+  /** Only a repository's group can be muted; on a muted one (group.muted) this unmutes. */
   onMute?: () => void
   onMove: (delta: -1 | 1) => void
   canUp: boolean
@@ -122,6 +122,7 @@ export function MrGroup({
             </span>
             {group.color ? <span className="q-dot" style={{ background: group.color }} /> : null}
             <span className="sb-group-name">{group.name}</span>
+            {group.muted ? <span className="sb-muted-label">muted</span> : null}
             <span className="sb-count">
               {group.needsYou} / {group.rows.length}
             </span>
@@ -130,6 +131,7 @@ export function MrGroup({
         <GroupMenu
           name={group.name}
           canMute={Boolean(onMute)}
+          muted={Boolean(group.muted)}
           canUp={canUp}
           canDown={canDown}
           onRename={() => {

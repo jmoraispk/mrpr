@@ -10,6 +10,7 @@ export function MrRow({
   current,
   onOpen,
   onSnooze,
+  action = 'snooze',
 }: {
   row: QueueRow
   selected: boolean
@@ -17,6 +18,8 @@ export function MrRow({
   current: boolean
   onOpen: () => void
   onSnooze: () => void
+  /** The row's button: snooze it, unsnooze it (snoozed view), or none. */
+  action?: 'snooze' | 'unsnooze' | null
 }) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -42,19 +45,35 @@ export function MrRow({
           {unread ? <span className="sb-unread" aria-label="Unread" /> : null}
           <span className="sb-title-text">{row.title}</span>
         </h3>
-        <button
-          type="button"
-          className="sb-snooze"
-          aria-label={`Snooze ${row.title}`}
-          title="Snooze until it changes"
-          onClick={(event) => {
-            // The row opens on click; this button never does.
-            event.stopPropagation()
-            onSnooze()
-          }}
-        >
-          💤
-        </button>
+        {action ? (
+          <button
+            type="button"
+            className="sb-snooze"
+            aria-label={`${action === 'unsnooze' ? 'Unsnooze' : 'Snooze'} ${row.title}`}
+            title={action === 'unsnooze' ? 'Unsnooze' : 'Snooze until it changes'}
+            onClick={(event) => {
+              // The row opens on click; this button never does.
+              event.stopPropagation()
+              onSnooze()
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 7h5l-5 6h5" />
+              <path d="M9 2h5l-5 6h5" />
+              {action === 'unsnooze' ? <path d="M1.5 14.5 14.5 1.5" /> : null}
+            </svg>
+          </button>
+        ) : null}
       </div>
       <p className="sb-meta">
         !{row.iid}

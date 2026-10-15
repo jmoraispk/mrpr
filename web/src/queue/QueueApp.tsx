@@ -8,10 +8,11 @@ import { useUnreadTitle } from '../hub/useInbox'
 import { ACTIVE_POLL_MAX_AGE_MS } from '../inbox/types'
 import { platform } from '../platform/platform'
 import type { ReviewTarget } from '../transport/types'
-import { useMutedGroups, withoutMuted } from './groups'
+import { snoozedRows, useMutedGroups, withoutMuted } from './groups'
 import { KeyHelp } from './KeyHelp'
 import { useSidebar } from './listSettings'
 import { lookKeyFor, type QueueRow } from './model'
+import type { SidebarView } from './order'
 import { MrHeader, type HeaderRequest } from './mr/MrHeader'
 import { MrOverviewView } from './mr/MrOverview'
 import { MrPanel } from './mr/MrPanel'
@@ -23,7 +24,6 @@ import { focusNoteOf, markRowRead } from './readState'
 import { parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
 import { Sidebar } from './sidebar/Sidebar'
 import { useSidebarList } from './sidebar/useSidebarList'
-import { SnoozedPage } from './SnoozedPage'
 import { useProjects } from './state'
 import { useQueue } from './useQueue'
 import { useQueueKeys } from './useQueueKeys'
@@ -60,7 +60,18 @@ export function QueueApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [users],
   )
-  const list = useSidebarList(rows, projects, isMine)
+  // The sidebar shows the active list or what you snoozed and muted; old #/snoozed links open the latter.
+  const [view, setView] = useState<SidebarView>('active')
+  const listRows = useMemo(
+    () => (view === 'snoozed' ? snoozedRows(queue.rows, muted, projects) : rows),
+    [view, queue.rows, muted, projects, rows],
+  )
+  const list = useSidebarList(listRows, projects, isMine, view, muted)
+  useEffect(() => {
+    if (route.name !== 'snoozed') return
+    setView('snoozed')
+    window.location.hash = '#/'
+  }, [route.name])
   const [sidebar, setSidebar] = useSidebar()
   // While dragging, the width follows the pointer; it is saved on release.
   const [dragWidth, setDragWidth] = useState<number | null>(null)
@@ -220,7 +231,7 @@ export function QueueApp() {
   return (
     <div
       className={`q-shell${showSidebar ? '' : ' is-sidebar-hidden'}${openTarget ? ' has-mr' : ''}${
-        route.name === 'settings' || route.name === 'snoozed' ? ' has-page' : ''
+        route.name === 'settings' ? ' has-page' : ''
       }`}
       style={{ ['--sidebar-width' as string]: `${width}px` }}
     >
@@ -235,6 +246,9 @@ export function QueueApp() {
           onOpenRow={(row) => open(row)}
           onSnoozeRow={actions.snooze}
           onMuteGroup={(group) => actions.mute({ id: group.id, name: group.repo ?? group.name })}
+          onUnmuteGroup={actions.unmute}
+          view={view}
+          onToggleView={() => setView(view === 'snoozed' ? 'active' : 'snoozed')}
           searchFocus={searchFocus}
           onSearchFocused={() => setSearchFocus(0)}
           width={width}
@@ -282,13 +296,6 @@ export function QueueApp() {
             <Settings />
             <ProjectsSettings />
           </>
-        ) : route.name === 'snoozed' ? (
-          <SnoozedPage
-            rows={queue.rows}
-            onUnsnooze={actions.snooze}
-            muted={actions.muted}
-            onUnmute={actions.unmute}
-          />
         ) : route.name === 'review' ? (
           <MrPanel
             key={openKey}
