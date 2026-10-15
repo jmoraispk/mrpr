@@ -122,12 +122,14 @@ export function ActivityList({
                       {first?.author?.name}: {first?.body.split('\n')[0].slice(0, 120)}
                     </summary>
                     <DiscussionThread
+                      variant="chat"
                       discussion={toThreadDiscussion(item.discussion)}
                       onChanged={refresh}
                     />
                   </details>
                 ) : (
                   <DiscussionThread
+                    variant="chat"
                     discussion={toThreadDiscussion(item.discussion)}
                     onChanged={refresh}
                   />

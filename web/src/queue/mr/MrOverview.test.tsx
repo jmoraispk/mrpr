@@ -326,3 +326,33 @@ test('the MR page has no ⚙ Show: what Activity shows is set under Filters in t
   show()
   expect(screen.queryByRole('button', { name: /Show$/ })).toBeNull()
 })
+
+test('Activity threads read like a chat: the opener on the left, everyone else on the right', () => {
+  show({
+    overview: overview({
+      discussions: [
+        {
+          id: 'chat',
+          resolvable: true,
+          resolved: false,
+          notes: [
+            note(301, 'li', 'Why does this retry forever?', '2026-10-11T08:00:00Z'),
+            note(302, 'joao', 'It stops after the budget.', '2026-10-11T08:30:00Z'),
+            note(303, 'li', 'Then say so in the docstring.', '2026-10-11T09:00:00Z'),
+          ],
+        },
+      ],
+    }),
+  })
+  const thread = document.querySelector('[data-discussion-id="chat"]') as HTMLElement
+  expect(thread).toHaveClass('is-chat')
+  const sides = [...thread.querySelectorAll('.chat-note')].map((el) =>
+    el.classList.contains('is-reply') ? 'right' : 'left',
+  )
+  expect(sides).toEqual(['left', 'right', 'left'])
+  const names = [...thread.querySelectorAll('.chat-meta strong')].map((el) => el.textContent)
+  expect(names).toEqual(['LI', 'JOAO', 'LI'])
+  expect(thread.querySelector('.chat-meta time')).toHaveAttribute('dateTime', '2026-10-11T08:00:00Z')
+  // Reply and Resolve stay below the bubbles.
+  expect(within(thread).getByRole('textbox', { name: 'Reply' })).toBeInTheDocument()
+})

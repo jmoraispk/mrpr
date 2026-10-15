@@ -95,3 +95,18 @@
 }
 /* The panel's header already names the MR. */
 .app-shell.is-embedded .heading-copy { display: none; }
+
+/* Activity threads as a chat: the opener on the left, replies on the right. */
+.mr-thread .discussion-thread.is-chat .thread-notes { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; }
+.chat-note { display: flex; gap: 8px; align-items: flex-start; max-width: 80%; }
+.chat-note.is-reply { flex-direction: row-reverse; align-self: flex-end; }
+.chat-body { min-width: 0; }
+.chat-meta { margin: 0 0 3px; color: var(--muted); font-size: 12px; }
+.chat-meta strong { color: var(--ink); font-weight: 600; }
+.chat-note.is-reply .chat-meta { text-align: right; }
+.chat-bubble { padding: 8px 12px; border: 1px solid var(--line-3); border-radius: 12px; background: var(--surface-2); color: var(--ink); overflow-wrap: anywhere; }
+.chat-note.is-opener .chat-bubble { border-top-left-radius: 4px; }
+.chat-note.is-reply .chat-bubble { border-color: color-mix(in srgb, var(--accent) 22%, var(--line-3)); border-top-right-radius: 4px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.chat-bubble > :first-child { margin-top: 0; }
+.chat-bubble > :last-child { margin-bottom: 0; }
+.chat-bubble pre { max-width: 100%; overflow-x: auto; }

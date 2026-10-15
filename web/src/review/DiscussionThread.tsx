@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm'
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { Discussion, DiscussionNote } from '../api/types'
+import { shortTime } from '../hub/relativeTime'
 import { useTransport } from '../transport/context'
 import { discussionsQueryKey } from './discussionCache'
 import { ReviewerMark } from './ReviewerMark'
@@ -18,6 +19,8 @@ interface DiscussionThreadProps {
   rangeLabel?: string
   /** Called after a reply or resolve settles, for views that show the thread from other data. */
   onChanged?: () => void
+  /** 'chat': bubbles, the opener left and everyone else right (the MR page's Activity). */
+  variant?: 'default' | 'chat'
 }
 
 function updateCachedDiscussion(
@@ -34,7 +37,9 @@ export function DiscussionThread({
   discussion,
   rangeLabel,
   onChanged,
+  variant = 'default',
 }: DiscussionThreadProps) {
+  const chat = variant === 'chat'
   const queryClient = useQueryClient()
   const transport = useTransport()
   const queryKey = discussionsQueryKey(transport.targetKey)
@@ -129,16 +134,19 @@ export function DiscussionThread({
     if (body && !reply.isPending) reply.mutate(body)
   }
 
+  const opener = current.notes[0]?.author?.username
   return (
     <article
-      className="discussion-thread"
+      className={`discussion-thread${chat ? ' is-chat' : ''}`}
       data-discussion-id={current.id}
       tabIndex={-1}
     >
       <header className="thread-heading">
-        <span className="thread-author">
-          {current.notes[0]?.author?.name ?? 'GitLab reviewer'}
-        </span>
+        {chat ? null : (
+          <span className="thread-author">
+            {current.notes[0]?.author?.name ?? 'GitLab reviewer'}
+          </span>
+        )}
         {rangeLabel ? (
           <span className="discussion-range-label">{rangeLabel}</span>
         ) : null}
@@ -152,24 +160,56 @@ export function DiscussionThread({
       </header>
 
       <div className="thread-notes">
-        {current.notes.map((note) => (
-          <div className="thread-note" key={note.id}>
-            <ReviewerMark author={note.author} />
-            <div>
-              {note !== current.notes[0] ? (
-                <strong>{note.author?.name ?? 'Reviewer'}</strong>
-              ) : null}
-              <div className="note-markdown">
-                <ReactMarkdown
-                  remarkPlugins={remarkPlugins}
-                  rehypePlugins={rehypePlugins}
-                >
-                  {note.body}
-                </ReactMarkdown>
+        {current.notes.map((note) =>
+          chat ? (
+            <div
+              className={`thread-note chat-note ${
+                note.author?.username === opener ? 'is-opener' : 'is-reply'
+              }`}
+              key={note.id}
+            >
+              <ReviewerMark author={note.author} />
+              <div className="chat-body">
+                <p className="chat-meta">
+                  <strong>{note.author?.name ?? 'Reviewer'}</strong>
+                  {note.created_at ? (
+                    <>
+                      {' · '}
+                      <time dateTime={note.created_at}>
+                        {shortTime(note.created_at)}
+                      </time>
+                    </>
+                  ) : null}
+                </p>
+                <div className="note-markdown chat-bubble">
+                  <ReactMarkdown
+                    remarkPlugins={remarkPlugins}
+                    rehypePlugins={rehypePlugins}
+                  >
+                    {note.body}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ) : (
+            <div className="thread-note" key={note.id}>
+              <ReviewerMark author={note.author} />
+              <div>
+                {note !== current.notes[0] ? (
+                  <strong>{note.author?.name ?? 'Reviewer'}</strong>
+                ) : null}
+                <div className="note-markdown">
+                  <ReactMarkdown
+                    remarkPlugins={remarkPlugins}
+                    rehypePlugins={rehypePlugins}
+                  >
+                    {note.body}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          ),
+        )}
       </div>
 
       <form className="reply-form" onSubmit={submitReply}>
