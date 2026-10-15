@@ -784,3 +784,11 @@ test('a reply survives leaving the MR and coming back at once', async () => {
   const back = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
   expect(await within(back).findByText('Only on success')).toBeInTheDocument()
 })
+
+test('an old Snoozed link replaces itself, so Back does not bring it back', async () => {
+  window.location.hash = '#/snoozed'
+  const before = history.length
+  renderApp()
+  await waitFor(() => expect(window.location.hash).toBe('#/'))
+  expect(history.length).toBe(before)
+})

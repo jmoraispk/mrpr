@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import type { MrOverview, OverviewNote } from '../../gitlab/mrOverview'
-import { installPlatform } from '../../platform/platform'
+import { installPlatform, platform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { TransportProvider } from '../../transport/context'
 import type { DeltaTransport } from '../../transport/types'
@@ -470,4 +470,26 @@ test('coming back to Overview re-reads the MR if a reply marked it stale', () =>
     </QueryClientProvider>,
   )
   expect(refetch).toHaveBeenCalledWith({ queryKey: ['overview', 'gitlab.example.com/g/p/1'], stale: true })
+})
+
+test('a resolved inline thread folded to one line shows no code and asks for none', async () => {
+  await platform().store.set({ activityFilters: { defaults: { unresolved: true, resolved: true, commits: true, bots: false, other: false }, perMr: {} } })
+  ;(transport.getDiffsBetween as ReturnType<typeof vi.fn>).mockClear()
+  show({
+    overview: overview({
+      discussions: [
+        {
+          id: 'done', resolvable: true, resolved: true,
+          notes: [
+            note(403, 'li', 'Fixed now', '2026-10-11T08:00:00Z', {
+              position: { filePath: 'src/retry.py', newLine: 13, oldLine: null, baseSha: 'b1', headSha: 'h1' },
+            }),
+          ],
+        },
+      ],
+    }),
+  })
+  await screen.findByText(/LI: Fixed now/)
+  expect(document.querySelector('.mr-snippet')).toBeNull()
+  expect(transport.getDiffsBetween).not.toHaveBeenCalled()
 })

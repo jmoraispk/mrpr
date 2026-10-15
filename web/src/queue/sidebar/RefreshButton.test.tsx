@@ -33,7 +33,11 @@ test('just refreshed reads now; while refreshing it waits and cannot be pressed 
   rerender(<RefreshButton updatedAt={Date.now()} refreshing onRefresh={onRefresh} />)
   const busy = screen.getByRole('button', { name: 'Refreshing' })
   expect(busy).toHaveTextContent('↻ …')
-  expect(busy).toBeDisabled()
+  // Not disabled: keyboard focus stays on it through the minute's refresh.
+  expect(busy).not.toBeDisabled()
+  expect(busy).toHaveAttribute('aria-disabled', 'true')
+  fireEvent.click(busy)
+  expect(onRefresh).not.toHaveBeenCalled()
   // A refresh that lands a moment "in the future" by the local clock is still now.
   rerender(<RefreshButton updatedAt={Date.now() + 5000} refreshing={false} onRefresh={onRefresh} />)
   expect(screen.getByRole('button', { name: 'Refresh, updated just now' })).toBeInTheDocument()

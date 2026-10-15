@@ -120,7 +120,10 @@ export function ActivityList({
                   {item.category === 'resolved' ? ' · resolved' : ''}
                   {item.you ? <strong className="mr-you"> · {YOU_TAGS[item.you]}</strong> : null}
                 </p>
-                {first?.position ? <CodeSnippet position={first.position} /> : null}
+                {first?.position && !(item.category === 'resolved' && !expanded.has(item.discussion.id)) ? (
+                  // A resolved thread folded to one line shows (and fetches) no code.
+                  <CodeSnippet position={first.position} />
+                ) : null}
                 {item.category === 'resolved' && !expanded.has(item.discussion.id) ? (
                   // A shown resolved thread takes one line until opened.
                   <details className="mr-resolved">

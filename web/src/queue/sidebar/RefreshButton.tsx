@@ -32,8 +32,11 @@ export function RefreshButton({
       className="sb-refresh"
       aria-label={label}
       title={label}
-      disabled={refreshing}
-      onClick={onRefresh}
+      // aria-disabled, not disabled: a focused button keeps focus through the minute's refresh.
+      aria-disabled={refreshing}
+      onClick={() => {
+        if (!refreshing) onRefresh()
+      }}
     >
       ↻ {refreshing ? '…' : age}
     </button>

@@ -80,7 +80,8 @@ export function QueueApp() {
   useEffect(() => {
     if (route.name !== 'snoozed') return
     setView('snoozed')
-    window.location.hash = '#/'
+    // Replace the old link's entry, so Back does not land on it again.
+    window.location.replace('#/')
   }, [route.name])
   const [sidebar, setSidebar] = useSidebar()
   // While dragging, the width follows the pointer; it is saved on release.
