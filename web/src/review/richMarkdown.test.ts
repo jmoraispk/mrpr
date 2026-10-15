@@ -58,3 +58,21 @@ test('paragraphs, line breaks, lists (nested), and code blocks', () => {
   expect(toMarkdown(doc(p()))).toBe('')
   expect(toMarkdown(doc(p(t('x')), p()))).toBe('x')
 })
+
+test('spaces at the edge of a format go outside its markers, so it still renders', () => {
+  expect(toMarkdown(doc(p(t('a '), t('bold ', 'bold'), t('b'))))).toBe('a **bold** b')
+  expect(toMarkdown(doc(p(t('a'), t(' it', 'italic'))))).toBe('a _it_')
+  expect(toMarkdown(doc(p(t('a'), t(' ', 'bold', 'strike'), t('b'))))).toBe('a b')
+  // Code keeps its spaces: they are part of the code.
+  expect(toMarkdown(doc(p(t('x '), t(' y ', 'code'))))).toBe('x ` y `')
+})
+
+test('a code block keeps its language and fences code that holds a fence', () => {
+  const block = (text: string, language?: string) => ({
+    type: 'codeBlock',
+    attrs: language ? { language } : {},
+    content: [{ type: 'text', text }],
+  })
+  expect(toMarkdown(doc(block('x = 1', 'suggestion')))).toBe('```suggestion\nx = 1\n```')
+  expect(toMarkdown(doc(block('```\ninner\n```')))).toBe('````\n```\ninner\n```\n````')
+})

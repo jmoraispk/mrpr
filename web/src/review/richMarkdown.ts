@@ -29,8 +29,13 @@ function block(node: JSONContent): string {
     case 'bulletList':
     case 'orderedList':
       return list(node)
-    case 'codeBlock':
-      return `\`\`\`\n${text(node)}\n\`\`\``
+    case 'codeBlock': {
+      const code = text(node)
+      // One backtick longer than any run inside, so a fence in the code stays code.
+      const longest = Math.max(0, ...(code.match(/`+/g) ?? []).map((run) => run.length))
+      const fence = '`'.repeat(Math.max(3, longest + 1))
+      return `${fence}${String(node.attrs?.language ?? '')}\n${code}\n${fence}`
+    }
     default:
       return escapeText(text(node), true)
   }
@@ -94,7 +99,17 @@ function inline(nodes: JSONContent[]): string {
   return out
 }
 
-function wrap({ text: value, marks }: Run, atLineStart: boolean): string {
+function wrap(run: Run, atLineStart: boolean): string {
+  if (run.marks.length === 0 || run.marks.some((mark) => mark.type === 'code')) {
+    return markup(run, atLineStart)
+  }
+  // "**bold **" is not bold in Markdown: spaces at the edges go outside the markers.
+  const [, before, core, after] = /^(\s*)([\s\S]*?)(\s*)$/.exec(run.text)!
+  if (!core) return run.text
+  return before + markup({ text: core, marks: run.marks }, atLineStart && !before) + after
+}
+
+function markup({ text: value, marks }: Run, atLineStart: boolean): string {
   const has = (type: string) => marks.some((mark) => mark.type === type)
   let out: string
   if (has('code')) {
