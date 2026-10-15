@@ -1,4 +1,4 @@
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 
 import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
@@ -86,11 +86,18 @@ export function useQueue() {
     () => (filters.allMrs ? reposToList(base, muted) : {}),
     [filters.allMrs, base, muted],
   )
-  const repoKey = JSON.stringify(repos)
+  // The set, not its order: repositories trade places as their MRs update.
+  const repoKey = JSON.stringify(
+    Object.entries(repos)
+      .map(([hostId, list]) => [hostId, [...list].sort()] as const)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  )
   const extra = useQuery({
     queryKey: [...QUEUE_QUERY_KEY, 'repos', repoKey],
     queryFn: () => hubRequest<Record<string, QueueMr[]>>('listRepoMrs', { repos }),
-    enabled: filters.allMrs && repoKey !== '{}',
+    enabled: filters.allMrs && repoKey !== '[]',
+    // A changed set keeps showing the last answer until the new one arrives.
+    placeholderData: keepPreviousData,
     refetchInterval: 60_000,
     staleTime: 30_000,
   })

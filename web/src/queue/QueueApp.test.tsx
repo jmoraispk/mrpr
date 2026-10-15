@@ -80,12 +80,15 @@ const mention = (discussionId = 'd'): InboxItem => ({
 let hosts: QueueHost[]
 let items: InboxItem[] = []
 let repoMrs: QueueMr[] = []
+/** When set, All MRs answers only once it resolves. */
+let repoGate: Promise<void> | null = null
 let fake: ReturnType<typeof createFakePlatform>
 
 beforeEach(() => {
   window.location.hash = ''
   items = []
   repoMrs = []
+  repoGate = null
   Object.values(transport).forEach((fn) => fn.mockClear())
   transport.getOverview.mockReset().mockImplementation(async (target: { iid: number }) =>
     overview(hosts[0].mrs.find((value) => value.iid === target.iid)?.title ?? 'An MR'),
@@ -119,7 +122,10 @@ beforeEach(() => {
       if (message.kind !== 'delta/hub') return { ok: true, data: null }
       // A fresh copy, as a real hub sends: tests change `hosts` in place.
       if (message.op === 'listQueue') return { ok: true, data: structuredClone(hosts) }
-      if (message.op === 'listRepoMrs') return { ok: true, data: { [H]: structuredClone(repoMrs) } }
+      if (message.op === 'listRepoMrs') {
+        if (repoGate) await repoGate
+        return { ok: true, data: { [H]: structuredClone(repoMrs) } }
+      }
       if (message.op === 'listInbox') {
         return { ok: true, data: { hosts: [], items, unread: items.length } }
       }
@@ -816,4 +822,33 @@ test('All MRs adds the other open MRs of your repositories once, and only while 
   expect(rowNamed('Someone else’s change')).not.toHaveClass('is-needs-you')
   await user.click(screen.getByRole('checkbox', { name: 'All MRs' }))
   await waitFor(() => expect(screen.queryByText('Someone else’s change')).toBeNull())
+})
+
+test('All MRs rows stay put while the list is read again, even when the repositories change order', async () => {
+  const user = userEvent.setup()
+  hosts[0].mrs[1] = mr(2, { title: 'Fix flaky test', project: 'g/web', updatedAt: '2026-10-11T08:00:00Z' })
+  repoMrs = [
+    mr(7, {
+      title: 'Someone else’s change',
+      roles: [],
+      reviewers: [],
+      author: { username: 'li', name: 'Li', avatarUrl: null, bot: false },
+    }),
+  ]
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('button', { name: /^Filters/ }))
+  await user.click(screen.getByRole('checkbox', { name: 'All MRs' }))
+  expect(await screen.findByText('Someone else’s change')).toBeInTheDocument()
+
+  // g/web is now the most recently updated repository, and the next read is slow.
+  let open = () => {}
+  repoGate = new Promise((resolve) => (open = resolve))
+  hosts[0].mrs[1] = { ...hosts[0].mrs[1], updatedAt: '2026-10-12T08:00:00Z' }
+  await user.click(screen.getByRole('button', { name: /^Refresh/ }))
+  await waitFor(() =>
+    expect(fake.sent.filter((message: { op?: string }) => message.op === 'listRepoMrs').length).toBeGreaterThan(1),
+  )
+  expect(screen.getByText('Someone else’s change')).toBeInTheDocument()
+  open()
 })

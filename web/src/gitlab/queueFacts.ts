@@ -145,23 +145,50 @@ export async function fetchQueueMrs(
 }
 
 const REPO_BATCH = 2
+/** Requests in flight at once. */
+const REPO_PARALLEL = 3
 
 /**
  * Every open MR (up to 50 each, newest first) of these repositories, for All
  * MRs. Two repositories per request keeps each under GitLab's complexity
- * limit; the paths go as variables. Roles are empty: nobody asked you.
+ * limit; the paths go as variables. Roles are empty: nobody asked you. A
+ * request that fails (a repository gone or forbidden) costs only its own MRs.
  */
 export async function fetchRepoMrs(
   client: GitLabClient,
   projects: string[],
   signal?: AbortSignal,
 ): Promise<QueueMr[]> {
-  const out: QueueMr[] = []
+  const batches: string[][] = []
   for (let start = 0; start < projects.length; start += REPO_BATCH) {
-    const chunk = projects.slice(start, start + REPO_BATCH)
-    const variables = Object.fromEntries(chunk.map((path, index) => [`p${start + index}`, path]))
-    const names = Object.keys(variables)
-    const query = `query RepoMrs(${names.map((name) => `$${name}: ID!`).join(', ')}) {
+    batches.push(projects.slice(start, start + REPO_BATCH))
+  }
+  const results: QueueMr[][] = []
+  for (let start = 0; start < batches.length; start += REPO_PARALLEL) {
+    const wave = batches.slice(start, start + REPO_PARALLEL)
+    results.push(
+      ...(await Promise.all(
+        wave.map((chunk, index) =>
+          fetchRepoBatch(client, chunk, (start + index) * REPO_BATCH, signal).catch((error: unknown) => {
+            if (signal?.aborted) throw error
+            return []
+          }),
+        ),
+      )),
+    )
+  }
+  return results.flat()
+}
+
+async function fetchRepoBatch(
+  client: GitLabClient,
+  chunk: string[],
+  first: number,
+  signal?: AbortSignal,
+): Promise<QueueMr[]> {
+  const variables = Object.fromEntries(chunk.map((path, index) => [`p${first + index}`, path]))
+  const names = Object.keys(variables)
+  const query = `query RepoMrs(${names.map((name) => `$${name}: ID!`).join(', ')}) {
 ${names
   .map(
     (name) =>
@@ -169,12 +196,10 @@ ${names
   )
   .join('\n')}
 }`
-    const data = await client.graphql<
-      Record<string, { mergeRequests: { nodes: RawMr[] } } | null>
-    >(query, variables, signal)
-    for (const name of names) {
-      for (const raw of data[name]?.mergeRequests.nodes ?? []) out.push(toQueueMr(raw))
-    }
-  }
-  return out
+  const data = await client.graphql<Record<string, { mergeRequests: { nodes: RawMr[] } } | null>>(
+    query,
+    variables,
+    signal,
+  )
+  return names.flatMap((name) => (data[name]?.mergeRequests.nodes ?? []).map(toQueueMr))
 }

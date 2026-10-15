@@ -109,6 +109,8 @@ export function createFakeGitLab() {
   const events: { noteableId: number; createdAt: string; type?: string }[] = []
   const calls: string[] = []
   const repoQueries: { query: string; variables: Record<string, string> }[] = []
+  /** Repositories whose All MRs request fails (as when one is gone or forbidden). */
+  const failingRepos = new Set<string>()
   const eventQueries: Record<string, string>[] = []
   const involvedQueries: string[] = []
   const watchedQueries: string[] = []
@@ -287,6 +289,9 @@ export function createFakeGitLab() {
     gitlab.query('RepoMrs', ({ query, variables }) => {
       calls.push('RepoMrs')
       repoQueries.push({ query, variables: variables as Record<string, string> })
+      if (Object.values(variables as Record<string, string>).some((path) => failingRepos.has(path))) {
+        return HttpResponse.json({ errors: [{ message: 'forbidden' }] }, { status: 500 })
+      }
       const data: Record<string, unknown> = {}
       for (const [alias, path] of Object.entries(variables as Record<string, string>)) {
         const open = [...mrs.values()].filter((mr) => mr.project === path && mr.state === 'opened')
@@ -377,6 +382,7 @@ export function createFakeGitLab() {
     involvedQueries,
     watchedQueries,
     repoQueries,
+    failingRepos,
     add(mr: FakeMergeRequest) {
       mrs.set(mr.id, mr)
       return mr

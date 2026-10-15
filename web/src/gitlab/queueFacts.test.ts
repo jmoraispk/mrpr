@@ -77,3 +77,15 @@ test('All MRs reads open MRs two repositories per request, with the paths as var
     [3, 'g/c', []],
   ])
 })
+
+test('All MRs keeps the repositories that answered when one request fails', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(1, { project: 'g/a' }))
+  gitlab.add(fakeMergeRequest(2, { project: 'g/b' }))
+  gitlab.add(fakeMergeRequest(3, { project: 'g/c' }))
+  gitlab.failingRepos.add('g/c')
+
+  const mrs = await fetchRepoMrs(new GitLabClient(API, 'secret'), ['g/a', 'g/b', 'g/c'])
+
+  expect(mrs.map((mr) => mr.id)).toEqual([1, 2])
+})
