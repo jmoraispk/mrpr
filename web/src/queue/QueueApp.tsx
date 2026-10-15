@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { MrOverview } from '../gitlab/mrOverview'
 import { hubRequest } from '../hub/api'
@@ -8,6 +8,7 @@ import { useUnreadTitle } from '../hub/useInbox'
 import { ACTIVE_POLL_MAX_AGE_MS } from '../inbox/types'
 import { platform } from '../platform/platform'
 import type { ReviewTarget } from '../transport/types'
+import { useMutedGroups, withoutMuted } from './groups'
 import { KeyHelp } from './KeyHelp'
 import { useSidebar } from './listSettings'
 import { lookKeyFor, type QueueRow } from './model'
@@ -48,6 +49,9 @@ export function QueueApp() {
   const route = useSiteRoute()
   const queue = useQueue()
   const [projects] = useProjects()
+  const [muted] = useMutedGroups()
+  // A muted repository is gone from the list and every count; its MRs still open from a link.
+  const rows = useMemo(() => withoutMuted(queue.rows, muted, projects), [queue.rows, muted, projects])
   // Who you are on each host: your MRs go under From me.
   const users = queue.hosts.map((host) => `${host.hostId}=${host.username}`).join('\n')
   const isMine = useCallback(
@@ -56,7 +60,7 @@ export function QueueApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [users],
   )
-  const list = useSidebarList(queue.rows, projects, isMine)
+  const list = useSidebarList(rows, projects, isMine)
   const [sidebar, setSidebar] = useSidebar()
   // While dragging, the width follows the pointer; it is saved on release.
   const [dragWidth, setDragWidth] = useState<number | null>(null)
@@ -68,7 +72,7 @@ export function QueueApp() {
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const actions = useRowActions()
   useUnreadTitle(
-    queue.rows.filter((row) => !row.snoozed && !row.folded && row.attention === 'needs-you').length,
+    rows.filter((row) => !row.snoozed && !row.folded && row.attention === 'needs-you').length,
   )
   // Opening the queue is a sign the user is looking; catch up if the last
   // poll is stale rather than waiting up to two minutes for the next.
@@ -95,7 +99,7 @@ export function QueueApp() {
   // selected row while the list shows it or it is the open MR; with nothing
   // selected and nothing open, the first row.
   const listed = new Set(list.flat.map((row) => row.key))
-  const selectedRow = selected ? (queue.rows.find((row) => row.key === selected) ?? null) : null
+  const selectedRow = selected ? (rows.find((row) => row.key === selected) ?? null) : null
   const current = !showSidebar
     ? openRow
     : selectedRow
@@ -221,7 +225,7 @@ export function QueueApp() {
     >
       {showSidebar ? (
         <Sidebar
-          rows={queue.rows}
+          rows={rows}
           list={list}
           loading={queue.isLoading}
           selectedKey={current?.key ?? null}

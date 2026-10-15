@@ -655,3 +655,15 @@ test('hiding the sidebar mid-drag drops the drag, and the saved width shows', as
   await screen.findByRole('separator', { name: 'Resize the sidebar' })
   expect((document.querySelector('.q-shell') as HTMLElement).style.getPropertyValue('--sidebar-width')).toBe('400px')
 })
+
+test('a muted repository leaves the list and every count, even with its MR open', async () => {
+  await fake.store.set({ mutedGroups: { [`repo:${H}:g/sdk`]: 'g/sdk' } })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  renderApp()
+  expect(await screen.findByRole('region', { name: 'Fix flaky test' })).toBeInTheDocument()
+  const side = sidebar()!
+  await waitFor(() => expect(within(side).getByText('0 need you')).toBeInTheDocument())
+  expect(within(side).queryByRole('article')).toBeNull()
+  fireEvent.keyDown(window, { key: 'j' })
+  expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2')
+})

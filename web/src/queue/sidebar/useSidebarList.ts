@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react'
 
+import {
+  arrangeGroups,
+  moveGroup as movedOrder,
+  shiftGroup as shiftedOrder,
+  useGroupNames,
+  useGroupOrder,
+} from '../groups'
 import { useCollapsedGroups, useListFilters, useListOrder, useSidebarTab } from '../listSettings'
 import type { QueueRow } from '../model'
 import {
@@ -28,6 +35,13 @@ export interface SidebarList {
   tab: SidebarTab
   setTab: (next: SidebarTab) => void
   counts: Record<SidebarTab, number>
+  /** Put a group above or below another; the order is kept in this browser. */
+  moveGroup: (id: string, target: string, place: 'before' | 'after') => void
+  /** Move a group up (-1) or down (1) one place. */
+  shiftGroup: (id: string, delta: -1 | 1) => void
+  /** Repository group id → its display name in this browser. */
+  names: Record<string, string>
+  setNames: (next: Record<string, string>) => void
   search: string
   setSearch: (next: string) => void
   /** Whether a search or a filter narrows the list. */
@@ -47,6 +61,8 @@ export function useSidebarList(
   const [collapsed, setCollapsed] = useCollapsedGroups()
   const [tab, setTab] = useSidebarTab()
   const [search, setSearch] = useState('')
+  const [groupOrder, setGroupOrder] = useGroupOrder()
+  const [names, setNames] = useGroupNames()
   const listed = useMemo(() => filterRows(rows, filters, search), [rows, filters, search])
   const counts = useMemo(() => {
     const mine = listed.filter(isMine).length
@@ -56,7 +72,11 @@ export function useSidebarList(
     () => listed.filter((row) => isMine(row) === (tab === 'mine')),
     [listed, isMine, tab],
   )
-  const groups = useMemo(() => groupRows(sortRows(inTab, order), projects), [inTab, order, projects])
+  const groups = useMemo(
+    () => arrangeGroups(groupRows(sortRows(inTab, order), projects), groupOrder, names),
+    [inTab, order, projects, groupOrder, names],
+  )
+  const listedIds = groups.map((group) => group.id)
   const flat = useMemo(
     () => groups.filter((group) => !collapsed.includes(group.id)).flatMap((group) => group.rows),
     [groups, collapsed],
@@ -71,6 +91,10 @@ export function useSidebarList(
     collapsed,
     toggleGroup: (id) =>
       setCollapsed(collapsed.includes(id) ? collapsed.filter((other) => other !== id) : [...collapsed, id]),
+    moveGroup: (id, target, place) => setGroupOrder(movedOrder(listedIds, groupOrder, id, target, place)),
+    shiftGroup: (id, delta) => setGroupOrder(shiftedOrder(listedIds, groupOrder, id, delta)),
+    names,
+    setNames,
     tab,
     setTab,
     counts,
