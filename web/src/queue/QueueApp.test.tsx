@@ -739,3 +739,48 @@ test('if anything scrolls the page itself, it snaps back to the top', async () =
   Object.defineProperty(root, 'scrollTop', { configurable: true, value: 0 })
   scrollTo.mockRestore()
 })
+
+test('a reply survives leaving the MR and coming back at once', async () => {
+  const user = userEvent.setup()
+  const thread = (replied: boolean) => ({
+    id: 'd1', resolvable: true, resolved: false,
+    notes: [
+      {
+        id: 55, body: 'Should the budget reset?', system: false, icon: null,
+        createdAt: '2026-10-11T09:00:00Z',
+        author: { username: 'li', name: 'Li', avatarUrl: null, bot: false }, position: null,
+      },
+      ...(replied
+        ? [{
+            id: 56, body: 'Only on success', system: false, icon: null,
+            createdAt: '2026-10-11T10:00:00Z',
+            author: { username: 'joao', name: 'Joao', avatarUrl: null, bot: false }, position: null,
+          }]
+        : []),
+    ],
+  })
+  let replied = false
+  transport.replyToDiscussion.mockImplementation(async () => {
+    replied = true
+    return { id: 56, body: 'Only on success', author: { name: 'Joao', username: 'joao' } }
+  })
+  transport.getOverview.mockImplementation(async (target: { iid: number }) => ({
+    ...overview(target.iid === 1 ? 'Retry budget for webhooks' : 'Fix flaky test'),
+    discussions: target.iid === 1 ? [thread(replied)] : [],
+  }))
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  const box = await waitFor(() => {
+    const found = document.querySelector('[data-discussion-id="d1"] textarea') as HTMLTextAreaElement
+    expect(found).not.toBeNull()
+    return found
+  })
+  await user.type(box, 'Only on success')
+  await user.click(within(box.closest('[data-discussion-id]') as HTMLElement).getByRole('button', { name: 'Reply' }))
+  await waitFor(() => expect(replied).toBe(true))
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  await screen.findByRole('region', { name: 'Fix flaky test' })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  const back = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  expect(await within(back).findByText('Only on success')).toBeInTheDocument()
+})

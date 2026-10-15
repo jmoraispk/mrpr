@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import type { MrOverview } from '../../gitlab/mrOverview'
@@ -37,6 +38,13 @@ export function MrOverviewView({
   /** Open at this note's thread, as a link to a comment does. */
   focusNoteId?: number | null
 }) {
+  // Back on Overview after a reply here (another tab, the same visit): the MR
+  // was marked stale, so read it again now.
+  const queryClient = useQueryClient()
+  const overviewKey = `${target.hostId}/${target.project}/${target.iid}`
+  useEffect(() => {
+    void queryClient.refetchQueries({ queryKey: ['overview', overviewKey], stale: true })
+  }, [queryClient, overviewKey])
   const settings = useActivityFilters(lookKeyFor(target.hostId, target.project, target.iid))
   const [reveal, setReveal] = useState(false)
   const [descriptionOpen, setDescriptionOpen] = useState(false)

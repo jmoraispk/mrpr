@@ -457,3 +457,17 @@ test('an inline thread whose line is gone keeps just its link', async () => {
   expect(within(thread).queryByRole('figure')).toBeNull()
   expect(within(thread).getByRole('link', { name: /src\/retry\.py · line 99/ })).toBeInTheDocument()
 })
+
+test('coming back to Overview re-reads the MR if a reply marked it stale', () => {
+  const client = new QueryClient()
+  const refetch = vi.spyOn(client, 'refetchQueries')
+  render(
+    <QueryClientProvider client={client}>
+      <TransportProvider transport={transport}>
+        <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
+          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  expect(refetch).toHaveBeenCalledWith({ queryKey: ['overview', 'gitlab.example.com/g/p/1'], stale: true })
+})

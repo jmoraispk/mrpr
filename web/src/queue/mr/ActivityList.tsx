@@ -52,11 +52,13 @@ export function ActivityList({
 }) {
   const queryClient = useQueryClient()
   // A reply or resolve shows in its own thread at once; only the list is read
-  // again, so the row's state follows. The MR page is not reloaded for it.
-  const refresh = useCallback(
-    () => void queryClient.invalidateQueries({ queryKey: QUEUE_QUERY_KEY }),
-    [queryClient],
-  )
+  // again now, so the row's state follows. The MR page is not reloaded for it,
+  // only marked stale: coming back to it reads it again, reply included.
+  const overviewKey = `${target.hostId}/${target.project}/${target.iid}`
+  const refresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: QUEUE_QUERY_KEY })
+    void queryClient.invalidateQueries({ queryKey: ['overview', overviewKey], refetchType: 'none' })
+  }, [queryClient, overviewKey])
   // A reply asked for from the header: focus that thread's reply box.
   useEffect(() => {
     if (!replyTo) return
