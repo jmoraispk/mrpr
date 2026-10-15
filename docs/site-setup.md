@@ -132,7 +132,9 @@ mentions and comments on it are folded into that row.
   addressed, Returned to you, Waiting on others, Quick win, Needs rebase)
   show in the MR's header.
 - **Sort:** Last changed (newest first), Age (oldest first) or Size
-  (smallest first); the ↑/↓ button beside it flips the direction.
+  (smallest first); the ↑/↓ button beside it flips the direction. Sort and
+  Filters sit above the tabs and apply to both. Times are short: `now`, `5m`,
+  `2d`, `1w`; hover one for the full date.
 - **Filters** (beside Sort) opens one panel: Needs me only, Hide drafts and
   Show done for the list, then what an MR's Activity shows (unresolved and
   resolved threads, new commits, bot comments, other activity). With an MR
@@ -146,8 +148,15 @@ mentions and comments on it are folded into that row.
   repository** hides a repository's MRs until you unmute it from the Snoozed
   page; MRs of it you put in a project stay there. Click a header to fold the
   group; folded groups stay folded.
-- Snoozed MRs and muted repositories are listed under "Snoozed (N)" at the
-  bottom, and bot MRs are only counted.
+- **Snoozed (N)** at the bottom flips the sidebar to what you snoozed and the
+  repositories you muted (marked "muted", with Unmute in their ⋮ menu); it
+  then reads **Active (N)** to flip back. The grey snooze button on a row
+  snoozes it (or, in the snoozed view, unsnoozes it). Bot MRs are only counted.
+- **Freshness:** the list is read again every minute, when you come back to
+  the tab, and right after anything you do; **↻ 1m** in the header says how
+  long ago, and a click reads it now. A reply or resolve updates only its own
+  thread. An MR you only heard about through a notification leaves once it is
+  merged or closed.
 - **One click** (or `Enter`) opens an MR on the right.
 - **Since last review:** opening or approving an MR remembers its head commit
   in this browser. Next time, `d` (or the "Since last review" tab) shows only
@@ -178,7 +187,8 @@ The MR opens on the right, beside the sidebar. `f` makes it full screen
   Activity: threads and events in time order, with a "New since last review"
   divider, threads involving you outlined, and a reply box on each thread.
   Threads read like a chat: whoever started the thread on the left, replies
-  on the right. What Activity shows is set under **Filters** in the sidebar;
+  on the right. An inline comment shows the lines it was made on, as they
+  were when it was written. What Activity shows is set under **Filters** in the sidebar;
   anything hidden is counted, with "Show them". On the right: reviewers, approvals,
   pipeline, labels, project and commits, and **Rebase** when GitLab says the
   branch needs it and you can push to it.

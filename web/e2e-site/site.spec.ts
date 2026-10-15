@@ -471,7 +471,7 @@ test('tabs, sort and filters stay as you left them after a reload', async ({ pag
   await expect(page.getByRole('checkbox', { name: 'Needs me only' })).toBeVisible()
 })
 
-test('drag a repository above another, mute it, and unmute it from the Snoozed page', async ({ page }) => {
+test('drag a repository above another, mute it, and unmute it from the snoozed view', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
   // The approved MR in g/r shows with Show done: two repositories under From others.
@@ -488,11 +488,12 @@ test('drag a repository above another, mute it, and unmute it from the Snoozed p
   await page.getByRole('menuitem', { name: 'Mute repository' }).click()
   await expect(page.getByRole('status')).toContainText(`Muted ${before[1]}`)
   await expect(heads).toHaveText([before[0]])
-  await page.getByRole('link', { name: 'Snoozed (1)' }).click()
-  const muted = page.getByRole('region', { name: 'Muted repositories' })
-  await expect(muted).toContainText(before[1])
-  await muted.getByRole('button', { name: 'Unmute' }).click()
-  await expect(muted).toBeHidden()
+  await page.getByRole('button', { name: 'Snoozed (1)' }).click()
+  const mutedGroup = page.getByRole('region', { name: before[1] })
+  await expect(mutedGroup.getByText('muted', { exact: true })).toBeVisible()
+  await mutedGroup.getByRole('button', { name: `Options for ${before[1]}` }).click()
+  await page.getByRole('menuitem', { name: 'Unmute' }).click()
+  await page.getByRole('button', { name: /^Active/ }).click()
   await expect(heads).toHaveCount(2)
 })
 
@@ -803,4 +804,15 @@ test('an inline comment shows the code it was made on', async ({ page }) => {
   const code = page.getByRole('figure', { name: 'src/budget.py, line 1' })
   await expect(code.locator('.is-target')).toContainText('2')
   expect(gitlab.compares).toContainEqual({ from: 'base-0', to: 'head-1', straight: 'false' })
+})
+
+test('snooze from the row, find it under Snoozed, and bring it back', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('button', { name: 'Snooze Retry budget for webhooks' }).click()
+  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Snoozed (1)' }).click()
+  await page.getByRole('button', { name: 'Unsnooze Retry budget for webhooks' }).click()
+  await page.getByRole('button', { name: /^Active/ }).click()
+  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toHaveCount(1)
 })
