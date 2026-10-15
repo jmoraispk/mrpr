@@ -101,7 +101,8 @@ export async function pollHost(input: PollHostInput): Promise<HostInbox> {
         : mr.roles,
       maxSeenNoteId: kept?.maxSeenNoteId ?? 0,
       trackedUntil: null,
-      state: 'opened',
+      // The open lists hold opened ones; a todo can point at a merged or closed one.
+      state: mr.state ?? 'opened',
     }
     if (!kept || kept.updatedAt !== mr.updatedAt) changed.add(mr.id)
   }

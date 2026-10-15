@@ -330,3 +330,17 @@ test('a mention whose todo lands after the next poll is still caught', async () 
 
   expect(kinds(third)).toEqual([['mention', 100]])
 })
+
+test('a merge request you only have a todo on stays known as merged, poll after poll', async () => {
+  const gitlab = createFakeGitLab()
+  const mr = gitlab.add(fakeMergeRequest(5))
+  gitlab.lists.todos.push(5)
+  const first = await poll(null)
+  mr.state = 'merged'
+  mr.updatedAt = after(1).toISOString()
+  const second = await poll(first, after(2))
+  expect(second.mrs['5'].state).toBe('merged')
+  // Nothing changed since: no activity read, and the todo list must not turn it back to opened.
+  const third = await poll(second, after(3))
+  expect(third.mrs['5'].state).toBe('merged')
+})

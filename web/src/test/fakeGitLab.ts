@@ -295,7 +295,9 @@ export function createFakeGitLab() {
           todos: {
             nodes: lists.todos.map((entry) => {
               const mr = entry === 'issue' ? undefined : mrs.get(entry)
-              return { target: mr ? mrFields(mr) : {} }
+              // Like GitLab: the state comes back only when the query asks for it.
+              const withState = /on MergeRequest \{[^{}]*\{[^{}]*\} state \}/.test(query)
+              return { target: mr ? { ...mrFields(mr), ...(withState ? { state: mr.state } : {}) } : {} }
             }),
           },
         },
