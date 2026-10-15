@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { toggleTag } from '../listSettings'
-import { todaysBudget, type QueueRow } from '../model'
-import { SORTS, SORT_LABELS, type ListFilters, type SortBy } from '../order'
+import type { QueueRow } from '../model'
+import { directionLabel, FIRST_DESCENDING, SORTS, SORT_LABELS, type ListFilters, type SortBy } from '../order'
 import { ProjectDialog } from '../ProjectDialog'
 import { moveRow } from '../projects'
 import { useProjects } from '../state'
@@ -10,7 +9,6 @@ import { useTheme } from '../theme'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
 import { SidebarResizer } from './SidebarResizer'
-import { TagBar } from './TagBar'
 import type { SidebarList } from './useSidebarList'
 
 export interface SidebarProps {
@@ -130,7 +128,6 @@ export function Sidebar({
         <p className="sb-need">
           {needsYou} need{needsYou === 1 ? 's' : ''} you
         </p>
-        <p className="sb-budget">~{todaysBudget(rows)} min today</p>
       </header>
       <div className="sb-controls">
         <input
@@ -166,24 +163,33 @@ export function Sidebar({
             </label>
           ))}
         </fieldset>
-        <label className="sb-sort">
-          Sort
-          <select
-            value={list.order.sortBy}
-            onChange={(event) => list.setOrder({ ...list.order, sortBy: event.target.value as SortBy })}
+        <div className="sb-sort-row">
+          <label className="sb-sort">
+            Sort
+            <select
+              value={list.order.sortBy}
+              onChange={(event) => {
+                const sortBy = event.target.value as SortBy
+                list.setOrder({ sortBy, descending: FIRST_DESCENDING[sortBy] })
+              }}
+            >
+              {SORTS.map((sort) => (
+                <option key={sort} value={sort}>
+                  {SORT_LABELS[sort]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="sb-direction"
+            aria-label={directionLabel(list.order)}
+            title={`${directionLabel(list.order)} · click to flip`}
+            onClick={() => list.setOrder({ ...list.order, descending: !list.order.descending })}
           >
-            {SORTS.map((sort) => (
-              <option key={sort} value={sort}>
-                {SORT_LABELS[sort]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <TagBar
-          chips={list.chips}
-          onToggle={(kind) => list.setOrder(toggleTag(list.order, kind))}
-          onClear={() => list.setOrder({ ...list.order, tags: [] })}
-        />
+            {list.order.descending ? '↓' : '↑'}
+          </button>
+        </div>
       </div>
       <div className="sb-groups">{body}</div>
       <footer className="sb-foot">

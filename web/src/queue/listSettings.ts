@@ -1,13 +1,12 @@
 import { SORTS, type ListFilters, type ListOrder, type SortBy } from './order'
 import { useStored } from './state'
-import { TAG_PRIORITY, type TagKind } from './tags'
 
 export const DEFAULT_LIST_FILTERS: ListFilters = {
   needsMeOnly: false,
   hideDrafts: false,
   showDone: false,
 }
-export const DEFAULT_LIST_ORDER: ListOrder = { tags: [], sortBy: 'waiting' }
+export const DEFAULT_LIST_ORDER: ListOrder = { sortBy: 'changed', descending: true }
 const NONE: string[] = []
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -22,11 +21,10 @@ export function normalizeListFilters(stored: unknown): ListFilters {
 
 export function normalizeListOrder(stored: unknown): ListOrder {
   if (!isRecord(stored)) return DEFAULT_LIST_ORDER
-  const tags = Array.isArray(stored.tags)
-    ? [...new Set(stored.tags.filter((kind): kind is TagKind => TAG_PRIORITY.includes(kind as TagKind)))]
-    : []
-  const sortBy = SORTS.includes(stored.sortBy as SortBy) ? (stored.sortBy as SortBy) : 'waiting'
-  return { tags, sortBy }
+  if (!SORTS.includes(stored.sortBy as SortBy) || typeof stored.descending !== 'boolean') {
+    return DEFAULT_LIST_ORDER
+  }
+  return { sortBy: stored.sortBy as SortBy, descending: stored.descending }
 }
 
 /** The sidebar's width in pixels: dragged within these limits, saved in this browser. */
@@ -59,16 +57,6 @@ export function normalizeCollapsed(stored: unknown): string[] {
   return Array.isArray(stored)
     ? [...new Set(stored.filter((id): id is string => typeof id === 'string'))]
     : NONE
-}
-
-/** A tag clicked: added after the ones already chosen, or taken off. */
-export function toggleTag(order: ListOrder, kind: TagKind): ListOrder {
-  return {
-    ...order,
-    tags: order.tags.includes(kind)
-      ? order.tags.filter((chosen) => chosen !== kind)
-      : [...order.tags, kind],
-  }
 }
 
 export const useListFilters = () =>

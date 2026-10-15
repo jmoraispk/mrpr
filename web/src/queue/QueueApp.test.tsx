@@ -145,13 +145,12 @@ const rowNamed = (title: string) =>
   screen.getAllByRole('article').find((row) => row.textContent?.includes(title))!
 const selectedText = () => document.querySelector('.sb-row.is-selected')?.textContent ?? ''
 
-test('the sidebar says what needs you, today’s budget and the folded bot MRs', async () => {
+test('the sidebar says what needs you and the folded bot MRs', async () => {
   renderApp()
   await screen.findAllByRole('article')
   const side = sidebar()!
   expect(within(side).getByText('2 need you')).toBeInTheDocument()
-  // 130 lines ≈ 5 min, plus 5 lines ≈ 1 min.
-  expect(within(side).getByText('~6 min today')).toBeInTheDocument()
+  expect(within(side).queryByText(/min today/)).toBeNull()
   expect(within(side).getByText('1 bot MR folded away')).toBeInTheDocument()
 })
 

@@ -6,11 +6,9 @@ import {
   filterRows,
   groupRows,
   sortRows,
-  tagChips,
   type ListFilters,
   type ListOrder,
   type RowGroup,
-  type TagChip,
 } from '../order'
 import type { Project } from '../projects'
 
@@ -19,7 +17,6 @@ export interface SidebarList {
   groups: RowGroup[]
   /** The rows j and k walk: every listed row outside folded groups, in order. */
   flat: QueueRow[]
-  chips: TagChip[]
   filters: ListFilters
   setFilters: (next: ListFilters) => void
   order: ListOrder
@@ -45,11 +42,9 @@ export function useSidebarList(rows: QueueRow[], projects: Project[]): SidebarLi
     () => groups.filter((group) => !collapsed.includes(group.id)).flatMap((group) => group.rows),
     [groups, collapsed],
   )
-  const chips = useMemo(() => tagChips(listed, order.tags), [listed, order.tags])
   return {
     groups,
     flat,
-    chips,
     filters,
     setFilters,
     order,

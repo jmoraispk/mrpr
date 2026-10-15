@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 
 import type { QueueMr } from '../gitlab/queueFacts'
 import type { QueueRow } from './model'
-import { filterRows, groupRows, repoGroupId, sortRows, tagChips, type ListFilters, type ListOrder } from './order'
+import { directionLabel, filterRows, groupRows, repoGroupId, sortRows, type ListFilters, type ListOrder } from './order'
 import type { Project } from './projects'
 
 function facts(over: Partial<QueueMr> = {}): QueueMr {
@@ -40,43 +40,46 @@ function row(n: number, over: Partial<QueueRow> = {}): QueueRow {
 }
 
 const iids = (rows: QueueRow[]) => rows.map((r) => r.iid)
-const DEFAULT: ListOrder = { tags: [], sortBy: 'waiting' }
+const at = (iso: string) => ({ updatedAt: iso })
+const CHANGED: ListOrder = { sortBy: 'changed', descending: true }
 
-test('the default order: what needs you, then returned, waiting, done; then score; then newest', () => {
+test('Last changed: newest first, or oldest first when flipped; ties by key', () => {
   const rows = [
-    row(1, { attention: 'done', score: 50 }),
-    row(2, { attention: 'waiting' }),
-    row(3, { attention: 'needs-you', score: 1 }),
-    row(4, { attention: 'needs-you', score: 9 }),
-    row(5, { attention: 'returned' }),
-    row(6, { attention: 'needs-you', score: 1, updatedAt: '2026-10-11T11:00:00Z' }),
+    row(1, at('2026-10-11T08:00:00Z')),
+    row(2, at('2026-10-11T12:00:00Z')),
+    row(3, at('2026-10-11T10:00:00Z')),
+    row(4, at('2026-10-11T10:00:00Z')),
   ]
-  expect(iids(sortRows(rows, DEFAULT))).toEqual([4, 6, 3, 5, 2, 1])
+  expect(iids(sortRows(rows, CHANGED))).toEqual([2, 3, 4, 1])
+  expect(iids(sortRows(rows, { ...CHANGED, descending: false }))).toEqual([1, 3, 4, 2])
 })
 
-test('recently updated, oldest first, smallest first', () => {
+test('Age: oldest MR first by default; an MR without a created date uses its last change', () => {
   const rows = [
-    row(1, { updatedAt: '2026-10-11T09:00:00Z', mr: facts({ createdAt: '2026-10-03T00:00:00Z', additions: 50 }) }),
-    row(2, { updatedAt: '2026-10-11T11:00:00Z', mr: facts({ createdAt: '2026-10-02T00:00:00Z', additions: 5 }) }),
-    // Without facts: its update time stands in for creation, and it is the largest.
-    row(3, { updatedAt: '2026-10-01T00:00:00Z', mr: null }),
+    row(1, { mr: facts({ createdAt: '2026-10-05T00:00:00Z' }) }),
+    row(2, { mr: facts({ createdAt: '2026-10-01T00:00:00Z' }) }),
+    row(3, { mr: null, updatedAt: '2026-10-03T00:00:00Z' }),
   ]
-  expect(iids(sortRows(rows, { tags: [], sortBy: 'updated' }))).toEqual([2, 1, 3])
-  expect(iids(sortRows(rows, { tags: [], sortBy: 'oldest' }))).toEqual([3, 2, 1])
-  expect(iids(sortRows(rows, { tags: [], sortBy: 'smallest' }))).toEqual([2, 1, 3])
+  expect(iids(sortRows(rows, { sortBy: 'age', descending: false }))).toEqual([2, 3, 1])
+  expect(iids(sortRows(rows, { sortBy: 'age', descending: true }))).toEqual([1, 3, 2])
 })
 
-test('chosen tags come first, in your order; the sort settles the rest', () => {
+test('Size: smallest first by default; rows without a size go last either way', () => {
   const rows = [
-    row(1, { attention: 'needs-you', score: 9 }),
-    row(2, { tags: [{ kind: 'needs-rebase' }] }),
-    row(3, { tags: [{ kind: 'quick-win', minutes: 1 }], attention: 'needs-you' }),
-    row(4, { tags: [{ kind: 'needs-rebase' }, { kind: 'quick-win', minutes: 1 }], attention: 'needs-you', score: 5 }),
+    row(1, { mr: facts({ additions: 50, deletions: 0 }) }),
+    row(2, { mr: null }),
+    row(3, { mr: facts({ additions: 3, deletions: 2 }) }),
   ]
-  expect(iids(sortRows(rows, { tags: ['needs-rebase'], sortBy: 'waiting' }))).toEqual([4, 2, 1, 3])
-  expect(iids(sortRows(rows, { tags: ['quick-win', 'needs-rebase'], sortBy: 'waiting' }))).toEqual([
-    4, 3, 2, 1,
-  ])
+  expect(iids(sortRows(rows, { sortBy: 'size', descending: false }))).toEqual([3, 1, 2])
+  expect(iids(sortRows(rows, { sortBy: 'size', descending: true }))).toEqual([1, 3, 2])
+})
+
+test('the direction button says which way the list runs', () => {
+  expect(directionLabel({ sortBy: 'changed', descending: true })).toBe('Newest first')
+  expect(directionLabel({ sortBy: 'changed', descending: false })).toBe('Oldest first')
+  expect(directionLabel({ sortBy: 'age', descending: false })).toBe('Oldest first')
+  expect(directionLabel({ sortBy: 'size', descending: false })).toBe('Smallest first')
+  expect(directionLabel({ sortBy: 'size', descending: true })).toBe('Largest first')
 })
 
 const NONE: ListFilters = { needsMeOnly: false, hideDrafts: false, showDone: false }
@@ -103,19 +106,17 @@ test('Needs me only keeps what needs you and what came back; Hide drafts hides d
   expect(iids(filterRows(rows, { ...NONE, hideDrafts: true }, ''))).toEqual([1, 2, 3])
 })
 
-test('search matches title, !iid, author, repository and tag text, in any case', () => {
+test('search matches title, !iid, author and repository, in any case', () => {
   const rows = [
     row(1, { attention: 'needs-you', title: 'Retry budget' }),
     row(22, { attention: 'needs-you', mr: facts({ author: { username: 'li', name: 'Li Wei', avatarUrl: null, bot: false } }) }),
     row(3, { attention: 'needs-you', project: 'g/payments' }),
-    row(4, { attention: 'needs-you', tags: [{ kind: 'blocking', people: 2 }] }),
   ]
   expect(iids(filterRows(rows, NONE, 'RETRY'))).toEqual([1])
   expect(iids(filterRows(rows, NONE, '!22'))).toEqual([22])
   expect(iids(filterRows(rows, NONE, 'li wei'))).toEqual([22])
   expect(iids(filterRows(rows, NONE, 'payments'))).toEqual([3])
-  expect(iids(filterRows(rows, NONE, 'blocking 2'))).toEqual([4])
-  expect(iids(filterRows(rows, NONE, '  '))).toEqual([1, 22, 3, 4])
+  expect(iids(filterRows(rows, NONE, '  '))).toEqual([1, 22, 3])
 })
 
 const PROJECTS: Project[] = [
@@ -138,20 +139,7 @@ test('your projects first, in your order; then one group per repository, by its 
     ['repo:h:g/alpha', 'g/alpha', [3], 0],
   ])
   expect(groups[0]).toMatchObject({ projectId: 'web', color: '#1E4FD8' })
-  expect(groups[1]).toMatchObject({ projectId: null, color: null })
+  expect(groups[1]).toMatchObject({ projectId: null, color: null, repo: 'g/zeta' })
+  expect(groups[0]).toMatchObject({ repo: null })
   expect(repoGroupId(rows[0])).toBe('repo:h:g/zeta')
-})
-
-test('chips: chosen tags first with their place, then the rest by priority, with counts', () => {
-  const rows = [
-    row(1, { tags: [{ kind: 'needs-rebase' }, { kind: 'waiting-on-you' }] }),
-    row(2, { tags: [{ kind: 'waiting-on-you' }, { kind: 'quick-win', minutes: 1 }] }),
-  ]
-  expect(tagChips(rows, ['needs-rebase', 'returned'])).toEqual([
-    { kind: 'needs-rebase', count: 1, position: 1 },
-    // Chosen but on no row: still shown, so it can be taken off.
-    { kind: 'returned', count: 0, position: 2 },
-    { kind: 'waiting-on-you', count: 2, position: null },
-    { kind: 'quick-win', count: 1, position: null },
-  ])
 })

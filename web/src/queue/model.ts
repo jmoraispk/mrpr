@@ -169,10 +169,3 @@ export function buildQueue(input: QueueInput): QueueRow[] {
   }
   return rows
 }
-
-/** Minutes of review waiting on you today: the size estimates of what needs you. */
-export function todaysBudget(rows: QueueRow[]): number {
-  return rows
-    .filter((row) => !row.snoozed && !row.folded && row.attention === 'needs-you')
-    .reduce((sum, row) => sum + row.minutes, 0)
-}

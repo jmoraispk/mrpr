@@ -101,12 +101,11 @@ const titles = () =>
 const rowNamed = (title: string) =>
   screen.getAllByRole('article').find((row) => row.textContent?.includes(title))!
 
-test('the header counts what needs you and today’s budget; the footer, the rest', () => {
+test('the header counts what needs you; the footer, the rest', () => {
   show()
   const sidebar = screen.getByRole('complementary', { name: 'Merge requests' })
   expect(within(sidebar).getByText('3 need you')).toBeInTheDocument()
-  // 130 lines ≈ 5 min, 5 lines ≈ 1 min, the draft's 130 lines ≈ 5 min.
-  expect(within(sidebar).getByText('~11 min today')).toBeInTheDocument()
+  expect(within(sidebar).queryByText(/min today/)).toBeNull()
   expect(within(sidebar).getByText('1 bot MR folded away')).toBeInTheDocument()
   expect(within(sidebar).getByRole('link', { name: 'Snoozed (0)' })).toHaveAttribute('href', '#/snoozed')
   expect(within(sidebar).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '#/settings')
@@ -148,26 +147,29 @@ test('one click opens a row', () => {
   expect(screen.queryByRole('button', { name: 'Open full view' })).toBeNull()
 })
 
-test('a chip puts its tag first, numbered, and the order is saved', async () => {
+test('the sort menu and its direction button reorder each group, and are saved', async () => {
   const user = userEvent.setup()
   show()
-  await user.click(screen.getByRole('button', { name: /Waiting on others/ }))
-  expect(titles().slice(0, 3)).toEqual(['Port billing', 'Retry budget for webhooks', 'Fix flaky test'])
-  const chip = screen.getByRole('button', { name: /Waiting on others/ })
-  expect(chip).toHaveAttribute('aria-pressed', 'true')
-  expect(chip).toHaveTextContent(/^1/)
+  // Only these two, so the test holds whichever tab lists your own MR.
+  const two = () =>
+    titles().filter((title) => title === 'Fix flaky test' || title === 'Retry budget for webhooks')
+  await user.selectOptions(screen.getByRole('combobox', { name: /^Sort/ }), 'Size')
+  expect(two()).toEqual(['Fix flaky test', 'Retry budget for webhooks'])
+  await user.click(screen.getByRole('button', { name: 'Smallest first' }))
+  expect(two()).toEqual(['Retry budget for webhooks', 'Fix flaky test'])
+  expect(screen.getByRole('button', { name: 'Largest first' })).toBeInTheDocument()
   await waitFor(async () =>
-    expect(await fake.store.get('listOrder')).toEqual({ tags: ['waiting-on-others'], sortBy: 'waiting' }),
+    expect(await fake.store.get('listOrder')).toEqual({ sortBy: 'size', descending: true }),
   )
-  await user.click(screen.getByRole('button', { name: 'Clear' }))
-  expect(titles()[0]).toBe('Retry budget for webhooks')
+  // A new sort starts in its own natural direction.
+  await user.selectOptions(screen.getByRole('combobox', { name: /^Sort/ }), 'Last changed')
+  expect(screen.getByRole('button', { name: 'Newest first' })).toBeInTheDocument()
 })
 
-test('the sort menu reorders each group', async () => {
-  const user = userEvent.setup()
+test('no tag chips above the list', () => {
   show()
-  await user.selectOptions(screen.getByRole('combobox', { name: /^Sort/ }), 'Smallest first')
-  expect(titles().slice(0, 3)).toEqual(['Fix flaky test', 'Port billing', 'Retry budget for webhooks'])
+  expect(screen.queryByRole('button', { name: /Waiting on you \d/ })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull()
 })
 
 test('filters: needs me only, hide drafts, show done, search, and clearing them', async () => {

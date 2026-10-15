@@ -3,19 +3,14 @@
 .sb-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 16px 8px; }
 .sb-head .q-brand { margin-right: auto; padding: 0; }
 .sb-need { margin: 0; color: var(--ink); font-size: 14px; font-weight: 600; }
-.sb-budget { flex-basis: 100%; margin: 0; color: var(--muted); font: 12px var(--font-mono); }
 .sb-controls { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 10px; border-bottom: 1px solid var(--line-2); }
 .sb-search { box-sizing: border-box; width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: 14px var(--font-body); }
 .sb-filters { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; border: 0; color: var(--ink-2); font-size: 13px; }
 .sb-filters label { display: inline-flex; gap: 4px; align-items: center; }
+.sb-sort-row { display: flex; gap: 6px; align-items: center; }
+.sb-direction { min-width: 28px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: 14px var(--font-body); cursor: pointer; }
 .sb-sort { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
 .sb-sort select { padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
-.sb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.sb-chip { display: inline-flex; gap: 4px; align-items: center; padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--ink-2); font: 12px var(--font-body); cursor: pointer; }
-.sb-chip[aria-pressed='true'] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
-.sb-chip-pos { font: 600 11px var(--font-mono); }
-.sb-chip-count { opacity: 0.7; font-variant-numeric: tabular-nums; }
-.sb-clear { border: 0; background: none; color: var(--muted); font: 12px var(--font-body); text-decoration: underline; cursor: pointer; }
 .sb-groups { flex: 1; min-height: 0; overflow-y: auto; }
 .sb-group-head { margin: 0; }
 .sb-group-head button { display: flex; width: 100%; gap: 6px; align-items: center; padding: 10px 16px 6px; border: 0; background: none; color: var(--ink); font: 600 13px var(--font-body); text-align: left; cursor: pointer; }
