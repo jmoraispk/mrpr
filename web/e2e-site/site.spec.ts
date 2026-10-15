@@ -616,3 +616,19 @@ test('the landing page waitlist says thanks, or says it couldn’t', async ({ pa
   await expect(page.locator('#waitlist-status')).toHaveText("Couldn't add you. Try again in a moment.")
   await expect(join).toBeEnabled()
 })
+
+test('Changes uses the app’s light colours, with the file count on one line', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  await page.getByRole('link', { name: /^Changes/ }).click()
+  await expect(page.getByRole('region', { name: 'src/retry.py' })).toBeVisible()
+  const rail = page.getByRole('complementary', { name: 'Changed files' })
+  // --surface-2 in the light tokens.
+  await expect(rail).toHaveCSS('background-color', 'rgb(250, 250, 247)')
+  await expect(rail.locator('.change-summary')).toHaveText(/1 mod\s*0 new\s*0 del/i)
+  const filesBox = await rail.getByText(/^\d+ files?$/).boundingBox()
+  const summaryBox = await rail.locator('.change-summary').boundingBox()
+  expect(Math.abs(filesBox!.y - summaryBox!.y)).toBeLessThan(12)
+})
