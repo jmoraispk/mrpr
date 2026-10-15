@@ -28,6 +28,17 @@ const REVIEW = {
   project: { fullPath: 'g/q' },
 }
 
+/** An MR in another repository you already approved: listed only with Show done. */
+const TIDY = {
+  id: 'gid://gitlab/MergeRequest/300',
+  iid: '3',
+  title: 'Tidy logging',
+  webUrl: `${GITLAB}/g/r/-/merge_requests/3`,
+  createdAt: NOW,
+  updatedAt: NOW,
+  project: { fullPath: 'g/r' },
+}
+
 function facts(
   mr: typeof MR & { createdAt?: string },
   author: string,
@@ -151,7 +162,12 @@ async function fakeGitLab(
           data: {
             currentUser: {
               authored: { nodes: [facts(MR, 'joao', [['john', 'UNREVIEWED']], [40, 8])] },
-              reviewing: { nodes: [facts(REVIEW, 'ana', [['joao', 'UNREVIEWED']], [120, 10])] },
+              reviewing: {
+                nodes: [
+                  facts(REVIEW, 'ana', [['joao', 'UNREVIEWED']], [120, 10]),
+                  facts(TIDY, 'ana', [['joao', 'APPROVED']], [5, 1]),
+                ],
+              },
             },
           },
         })
@@ -290,11 +306,11 @@ test('sign in, see the queue, open a comment at its thread', async ({ page }) =>
   await expect(sidebar.getByText('1 needs you')).toBeVisible()
   const first = page.getByRole('article').first()
   await expect(first).toContainText('Retry budget for webhooks')
-  await expect(first).toContainText('by ANA')
+  await expect(first).toContainText('· ANA ·')
 
-  // Ana's comment on your MR is folded into its row, tagged Returned to you.
+  // Ana's comment on your MR is folded into its row, under From me.
+  await page.getByRole('tab', { name: /^From me/ }).click()
   const yours = page.getByRole('article').filter({ hasText: 'Improve parser errors' })
-  await expect(yours).toContainText('Returned to you')
   await yours.click()
   await expect(page).toHaveURL(/#\/mr\/gitlab\.example\.com\/g%2Fp\/1\/note\/11$/)
   const panel = page.getByRole('region', { name: 'Improve parser errors' })
@@ -370,13 +386,13 @@ test('one click opens the MR beside the queue: description, the thread that matt
   )
   await expect(panel.getByText('Should the budget reset on success?')).toBeVisible()
   await expect(panel.getByText('Typo')).toHaveCount(0)
-  await expect(panel.getByText(/1 hidden by your Show settings/)).toBeVisible()
+  await expect(panel.getByText(/1 hidden by your Filters/)).toBeVisible()
   const thread = panel.locator('[data-discussion-id="d5"]')
   await thread.getByRole('textbox', { name: 'Reply' }).fill('Only on success')
   await thread.getByRole('button', { name: 'Reply' }).click()
   await expect.poll(() => gitlab.replies.at(-1)).toBe('Only on success\n\n*— via Mr. PR*')
   // The list stays beside it.
-  await expect(page.getByRole('article').filter({ hasText: 'Improve parser errors' })).toBeVisible()
+  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toBeVisible()
 })
 
 test('Changes, full screen, and back', async ({ page }) => {
@@ -405,13 +421,43 @@ test('rebase when GitLab says it is needed', async ({ page }) => {
   await expect(details.getByText('Rebased')).toBeVisible({ timeout: 10_000 })
 })
 
-test('put a tag first, and it stays first after a reload', async ({ page }) => {
+test('tabs, sort and filters stay as you left them after a reload', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('button', { name: /Returned to you/ }).click()
-  await expect(page.getByRole('button', { name: /Returned to you/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('tab', { name: /^From me \(1\)/ }).click()
+  await page.getByRole('combobox', { name: /^Sort/ }).selectOption('size')
+  await page.getByRole('button', { name: 'Smallest first' }).click()
+  await page.getByRole('button', { name: /^Filters/ }).click()
   await page.reload()
-  await expect(page.getByRole('button', { name: /Returned to you/ })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('tab', { name: /^From me/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('combobox', { name: /^Sort/ })).toHaveValue('size')
+  await expect(page.getByRole('button', { name: 'Largest first' })).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: 'Needs me only' })).toBeVisible()
+})
+
+test('drag a repository above another, mute it, and unmute it from the Snoozed page', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+  // The approved MR in g/r shows with Show done: two repositories under From others.
+  await page.getByRole('button', { name: /^Filters/ }).click()
+  await page.getByRole('checkbox', { name: 'Show done' }).check()
+  const heads = page.locator('.sb-group-head .sb-group-name')
+  await expect(heads).toHaveCount(2)
+  const before = await heads.allTextContents()
+  await page.locator('.sb-group-toggle').nth(1).dragTo(page.locator('.sb-group-head').first(), {
+    targetPosition: { x: 20, y: 2 },
+  })
+  await expect(heads).toHaveText([before[1], before[0]])
+  await page.getByRole('button', { name: `Options for ${before[1]}` }).click()
+  await page.getByRole('menuitem', { name: 'Mute repository' }).click()
+  await expect(page.getByRole('status')).toContainText(`Muted ${before[1]}`)
+  await expect(heads).toHaveText([before[0]])
+  await page.getByRole('link', { name: 'Snoozed (1)' }).click()
+  const muted = page.getByRole('region', { name: 'Muted repositories' })
+  await expect(muted).toContainText(before[1])
+  await muted.getByRole('button', { name: 'Unmute' }).click()
+  await expect(muted).toBeHidden()
+  await expect(heads).toHaveCount(2)
 })
 
 test('the queue has a dark mode and its own fonts, under the app’s security policy', async ({
