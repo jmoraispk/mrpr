@@ -129,3 +129,12 @@ test('a box with initial text starts live, holding it', async () => {
   })
   expect(input).toHaveTextContent('@ana')
 })
+
+test('typing a web address links it; a file name like README.md stays text', async () => {
+  render(<Harness />)
+  const input = await typeRich(await box(), 'see README.md ')
+  await act(async () => {
+    richEditor(input).chain().focus('end').insertContent('or https://x.io ').run()
+  })
+  expect(md()).toBe('see README.md or [https://x.io](https://x.io)')
+})

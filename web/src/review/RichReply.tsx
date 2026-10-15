@@ -36,7 +36,13 @@ export default function RichReply({
         horizontalRule: false,
         // GitLab Markdown has no underline.
         underline: false,
-        link: { openOnClick: false, autolink: true, linkOnPaste: true },
+        link: {
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true,
+          // Only what is typed as a web address: README.md is a file name, not a site.
+          shouldAutoLink: (url) => /^https?:\/\//i.test(url),
+        },
       }),
       Extension.create({
         name: 'replyKeys',
