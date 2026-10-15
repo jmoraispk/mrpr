@@ -5,6 +5,7 @@ import { DiscussionThread } from '../../review/DiscussionThread'
 import type { ReviewTarget } from '../../transport/types'
 import { firstNote, toThreadDiscussion, type Activity } from '../activity'
 import { reviewHash } from '../route'
+import { QUEUE_QUERY_KEY } from '../useQueue'
 import { When } from './When'
 
 const EMPTY: ReadonlySet<string> = new Set()
@@ -49,9 +50,10 @@ export function ActivityList({
   expanded?: ReadonlySet<string>
 }) {
   const queryClient = useQueryClient()
-  // A reply or resolve changes the MR: read it again so Overview shows it.
+  // A reply or resolve shows in its own thread at once; only the list is read
+  // again, so the row's state follows. The MR page is not reloaded for it.
   const refresh = useCallback(
-    () => void queryClient.invalidateQueries({ queryKey: ['overview'] }),
+    () => void queryClient.invalidateQueries({ queryKey: QUEUE_QUERY_KEY }),
     [queryClient],
   )
   // A reply asked for from the header: focus that thread's reply box.

@@ -9,6 +9,7 @@ import { installPlatform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { TransportProvider } from '../../transport/context'
 import type { DeltaTransport } from '../../transport/types'
+import { QUEUE_QUERY_KEY } from '../useQueue'
 import { MrOverviewView } from './MrOverview'
 
 const transport = {
@@ -368,4 +369,24 @@ test('the details column and Activity events use short times', () => {
     expect(event.textContent).not.toMatch(/ago|just now/)
     expect(event.querySelector('time')?.getAttribute('title')).toBeTruthy()
   }
+})
+
+test('a reply reads the list again at once, and does not read the whole MR again', async () => {
+  const user = userEvent.setup()
+  const client = new QueryClient()
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
+  render(
+    <QueryClientProvider client={client}>
+      <TransportProvider transport={transport}>
+        <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
+          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  const thread = screen.getByText('Should the budget reset?').closest('[data-discussion-id]') as HTMLElement
+  await user.type(within(thread).getByRole('textbox', { name: 'Reply' }), 'Only on success')
+  await user.click(within(thread).getByRole('button', { name: 'Reply' }))
+  expect(await within(thread).findByText('Only on success')).toBeInTheDocument()
+  await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: QUEUE_QUERY_KEY }))
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['overview'] })
 })
