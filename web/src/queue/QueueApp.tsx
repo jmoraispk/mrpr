@@ -233,6 +233,7 @@ export function QueueApp() {
           activityKey={openTarget ? lookKeyFor(openTarget.hostId, openTarget.project, openTarget.iid) : null}
           onOpenRow={(row) => open(row)}
           onSnoozeRow={actions.snooze}
+          onMuteGroup={(group) => actions.mute({ id: group.id, name: group.repo ?? group.name })}
           searchFocus={searchFocus}
           onSearchFocused={() => setSearchFocus(0)}
           width={width}

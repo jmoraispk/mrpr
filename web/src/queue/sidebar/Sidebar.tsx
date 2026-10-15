@@ -9,6 +9,7 @@ import {
   SORT_LABELS,
   TAB_LABELS,
   TABS,
+  type RowGroup,
   type SortBy,
 } from '../order'
 import { ProjectDialog } from '../ProjectDialog'
@@ -33,6 +34,8 @@ export interface SidebarProps {
   activityKey: string | null
   onOpenRow: (row: QueueRow) => void
   onSnoozeRow: (row: QueueRow) => void
+  /** ⋮ → Mute repository on a repository's group. */
+  onMuteGroup: (group: RowGroup) => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
   onSearchFocused: () => void
@@ -53,6 +56,7 @@ export function Sidebar({
   activityKey,
   onOpenRow,
   onSnoozeRow,
+  onMuteGroup,
   searchFocus,
   onSearchFocused,
   onSearchDone,
@@ -80,16 +84,37 @@ export function Sidebar({
   const folded = rows.filter((row) => row.folded).length
   const snoozed = rows.filter((row) => row.snoozed && !row.folded).length
 
+  // A project's rename is the project's own; a repository's is a display name in this browser.
+  const renameGroup = (group: RowGroup, value: string): boolean => {
+    const name = value.trim()
+    if (group.projectId) {
+      if (!name) return false
+      setProjects(projects.map((project) => (project.id === group.projectId ? { ...project, name } : project)))
+      return true
+    }
+    const names = { ...list.names }
+    if (!name || name === group.repo) delete names[group.id]
+    else names[group.id] = name
+    list.setNames(names)
+    return true
+  }
+
   let body
   if (loading) body = <p className="sb-empty">Loading your queue…</p>
   else if (list.groups.length > 0) {
-    body = list.groups.map((group) => (
+    body = list.groups.map((group, index) => (
       <MrGroup
         key={group.id}
         group={group}
         collapsed={list.collapsed.includes(group.id)}
         onToggle={() => list.toggleGroup(group.id)}
         onDropRow={(key) => setProjects(moveRow(projects, key, group.projectId))}
+        onDropGroup={(id, place) => list.moveGroup(id, group.id, place)}
+        onRename={(value) => renameGroup(group, value)}
+        onMute={group.repo ? () => onMuteGroup(group) : undefined}
+        onMove={(delta) => list.shiftGroup(group.id, delta)}
+        canUp={index > 0}
+        canDown={index < list.groups.length - 1}
       >
         {group.rows.map((row) => (
           <MrRow

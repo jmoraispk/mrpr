@@ -32,6 +32,19 @@ export function NoticeBar({
       </div>
     )
   }
+  if (notice.kind === 'muted') {
+    return (
+      <div className="q-notice" role="status">
+        <span>
+          <strong>Muted</strong> {notice.group.name}
+        </span>
+        <button type="button" onClick={onUndo}>
+          Undo
+        </button>
+        {dismiss}
+      </div>
+    )
+  }
   return (
     <div className="q-notice" role="status">
       <span>

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 
 import { INBOX_QUERY_KEY } from '../hub/useInbox'
 import { createRuntimeTransport } from '../transport/runtime'
+import { useMutedGroups } from './groups'
 import type { QueueRow } from './model'
 import { useSnoozed } from './state'
 import { QUEUE_QUERY_KEY } from './useQueue'
@@ -11,15 +12,17 @@ import { QUEUE_QUERY_KEY } from './useQueue'
 export type Notice =
   | { kind: 'approved'; row: QueueRow }
   | { kind: 'snoozed'; row: QueueRow }
+  | { kind: 'muted'; group: { id: string; name: string } }
   | { kind: 'info'; message: string }
   | { kind: 'error'; message: string }
 
 const targetOf = (row: QueueRow) => ({ hostId: row.hostId, project: row.project, iid: row.iid })
 
-/** Approve and snooze, each with an Undo that survives the row leaving the list. */
+/** Approve, snooze and mute, each with an Undo that survives the row leaving the list. */
 export function useRowActions() {
   const queryClient = useQueryClient()
   const [, setSnooze] = useSnoozed()
+  const [muted, setMuted] = useMutedGroups()
   const [notice, setNotice] = useState<Notice | null>(null)
   // One request per MR at a time: a double `a` must not approve twice.
   const inFlight = useRef(new Set<string>())
@@ -69,7 +72,23 @@ export function useRowActions() {
     setNotice({ kind: 'snoozed', row })
   }
 
+  function mute(group: { id: string; name: string }) {
+    setMuted({ ...muted, [group.id]: group.name })
+    setNotice({ kind: 'muted', group })
+  }
+
+  function unmute(id: string) {
+    const next = { ...muted }
+    delete next[id]
+    setMuted(next)
+  }
+
   function undo() {
+    if (notice?.kind === 'muted') {
+      unmute(notice.group.id)
+      setNotice(null)
+      return
+    }
     if (notice?.kind === 'snoozed') {
       setSnooze(notice.row.key, null)
       setNotice(null)
@@ -91,5 +110,5 @@ export function useRowActions() {
     })
   }
 
-  return { notice, approve, snooze, undo, dismiss: () => setNotice(null) }
+  return { notice, approve, snooze, mute, unmute, muted, undo, dismiss: () => setNotice(null) }
 }

@@ -246,7 +246,7 @@ test('dropping a row on a project’s header moves it there', async () => {
     ],
   })
   renderApp()
-  const target = await screen.findByRole('button', { name: /Payments/ })
+  const target = await screen.findByRole('button', { name: /^Payments/ })
   const data = new Map<string, string>()
   const dataTransfer = {
     setData: (type: string, value: string) => data.set(type, value),
@@ -530,7 +530,7 @@ test('j skips a folded group', async () => {
   hosts[0].mrs.push(mr(5, { project: 'g/web', title: 'Web tweak', createdAt: '2026-10-08T00:00:00Z' }))
   renderApp()
   await screen.findAllByRole('article')
-  await user.click(screen.getByRole('button', { name: /g\/web/ }))
+  await user.click(screen.getByRole('button', { name: /^g\/web\s*\d/ }))
   fireEvent.keyDown(window, { key: 'j' })
   expect(selectedText()).toContain('Fix flaky test')
 })
@@ -666,4 +666,18 @@ test('a muted repository leaves the list and every count, even with its MR open'
   expect(within(side).queryByRole('article')).toBeNull()
   fireEvent.keyDown(window, { key: 'j' })
   expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/2')
+})
+
+test('muting a repository says so with Undo; Undo brings it back', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('button', { name: 'Options for g/sdk' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Mute repository' }))
+  const notice = await screen.findByRole('status')
+  expect(notice).toHaveTextContent('Muted g/sdk')
+  await waitFor(() => expect(screen.queryByRole('article')).toBeNull())
+  await user.click(within(notice).getByRole('button', { name: 'Undo' }))
+  expect(await screen.findAllByRole('article')).not.toHaveLength(0)
+  await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
 })

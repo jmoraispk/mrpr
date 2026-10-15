@@ -7,6 +7,7 @@ import type { QueueMr } from '../../gitlab/queueFacts'
 import { installPlatform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { buildQueue, type QueueRow } from '../model'
+import type { RowGroup } from '../order'
 import { useProjects } from '../state'
 import { Sidebar } from './Sidebar'
 import { useSidebarList } from './useSidebarList'
@@ -59,11 +60,13 @@ function Harness({
   rows,
   onOpen,
   onSnooze,
+  onMute,
   activityKey,
 }: {
   rows: QueueRow[]
   onOpen: (row: QueueRow) => void
   onSnooze: (row: QueueRow) => void
+  onMute: (group: RowGroup) => void
   activityKey: string | null
 }) {
   const [projects] = useProjects()
@@ -78,6 +81,7 @@ function Harness({
       openKey={null}
       activityKey={activityKey}
       onSnoozeRow={onSnooze}
+      onMuteGroup={onMute}
       onOpenRow={(row) => {
         setSelected(row.key)
         onOpen(row)
@@ -95,10 +99,11 @@ function Harness({
 function show(rows: QueueRow[] = rowsOf(MRS), activityKey: string | null = null) {
   const onOpen = vi.fn()
   const onSnooze = vi.fn()
+  const onMute = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} activityKey={activityKey} />,
+    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} activityKey={activityKey} />,
   )
-  return { onOpen, onSnooze, ...view }
+  return { onOpen, onSnooze, onMute, ...view }
 }
 
 const filtersButton = () => screen.getByRole('button', { name: /^Filters/ })
@@ -199,7 +204,7 @@ test('filters: needs me only, hide drafts, show done, search, and clearing them'
 test('a group folds and stays folded', async () => {
   const user = userEvent.setup()
   show()
-  await user.click(screen.getByRole('button', { name: /g\/sdk/ }))
+  await user.click(screen.getByRole('button', { name: /^g\/sdk\s*\d/ }))
   expect(titles()).toEqual(['Docs for the CLI'])
   await waitFor(async () =>
     expect(await fake.store.get('collapsedGroups')).toEqual([`repo:${H}:g/sdk`]),
@@ -264,4 +269,96 @@ test('with an MR open, Activity boxes change that MR, and Apply to all MRs makes
   await waitFor(async () =>
     expect(await fake.store.get('activityFilters')).toMatchObject({ defaults: { bots: true }, perMr: {} }),
   )
+})
+
+const groupNames = () => screen.getAllByRole('region').map((section) => section.getAttribute('aria-label'))
+const dataTransfer = () => {
+  const data = new Map<string, string>()
+  return {
+    setData: (type: string, value: string) => void data.set(type, value),
+    getData: (type: string) => data.get(type) ?? '',
+    get types() {
+      return [...data.keys()]
+    },
+  }
+}
+
+test('Rename… gives a repository a display name; Enter saves once; empty brings the real name back', async () => {
+  const user = userEvent.setup()
+  show()
+  await user.click(screen.getByRole('button', { name: 'Options for g/sdk' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Rename…' }))
+  const field = screen.getByRole('textbox', { name: 'Rename g/sdk' })
+  await user.clear(field)
+  await user.type(field, 'SDK{Enter}')
+  expect(screen.getByRole('button', { name: /^SDK\s*\d/ })).toBeInTheDocument()
+  await waitFor(async () => expect(await fake.store.get('groupNames')).toEqual({ [`repo:${H}:g/sdk`]: 'SDK' }))
+  await user.click(screen.getByRole('button', { name: 'Options for SDK' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Rename…' }))
+  await user.clear(screen.getByRole('textbox', { name: 'Rename SDK' }))
+  await user.keyboard('{Enter}')
+  expect(screen.getByRole('button', { name: /^g\/sdk\s*\d/ })).toBeInTheDocument()
+  await waitFor(async () => expect(await fake.store.get('groupNames')).toEqual({}))
+})
+
+test('Escape cancels a rename; a project cannot be given an empty name', async () => {
+  const user = userEvent.setup()
+  await fake.store.set({
+    projects: [{ id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: ['g/docs'], labels: [] }, pinned: [] }],
+  })
+  show()
+  await user.click(await screen.findByRole('button', { name: 'Options for Payments' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Rename…' }))
+  await user.keyboard('{Escape}')
+  expect(screen.getByRole('button', { name: /^Payments\s*\d/ })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Options for Payments' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Rename…' }))
+  const field = screen.getByRole('textbox', { name: 'Rename Payments' })
+  await user.clear(field)
+  await user.keyboard('{Enter}')
+  expect(screen.getByRole('textbox', { name: 'Rename Payments' })).toBeInTheDocument()
+  await user.type(screen.getByRole('textbox', { name: 'Rename Payments' }), 'Billing{Enter}')
+  await waitFor(async () => expect(await fake.store.get('projects')).toMatchObject([{ name: 'Billing' }]))
+})
+
+test('Move up and Move down reorder groups, and the order is saved', async () => {
+  const user = userEvent.setup()
+  show()
+  expect(groupNames()).toEqual(['g/sdk', 'g/docs'])
+  await user.click(screen.getByRole('button', { name: 'Options for g/docs' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Move up' }))
+  expect(groupNames()).toEqual(['g/docs', 'g/sdk'])
+  await waitFor(async () =>
+    expect(await fake.store.get('groupOrder')).toEqual([`repo:${H}:g/docs`, `repo:${H}:g/sdk`]),
+  )
+})
+
+test('dragging a group header onto another moves it there', () => {
+  show()
+  // jsdom has no DragEvent, so no pointer position: the drop lands below. Above vs below is
+  // covered by moveGroup's tests and the end-to-end drag.
+  const sdk = screen.getByRole('button', { name: /^g\/sdk\s*\d/ })
+  const docsHead = screen.getByRole('button', { name: /^g\/docs\s*\d/ }).closest('h2')!
+  const data = dataTransfer()
+  fireEvent.dragStart(sdk, { dataTransfer: data })
+  fireEvent.dragOver(docsHead, { dataTransfer: data })
+  fireEvent.drop(docsHead, { dataTransfer: data })
+  expect(groupNames()).toEqual(['g/docs', 'g/sdk'])
+})
+
+test('a drag that is not a group or a row does nothing to a header', () => {
+  show()
+  const sdkHead = screen.getByRole('button', { name: /^g\/sdk\s*\d/ }).closest('h2')!
+  const files = { getData: () => '', types: ['Files'] }
+  fireEvent.dragOver(sdkHead, { dataTransfer: files })
+  fireEvent.drop(sdkHead, { dataTransfer: files })
+  expect(groupNames()).toEqual(['g/sdk', 'g/docs'])
+})
+
+test('Mute repository asks the app to mute that repository', async () => {
+  const user = userEvent.setup()
+  const { onMute } = show()
+  await user.click(screen.getByRole('button', { name: 'Options for g/docs' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Mute repository' }))
+  expect(onMute).toHaveBeenCalledWith(expect.objectContaining({ id: `repo:${H}:g/docs`, repo: 'g/docs' }))
 })
