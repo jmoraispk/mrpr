@@ -39,6 +39,8 @@ export interface DeltaTransport {
   postComment?(body: string): Promise<Discussion>
   /** The diff from `from` to the MR's current head. */
   getDiffsSince?(from: string, signal?: AbortSignal): Promise<DiffFile[]>
+  /** The diff between two commits of this MR's project, e.g. a comment's base and head. */
+  getDiffsBetween?(from: string, to: string, signal?: AbortSignal): Promise<DiffFile[]>
   commitsSince?(sha: string): Promise<number>
   /** The head you last reviewed in this browser, if any. */
   lastLook?(): Promise<string | null>

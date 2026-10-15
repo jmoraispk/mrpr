@@ -17,7 +17,14 @@ export interface OverviewNote {
   icon: string | null
   createdAt: string
   author: OverviewAuthor | null
-  position: { filePath: string; newLine: number | null; oldLine: number | null } | null
+  /** Where an inline note sits, and the commits its diff was taken between. */
+  position: {
+    filePath: string
+    newLine: number | null
+    oldLine: number | null
+    baseSha: string | null
+    headSha: string | null
+  } | null
 }
 
 /** A thread, with REST ids so replies and resolves use the existing review ops. */
@@ -61,7 +68,7 @@ export interface MrOverview {
 const PAGE = 100
 const DISCUSSION_FIELDS = `pageInfo { hasNextPage endCursor }
   nodes { id resolvable resolved notes { nodes { id body system systemNoteIconName createdAt
-    author { username name avatarUrl bot } position { filePath newLine oldLine } } } }`
+    author { username name avatarUrl bot } position { filePath newLine oldLine diffRefs { baseSha headSha } } } } }`
 
 /** Verified on gitlab-master 17.7: complexity 94 (GitLab's default limit is 250). */
 const QUERY = `query MrOverview($project: ID!, $iid: String!) {
@@ -98,7 +105,12 @@ interface RawNote {
   systemNoteIconName: string | null
   createdAt: string
   author: RawAuthor | null
-  position: { filePath: string; newLine: number | null; oldLine: number | null } | null
+  position: {
+    filePath: string
+    newLine: number | null
+    oldLine: number | null
+    diffRefs: { baseSha: string | null; headSha: string | null } | null
+  } | null
 }
 
 interface RawDiscussionPage {
@@ -159,7 +171,15 @@ function toDiscussions(page: RawDiscussionPage): OverviewDiscussion[] {
       icon: note.systemNoteIconName,
       createdAt: note.createdAt,
       author: toAuthor(note.author),
-      position: note.position,
+      position: note.position
+        ? {
+            filePath: note.position.filePath,
+            newLine: note.position.newLine,
+            oldLine: note.position.oldLine,
+            baseSha: note.position.diffRefs?.baseSha ?? null,
+            headSha: note.position.diffRefs?.headSha ?? null,
+          }
+        : null,
     })),
   }))
 }

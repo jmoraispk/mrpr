@@ -163,7 +163,7 @@ async function fakeGitLab(
                               notes: { nodes: [note(1000 + n, 'li', `Thread ${n}: ${'a fairly long remark. '.repeat(12)}`)] },
                             }))
                           : []),
-                        { id: 'gid://gitlab/Discussion/d5', resolvable: true, resolved: false, notes: { nodes: [note(51, 'li', 'Should the budget reset on success?'), note(52, 'ana', 'Good question, looking.')] } },
+                        { id: 'gid://gitlab/Discussion/d5', resolvable: true, resolved: false, notes: { nodes: [note(51, 'li', 'Should the budget reset on success?', { position: { filePath: 'src/budget.py', newLine: 1, oldLine: null, diffRefs: { baseSha: 'base-0', headSha: 'head-1' } } }), note(52, 'ana', 'Good question, looking.')] } },
                         { id: 'gid://gitlab/Discussion/d6', resolvable: true, resolved: true, notes: { nodes: [note(61, 'li', 'Typo')] } },
                         { id: 'gid://gitlab/Discussion/d7', resolvable: false, resolved: false, notes: { nodes: [note(71, 'ana', 'added 2 commits', { system: true, systemNoteIconName: 'commit' })] } },
                       ]
@@ -407,7 +407,7 @@ test('d shows only what changed since last review', async ({ page }) => {
     'page',
   )
   await expect(page.getByRole('region', { name: 'src/budget.py' })).toBeVisible()
-  expect(gitlab.compares).toEqual([{ from: 'head-1', to: 'head-2', straight: 'false' }])
+  expect(gitlab.compares).toContainEqual({ from: 'head-1', to: 'head-2', straight: 'false' })
 })
 
 test('one click opens the MR beside the queue: description, the thread that matters, and inline reply', async ({
@@ -794,4 +794,13 @@ test('at full size, opening at a comment or clicking a row that vanishes never s
   await page.waitForTimeout(500)
   expect(await shifted()).toEqual({ top: 0, height: 1500, shell: 0 })
   await expect(page.locator('.sb-head')).toBeInViewport()
+})
+
+test('an inline comment shows the code it was made on', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  const code = page.getByRole('figure', { name: 'src/budget.py, line 1' })
+  await expect(code.locator('.is-target')).toContainText('2')
+  expect(gitlab.compares).toContainEqual({ from: 'base-0', to: 'head-1', straight: 'false' })
 })

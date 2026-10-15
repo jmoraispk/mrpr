@@ -34,6 +34,7 @@ const RETRYABLE: ReadonlySet<ReviewOp> = new Set<ReviewOp>([
   'getConfig',
   'getMergeRequest',
   'getDiffs',
+  'getDiffsBetween',
   'getDiscussions',
   'setResolved',
   // Approving twice lands on the same state. postComment is never here: a
@@ -120,6 +121,8 @@ export function createRuntimeTransport(target: ReviewTarget): DeltaTransport {
     unapprove: () => send<null>('unapprove', target).then(() => undefined),
     postComment: (body: string) => send<Discussion>('postComment', target, { body }),
     getDiffsSince: (from: string) => send<DiffFile[]>('getDiffsSince', target, { from }),
+    getDiffsBetween: (from: string, to: string) =>
+      send<DiffFile[]>('getDiffsBetween', target, { from, to }),
     commitsSince: (sha: string) => send<number>('commitsSince', target, { sha }),
     getOverview: () => send<MrOverview>('getOverview', target),
     rebase: () => send<null>('rebase', target).then(() => undefined),

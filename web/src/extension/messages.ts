@@ -12,6 +12,7 @@ export type ReviewOp =
   | 'unapprove'
   | 'postComment'
   | 'getDiffsSince'
+  | 'getDiffsBetween'
   | 'commitsSince'
   | 'getOverview'
   | 'rebase'

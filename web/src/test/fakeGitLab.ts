@@ -22,6 +22,13 @@ export interface FakeNote {
   bot?: boolean
   /** GitLab's systemNoteIconName, e.g. 'commit'. */
   icon?: string
+  /** An inline note's GraphQL position, as GitLab sends it. */
+  position?: {
+    filePath: string
+    newLine: number | null
+    oldLine: number | null
+    diffRefs: { baseSha: string | null; headSha: string | null } | null
+  }
 }
 
 export interface FakeDiscussion {
@@ -254,7 +261,7 @@ export function createFakeGitLab() {
                       systemNoteIconName: value.icon ?? null,
                       createdAt: value.createdAt,
                       author: person(value.author, value.bot ?? false),
-                      position: null,
+                      position: value.position ?? null,
                     })),
                   },
                 })),

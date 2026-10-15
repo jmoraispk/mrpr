@@ -127,3 +127,12 @@
 .chat-bubble > :first-child { margin-top: 0; }
 .chat-bubble > :last-child { margin-bottom: 0; }
 .chat-bubble pre { max-width: 100%; overflow-x: auto; }
+
+/* The code an inline comment was made on. */
+.mr-snippet { margin: 0; padding: 4px 0; overflow-x: auto; border-bottom: 1px solid var(--line-3); background: var(--surface-2); font: 12px/1.6 var(--font-mono); }
+.mr-snippet-line { display: grid; grid-template-columns: 3.5em 3.5em minmax(0, 1fr); padding-right: 12px; white-space: pre; }
+.mr-snippet-no { padding-right: 8px; color: var(--muted); text-align: right; user-select: none; }
+.mr-snippet-line code { padding: 0; background: none; color: var(--ink); font: inherit; }
+.mr-snippet-line.is-add { background: color-mix(in srgb, var(--plus) 12%, transparent); }
+.mr-snippet-line.is-del { background: color-mix(in srgb, var(--minus) 12%, transparent); }
+.mr-snippet-line.is-target { box-shadow: inset 3px 0 var(--accent); }

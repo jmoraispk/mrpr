@@ -144,7 +144,7 @@ test('a bot thread you joined is yours, not a bot’s', () => {
 test('a thread maps to the review view’s discussion shape, without system notes', () => {
   const d = thread('abc', [
     note('li', 'why?', '2026-10-11T08:00:00Z', {
-      position: { filePath: 'src/a.py', newLine: 4, oldLine: null },
+      position: { filePath: 'src/a.py', newLine: 4, oldLine: null, baseSha: null, headSha: null },
     }),
     note('ana', 'changed the title', '2026-10-11T08:01:00Z', { system: true, icon: 'pencil' }),
   ])

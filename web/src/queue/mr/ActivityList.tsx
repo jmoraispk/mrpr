@@ -6,6 +6,7 @@ import type { ReviewTarget } from '../../transport/types'
 import { firstNote, toThreadDiscussion, type Activity } from '../activity'
 import { reviewHash } from '../route'
 import { QUEUE_QUERY_KEY } from '../useQueue'
+import { CodeSnippet } from './CodeSnippet'
 import { When } from './When'
 
 const EMPTY: ReadonlySet<string> = new Set()
@@ -117,6 +118,7 @@ export function ActivityList({
                   {item.category === 'resolved' ? ' · resolved' : ''}
                   {item.you ? <strong className="mr-you"> · {YOU_TAGS[item.you]}</strong> : null}
                 </p>
+                {first?.position ? <CodeSnippet position={first.position} /> : null}
                 {item.category === 'resolved' && !expanded.has(item.discussion.id) ? (
                   // A shown resolved thread takes one line until opened.
                   <details className="mr-resolved">
