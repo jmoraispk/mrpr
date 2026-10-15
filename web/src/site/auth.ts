@@ -4,7 +4,7 @@ import { GitLabError } from '../gitlab/errors'
 import { updateInbox } from '../inbox/store'
 import { withLock } from '../platform/locks'
 import { platform } from '../platform/platform'
-import type { SiteConfig, SiteHost } from './config'
+import { siteConfig, type SiteConfig, type SiteHost } from './config'
 import { publishToDirectory } from './servers'
 
 /** Per-host OAuth tokens, in the platform store (localStorage on the site). */
@@ -128,8 +128,11 @@ export async function signIn(
   navigate: (url: string) => void = (url) => window.location.assign(url),
   options: { publish?: Record<string, never> } = {},
 ): Promise<void> {
-  // A server that refused `read_api` once is asked for `api` from then on.
-  const scope = scopes === 'api' || (await fullScopeHosts()).includes(site.host) ? 'api' : scopes
+  // This deployment's own server is asked for `api` at once: its sign-in application lists
+  // `api` only. A server that refused `read_api` once is asked for `api` from then on.
+  const builtIn = siteConfig().hosts.some((value) => value.host === site.host)
+  const scope =
+    scopes === 'api' || builtIn || (await fullScopeHosts()).includes(site.host) ? 'api' : scopes
   const pending: Pending = {
     host: site.host,
     clientId: site.clientId,

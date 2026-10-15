@@ -70,7 +70,13 @@ function facts(
 /** Everything GitLab would answer, keyed by what the page asks for. */
 async function fakeGitLab(
   page: Page,
-  options: { expiresIn?: number; origin?: string; scope?: string } = {},
+  options: {
+    expiresIn?: number
+    origin?: string
+    scope?: string
+    /** What GitLab grants at each token request in turn, overriding what was asked. */
+    grants?: string[]
+  } = {},
 ) {
   const tokenRequests: Record<string, string>[] = []
   const authorizeRequests: Record<string, string>[] = []
@@ -103,7 +109,8 @@ async function fakeGitLab(
         refresh_token: `rt-${tokenRequests.length}`,
         expires_in: options.expiresIn ?? 7200,
         // GitLab grants what was asked; `scope: 'api'` stands for a sign-in from before read-only.
-        scope: options.scope ?? authorizeRequests.at(-1)?.scope,
+        scope:
+          options.grants?.[tokenRequests.length - 1] ?? options.scope ?? authorizeRequests.at(-1)?.scope,
         token_type: 'Bearer',
       })
     }
@@ -593,14 +600,20 @@ test('the landing page theme toggle works under its security policy', async ({ p
   expect(blocked).toEqual([])
 })
 
-test('sign-in asks GitLab for read-only access', async ({ page }) => {
+test('sign-in to the deployment’s own server asks for api at once, so approving needs no second step', async ({ page }) => {
   const gitlab = await fakeGitLab(page)
   await signIn(page)
-  expect(gitlab.authorizeRequests[0].scope).toBe('read_api')
+  expect(gitlab.authorizeRequests[0].scope).toBe('api')
+  await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
+  await page.keyboard.press('a')
+  await expect(page.getByRole('status')).toContainText('Approved Retry budget for webhooks')
+  await expect(page.getByRole('dialog', { name: 'Allow posting' })).toHaveCount(0)
+  expect(gitlab.authorizeRequests).toHaveLength(1)
 })
 
-test('the first approval asks for posting rights, and goes through once GitLab says yes', async ({ page }) => {
-  const gitlab = await fakeGitLab(page)
+test('a session granted read-only asks for posting rights on the first approval, and goes through once GitLab says yes', async ({ page }) => {
+  // Signed in read-only before the built-in server was asked for api, or on a server set up later.
+  const gitlab = await fakeGitLab(page, { grants: ['read_api', 'api'] })
   await signIn(page)
   await expect(page.getByRole('article').first()).toContainText('Retry budget for webhooks')
   await page.keyboard.press('a')
@@ -612,7 +625,7 @@ test('the first approval asks for posting rights, and goes through once GitLab s
   await popup.waitForEvent('close')
   await expect(page.getByRole('status')).toContainText('Approved Retry budget for webhooks')
   expect(gitlab.approvals).toEqual(['approve'])
-  expect(gitlab.authorizeRequests.map((request) => request.scope)).toEqual(['read_api', 'api'])
+  expect(gitlab.authorizeRequests.map((request) => request.scope)).toEqual(['api', 'api'])
 })
 
 test('Feedback sends what you typed and says thanks', async ({ page }) => {

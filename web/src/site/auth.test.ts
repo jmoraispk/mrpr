@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { beforeEach, expect, test } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import { listHosts } from '../extension/hosts'
 import { installPlatform, platform } from '../platform/platform'
@@ -24,6 +24,10 @@ import { siteConfig } from './config'
 const SITE = { host: 'gitlab.example.com', clientId: 'client-1' }
 const CONFIG = { hosts: [SITE], scopes: 'api' }
 const ORIGIN = 'https://gitlab.example.com'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 beforeEach(() => {
   installPlatform(createFakePlatform())
@@ -480,4 +484,19 @@ test('forgetting a posting sign-in clears its slot', async () => {
   await signInForPosting(SITE, { location: { href: '' } } as unknown as Window)
   forgetPostingSignIn()
   expect(localStorage.getItem(POPUP_PENDING_KEY)).toBeNull()
+})
+
+test('the server built into this deployment is asked for api at sign-in; any other server signs in read-only', async () => {
+  vi.stubEnv('VITE_GITLAB_HOST', SITE.host)
+  vi.stubEnv('VITE_GITLAB_CLIENT_ID', SITE.clientId)
+  let builtIn = ''
+  await signIn(SITE, '#/', 'read_api', (url) => {
+    builtIn = url
+  })
+  expect(new URL(builtIn).searchParams.get('scope')).toBe('api')
+  let other = ''
+  await signIn({ host: 'gitlab.other.org', clientId: 'other-1' }, '#/', 'read_api', (url) => {
+    other = url
+  })
+  expect(new URL(other).searchParams.get('scope')).toBe('read_api')
 })

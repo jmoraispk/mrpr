@@ -6,7 +6,7 @@ export interface SiteHost {
 
 export interface SiteConfig {
   hosts: SiteHost[]
-  /** `read_api`: posting asks for `api` the first time it is needed. */
+  /** `read_api`: posting asks for `api` the first time it is needed. The built-in host is asked for `api` at once (see signIn). */
   scopes: string
 }
 
