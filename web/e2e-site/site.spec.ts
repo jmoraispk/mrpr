@@ -816,3 +816,16 @@ test('snooze from the row, find it under Snoozed, and bring it back', async ({ p
   await page.getByRole('button', { name: /^Active/ }).click()
   await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toHaveCount(1)
 })
+
+test('row marks: the open MR is a tint with no border, the bar means needs you, snooze shows on every row', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+  const row = page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
+  await expect(row.getByRole('button', { name: 'Snooze Retry budget for webhooks' })).toHaveCSS('opacity', /^0\.[4-6]/)
+  await row.click()
+  await expect(row).toHaveAttribute('aria-current', 'true')
+  await expect(row).toHaveCSS('border-left-color', 'rgba(0, 0, 0, 0)')
+  await expect(row).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  // Needs you: the inset bar, alone.
+  await expect(row).toHaveCSS('box-shadow', /inset/)
+})
