@@ -66,6 +66,8 @@ export function ActivityList({
     const thread = document.querySelector(`[data-discussion-id="${CSS.escape(replyTo)}"]`)
     if (!thread) return
     setReplyFocus(replyTo)
+    // A box already open (a draft in it) starts no editor, so focus it here.
+    thread.querySelector<HTMLElement>('.rich-reply-input')?.focus()
     thread.scrollIntoView?.({ block: 'center' })
     onReplied()
   }, [replyTo, activity, onReplied])

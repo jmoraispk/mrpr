@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -9,7 +9,7 @@ import { installPlatform, platform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { TransportProvider } from '../../transport/context'
 import type { DeltaTransport } from '../../transport/types'
-import { typeRich } from '../../test/richReply'
+import { liveBox, typeRich } from '../../test/richReply'
 import { QUEUE_QUERY_KEY } from '../useQueue'
 import { MrOverviewView } from './MrOverview'
 
@@ -489,4 +489,32 @@ test('a resolved inline thread folded to one line shows no code and asks for non
   await screen.findByText(/LI: Fixed now/)
   expect(document.querySelector('.mr-snippet')).toBeNull()
   expect(transport.getDiffsBetween).not.toHaveBeenCalled()
+})
+
+test('asking to reply again focuses a reply box that is already open', async () => {
+  function AskAgain() {
+    const [replyTo, setReplyTo] = useState<string | null>('done')
+    return (
+      <>
+        <button type="button" onClick={() => setReplyTo('done')}>
+          ask
+        </button>
+        <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
+          replyTo={replyTo} onReplied={() => setReplyTo(null)} projectName={null} projectColor={null} />
+      </>
+    )
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <TransportProvider transport={transport}>
+        <AskAgain />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  const input = await liveBox('Reply')
+  await waitFor(() => expect(input).toHaveFocus())
+  act(() => input.blur())
+  expect(input).not.toHaveFocus()
+  await userEvent.setup().click(screen.getByRole('button', { name: 'ask' }))
+  await waitFor(() => expect(input).toHaveFocus())
 })
