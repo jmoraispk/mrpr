@@ -368,3 +368,19 @@ test('the footer counts snoozed MRs and muted repositories together', async () =
   show()
   expect(await screen.findByRole('link', { name: 'Snoozed (1)' })).toBeInTheDocument()
 })
+
+test('a project header refuses a link dragged from another page, and a dropped file never leaves the app', async () => {
+  await fake.store.set({
+    projects: [{ id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: ['g/docs'], labels: [] }, pinned: [] }],
+  })
+  show()
+  const projectHead = (await screen.findByRole('button', { name: /^Payments\s*\d/ })).closest('h2')!
+  const link = { getData: () => 'https://example.com', types: ['text/uri-list', 'text/plain'] }
+  // Not cancelled: the browser shows the drop as not allowed here.
+  expect(fireEvent.dragOver(projectHead, { dataTransfer: link })).toBe(true)
+  const repoHead = screen.getByRole('button', { name: /^g\/sdk\s*\d/ }).closest('h2')!
+  const files = { getData: () => '', types: ['Files'] }
+  // Cancelled: the browser does not open the file in place of Mr. PR.
+  expect(fireEvent.drop(repoHead, { dataTransfer: files })).toBe(false)
+  expect(groupNames()).toEqual(['Payments', 'g/sdk'])
+})

@@ -144,7 +144,7 @@ async function fakeGitLab(
                   pageInfo: { hasNextPage: false, endCursor: null },
                   nodes: review
                     ? [
-                        { id: 'gid://gitlab/Discussion/d5', resolvable: true, resolved: false, notes: { nodes: [note(51, 'li', 'Should the budget reset on success?')] } },
+                        { id: 'gid://gitlab/Discussion/d5', resolvable: true, resolved: false, notes: { nodes: [note(51, 'li', 'Should the budget reset on success?'), note(52, 'ana', 'Good question, looking.')] } },
                         { id: 'gid://gitlab/Discussion/d6', resolvable: true, resolved: true, notes: { nodes: [note(61, 'li', 'Typo')] } },
                         { id: 'gid://gitlab/Discussion/d7', resolvable: false, resolved: false, notes: { nodes: [note(71, 'ana', 'added 2 commits', { system: true, systemNoteIconName: 'commit' })] } },
                       ]
@@ -699,4 +699,32 @@ test('an open MR fills the window: the page never scrolls, and Feedback floats i
   const box = (await page.getByRole('button', { name: 'Feedback' }).boundingBox())!
   expect(box.x + box.width).toBeGreaterThan(1280 - 40)
   expect(box.y + box.height).toBeGreaterThan(800 - 40)
+})
+
+test('Activity threads lay out as a chat: the opener left, replies right, each a bubble', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  const thread = page.locator('[data-discussion-id="d5"]')
+  const opener = thread.locator('.chat-note.is-opener')
+  const reply = thread.locator('.chat-note.is-reply')
+  await expect(reply).toHaveCSS('display', 'flex')
+  await expect(reply).toHaveCSS('flex-direction', 'row-reverse')
+  await expect(reply).toHaveCSS('border-top-width', '0px')
+  await expect(reply.locator('.chat-meta strong')).toHaveCSS('display', 'inline')
+  const left = (await opener.boundingBox())!
+  const right = (await reply.boundingBox())!
+  expect(right.x + right.width).toBeGreaterThan(left.x + left.width)
+  expect(right.x).toBeGreaterThan(left.x)
+})
+
+test('the red counts in a light Changes view are dark enough to read', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  await page.getByRole('link', { name: /^Changes/ }).click()
+  const rail = page.getByRole('complementary', { name: 'Changed files' })
+  // --minus in the light tokens (#A1361A), not the dark view's #ef7777.
+  await expect(rail.locator('.rail-summary .stat-deletion')).toHaveCSS('color', 'rgb(161, 54, 26)')
 })

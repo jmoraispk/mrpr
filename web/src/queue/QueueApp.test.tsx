@@ -694,3 +694,13 @@ test('muted repositories are listed on the Snoozed page, and Unmute brings them 
   await waitFor(() => expect(within(page).queryByRole('region', { name: 'Muted repositories' })).toBeNull())
   await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
 })
+
+test('with its repository muted, the open MR still answers a', async () => {
+  await fake.store.set({ mutedGroups: { ['repo:' + H + ':g/sdk']: 'g/sdk' } })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  renderApp()
+  expect(await screen.findByRole('region', { name: 'Fix flaky test' })).toBeInTheDocument()
+  await waitFor(() => expect(within(sidebar()!).getByText('0 need you')).toBeInTheDocument())
+  fireEvent.keyDown(window, { key: 'a' })
+  await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
+})

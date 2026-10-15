@@ -36,9 +36,9 @@ test('a repository shows its display name; a project keeps its own', () => {
   expect(named[0].repo).toBe('g/a')
 })
 
-test('moving: above or below a target; stale stored ids are kept at the end', () => {
+test('moving: above or below a target; stored ids not listed now keep their places', () => {
   const listed = ['a', 'b', 'c']
-  expect(moveGroup(listed, ['gone'], 'c', 'a', 'before')).toEqual(['c', 'a', 'b', 'gone'])
+  expect(moveGroup(listed, ['gone'], 'c', 'a', 'before')).toEqual(['gone', 'c', 'a', 'b'])
   expect(moveGroup(listed, [], 'a', 'c', 'after')).toEqual(['b', 'c', 'a'])
   expect(moveGroup(listed, ['x'], 'a', 'a', 'after')).toEqual(['x'])
   expect(moveGroup(listed, ['x'], 'zzz', 'a', 'after')).toEqual(['x'])
@@ -63,4 +63,14 @@ test('a muted repository’s rows go, except those you put in a project', () => 
   const rows = [row(1, 'g/a'), row(2, 'g/a'), row(3, 'g/b')]
   expect(withoutMuted(rows, { 'repo:h:g/a': 'g/a' }, projects).map((r) => r.iid)).toEqual([2, 3])
   expect(withoutMuted(rows, {}, projects)).toBe(rows)
+})
+
+test('a move in one tab, or in a narrowed list, leaves the groups you cannot see in their order', () => {
+  // From others is arranged A, B, C, D; From me lists M and B; M moves below B.
+  const stored = ['A', 'B', 'C', 'D']
+  const next = moveGroup(['M', 'B'], stored, 'M', 'B', 'after')
+  expect(next.filter((id) => id !== 'M')).toEqual(['A', 'B', 'C', 'D'])
+  expect(next.indexOf('M')).toBe(next.indexOf('B') + 1)
+  // A search shows only C and D; D moves above C. A and B stay first.
+  expect(moveGroup(['C', 'D'], stored, 'D', 'C', 'before')).toEqual(['A', 'B', 'D', 'C'])
 })

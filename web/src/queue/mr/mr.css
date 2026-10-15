@@ -101,13 +101,20 @@
   font: 14px/1.45 var(--sans);
 }
 :root[data-theme='dark'] .q-shell .app-shell.is-embedded { --warning: #d4a84f; color-scheme: dark; }
+/* Colours the code view hard-codes for its dark look, in the app's tokens. */
+.q-shell .app-shell.is-embedded .stat-deletion,
+.q-shell .app-shell.is-embedded .diff-placeholder code.removed { color: var(--minus); }
+.q-shell .app-shell.is-embedded .diff-placeholder code.added { color: var(--plus); }
+.q-shell .app-shell.is-embedded .fallback-notice { color: var(--warning); }
 /* The panel's header already names the MR. */
 .app-shell.is-embedded .heading-copy { display: none; }
 
 /* Activity threads as a chat: the opener on the left, replies on the right. */
 .mr-thread .discussion-thread.is-chat .thread-notes { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; }
-.chat-note { display: flex; gap: 8px; align-items: flex-start; max-width: 80%; }
-.chat-note.is-reply { flex-direction: row-reverse; align-self: flex-end; }
+/* The code view's .thread-note rules (a grid, borders, block names) load later: outrank them. */
+.discussion-thread.is-chat .thread-note.chat-note { display: flex; gap: 8px; align-items: flex-start; max-width: 80%; padding: 0; border-top: 0; }
+.discussion-thread.is-chat .chat-meta strong { display: inline; margin: 0; font-size: inherit; }
+.discussion-thread.is-chat .chat-note.is-reply { flex-direction: row-reverse; align-self: flex-end; }
 .chat-body { min-width: 0; }
 .chat-meta { margin: 0 0 3px; color: var(--muted); font-size: 12px; }
 .chat-meta strong { color: var(--ink); font-weight: 600; }

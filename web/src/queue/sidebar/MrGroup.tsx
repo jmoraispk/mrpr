@@ -55,12 +55,16 @@ export function MrGroup({
     }
   }
 
-  const accepts = (event: DragEvent) => carries(event, GROUP) || (takesRows && !carries(event, 'Files'))
+  // Only our own drags: a group anywhere, a row onto a project. Anything else is refused.
+  const accepts = (event: DragEvent) => carries(event, GROUP) || (takesRows && carries(event, ROW))
+  // A file dropped here must not open in place of the app.
+  const isFile = (event: DragEvent) => carries(event, 'Files')
   return (
     <section className="sb-group" aria-label={group.name}>
       <h2
         className={`sb-group-head${dropAt ? ` is-drop-${dropAt}` : ''}`}
         onDragOver={(event) => {
+          if (isFile(event)) event.preventDefault()
           if (!accepts(event)) return
           event.preventDefault()
           setDropAt(carries(event, GROUP) ? placeOf(event) : null)
@@ -68,6 +72,10 @@ export function MrGroup({
         onDragLeave={() => setDropAt(null)}
         onDrop={(event) => {
           setDropAt(null)
+          if (isFile(event)) {
+            event.preventDefault()
+            return
+          }
           const id = event.dataTransfer.getData(GROUP)
           if (id) {
             event.preventDefault()

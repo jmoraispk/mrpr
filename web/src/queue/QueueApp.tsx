@@ -99,7 +99,8 @@ export function QueueApp() {
   // selected row while the list shows it or it is the open MR; with nothing
   // selected and nothing open, the first row.
   const listed = new Set(list.flat.map((row) => row.key))
-  const selectedRow = selected ? (rows.find((row) => row.key === selected) ?? null) : null
+  // From every row: the open MR of a muted repository is still the one keys act on.
+  const selectedRow = selected ? (queue.rows.find((row) => row.key === selected) ?? null) : null
   const current = !showSidebar
     ? openRow
     : selectedRow

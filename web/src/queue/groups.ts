@@ -41,8 +41,9 @@ export function arrangeGroups(
 }
 
 /**
- * The stored order after moving `id` above or below `target`: every listed
- * group in its new place, then stored ids not listed now (they return later).
+ * The stored order after moving `id` above or below `target`. The move is
+ * made in the whole order (stored ids, then listed groups not stored yet), so
+ * groups another tab or a search hides keep their places.
  */
 export function moveGroup(
   listed: string[],
@@ -52,10 +53,10 @@ export function moveGroup(
   place: 'before' | 'after',
 ): string[] {
   if (id === target || !listed.includes(id) || !listed.includes(target)) return stored
-  const rest = listed.filter((other) => other !== id)
+  const all = [...stored, ...listed.filter((other) => !stored.includes(other))]
+  const rest = all.filter((other) => other !== id)
   const at = rest.indexOf(target) + (place === 'after' ? 1 : 0)
-  const next = [...rest.slice(0, at), id, ...rest.slice(at)]
-  return [...next, ...stored.filter((other) => !next.includes(other))]
+  return [...rest.slice(0, at), id, ...rest.slice(at)]
 }
 
 /** Move up (-1) or down (1) one place; at the ends nothing changes. */
