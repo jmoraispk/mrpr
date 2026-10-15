@@ -76,6 +76,8 @@ async function fakeGitLab(
     scope?: string
     /** What GitLab grants at each token request in turn, overriding what was asked. */
     grants?: string[]
+    /** A full day's volume: 30 more MRs to review, a long description, many threads. */
+    many?: boolean
   } = {},
 ) {
   const tokenRequests: Record<string, string>[] = []
@@ -133,7 +135,9 @@ async function fakeGitLab(
               mergeRequest: {
                 iid: review ? '2' : '1',
                 title: review ? REVIEW.title : MR.title,
-                description: review ? 'Adds a **retry budget** per endpoint.' : 'Clearer parser errors.',
+                description: options.many
+                  ? 'Long description line.\n\n'.repeat(150)
+                  : review ? 'Adds a **retry budget** per endpoint.' : 'Clearer parser errors.',
                 draft: false, state: 'opened', createdAt: NOW, updatedAt: NOW,
                 sourceBranch: review ? 'retry' : 'parser', targetBranch: 'main',
                 webUrl: review ? REVIEW.webUrl : MR.webUrl,
@@ -151,7 +155,15 @@ async function fakeGitLab(
                   pageInfo: { hasNextPage: false, endCursor: null },
                   nodes: review
                     ? [
-                        { id: 'gid://gitlab/Discussion/d5', resolvable: true, resolved: false, notes: { nodes: [note(51, 'li', 'Should the budget reset on success?'), note(52, 'ana', 'Good question, looking.')] } },
+                        ...(options.many
+                          ? Array.from({ length: 20 }, (_, n) => ({
+                              id: `gid://gitlab/Discussion/d${100 + n}`,
+                              resolvable: true,
+                              resolved: false,
+                              notes: { nodes: [note(1000 + n, 'li', `Thread ${n}: ${'a fairly long remark. '.repeat(12)}`)] },
+                            }))
+                          : []),
+                        { id: 'gid://gitlab/Discussion/d5', resolvable: true, resolved: false, notes: { nodes: [note(51, 'li', 'Should the budget reset on success?', { position: { filePath: 'src/budget.py', newLine: 1, oldLine: null, diffRefs: { baseSha: 'base-0', headSha: 'head-1' } } }), note(52, 'ana', 'Good question, looking.')] } },
                         { id: 'gid://gitlab/Discussion/d6', resolvable: true, resolved: true, notes: { nodes: [note(61, 'li', 'Typo')] } },
                         { id: 'gid://gitlab/Discussion/d7', resolvable: false, resolved: false, notes: { nodes: [note(71, 'ana', 'added 2 commits', { system: true, systemNoteIconName: 'commit' })] } },
                       ]
@@ -173,6 +185,23 @@ async function fakeGitLab(
                 nodes: [
                   facts(REVIEW, 'ana', [['joao', 'UNREVIEWED']], [120, 10]),
                   facts(TIDY, 'ana', [['joao', 'APPROVED']], [5, 1]),
+                  ...(options.many
+                    ? Array.from({ length: 30 }, (_, n) =>
+                        facts(
+                          {
+                            ...REVIEW,
+                            id: `gid://gitlab/MergeRequest/${1000 + n}`,
+                            iid: String(100 + n),
+                            title: `Busy MR ${n} with a fairly long title to fill the row`,
+                            webUrl: `${GITLAB}/g/r${n % 5}/-/merge_requests/${100 + n}`,
+                            project: { fullPath: `g/r${n % 5}` },
+                          },
+                          'ana',
+                          [['joao', 'UNREVIEWED']],
+                          [20 + n, n],
+                        ),
+                      )
+                    : []),
                 ],
               },
             },
@@ -378,7 +407,7 @@ test('d shows only what changed since last review', async ({ page }) => {
     'page',
   )
   await expect(page.getByRole('region', { name: 'src/budget.py' })).toBeVisible()
-  expect(gitlab.compares).toEqual([{ from: 'head-1', to: 'head-2', straight: 'false' }])
+  expect(gitlab.compares).toContainEqual({ from: 'head-1', to: 'head-2', straight: 'false' })
 })
 
 test('one click opens the MR beside the queue: description, the thread that matters, and inline reply', async ({
@@ -442,7 +471,7 @@ test('tabs, sort and filters stay as you left them after a reload', async ({ pag
   await expect(page.getByRole('checkbox', { name: 'Needs me only' })).toBeVisible()
 })
 
-test('drag a repository above another, mute it, and unmute it from the Snoozed page', async ({ page }) => {
+test('drag a repository above another, mute it, and unmute it from the snoozed view', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
   // The approved MR in g/r shows with Show done: two repositories under From others.
@@ -459,11 +488,12 @@ test('drag a repository above another, mute it, and unmute it from the Snoozed p
   await page.getByRole('menuitem', { name: 'Mute repository' }).click()
   await expect(page.getByRole('status')).toContainText(`Muted ${before[1]}`)
   await expect(heads).toHaveText([before[0]])
-  await page.getByRole('link', { name: 'Snoozed (1)' }).click()
-  const muted = page.getByRole('region', { name: 'Muted repositories' })
-  await expect(muted).toContainText(before[1])
-  await muted.getByRole('button', { name: 'Unmute' }).click()
-  await expect(muted).toBeHidden()
+  await page.getByRole('button', { name: 'Snoozed (1)' }).click()
+  const mutedGroup = page.getByRole('region', { name: before[1] })
+  await expect(mutedGroup.getByText('muted', { exact: true })).toBeVisible()
+  await mutedGroup.getByRole('button', { name: `Options for ${before[1]}` }).click()
+  await page.getByRole('menuitem', { name: 'Unmute' }).click()
+  await page.getByRole('button', { name: /^Active/ }).click()
   await expect(heads).toHaveCount(2)
 })
 
@@ -740,4 +770,49 @@ test('the red counts in a light Changes view are dark enough to read', async ({ 
   const rail = page.getByRole('complementary', { name: 'Changed files' })
   // --minus in the light tokens (#A1361A), not the dark view's #ef7777.
   await expect(rail.locator('.rail-summary .stat-deletion')).toHaveCSS('color', 'rgb(161, 54, 26)')
+})
+
+test('at full size, opening at a comment or clicking a row that vanishes never shifts the page', async ({ page }) => {
+  await page.setViewportSize({ width: 2000, height: 1500 })
+  await fakeGitLab(page, { many: true })
+  await signIn(page)
+  const shifted = () =>
+    page.evaluate(() => ({
+      top: document.scrollingElement!.scrollTop,
+      height: document.scrollingElement!.scrollHeight,
+      shell: document.querySelector('.q-shell')!.getBoundingClientRect().top,
+    }))
+  // The last row, scrolled to and opened.
+  const last = page.getByRole('article').last()
+  await last.scrollIntoViewIfNeeded()
+  await last.click()
+  await page.waitForTimeout(500)
+  expect(await shifted()).toEqual({ top: 0, height: 1500, shell: 0 })
+  // Your MR, opened at Ana's comment: its row vanishes from the unread list as it opens.
+  await page.getByRole('tab', { name: /^From me/ }).click()
+  await page.getByRole('article').filter({ hasText: 'Improve parser errors' }).click()
+  await expect(page.getByText('Why does this throw?')).toBeVisible()
+  await page.waitForTimeout(500)
+  expect(await shifted()).toEqual({ top: 0, height: 1500, shell: 0 })
+  await expect(page.locator('.sb-head')).toBeInViewport()
+})
+
+test('an inline comment shows the code it was made on', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  const code = page.getByRole('figure', { name: 'src/budget.py, line 1' })
+  await expect(code.locator('.is-target')).toContainText('2')
+  expect(gitlab.compares).toContainEqual({ from: 'base-0', to: 'head-1', straight: 'false' })
+})
+
+test('snooze from the row, find it under Snoozed, and bring it back', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('button', { name: 'Snooze Retry budget for webhooks' }).click()
+  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Snoozed (1)' }).click()
+  await page.getByRole('button', { name: 'Unsnooze Retry budget for webhooks' }).click()
+  await page.getByRole('button', { name: /^Active/ }).click()
+  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toHaveCount(1)
 })

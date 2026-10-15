@@ -46,6 +46,8 @@ export interface TrackedMergeRequest {
   maxSeenNoteId: number
   /** null while an open list holds it; otherwise when to stop watching (ISO). */
   trackedUntil: string | null
+  /** GitLab's state when last read (opened, merged, closed, locked); absent in older stores. */
+  state?: string
 }
 
 export interface HostInbox {
@@ -80,6 +82,8 @@ export interface InboxView {
   hosts: InboxHostStatus[]
   items: InboxItem[]
   unread: number
+  /** `hostId:mrId` of tracked merge requests now merged or closed. */
+  closed: string[]
 }
 
 /**

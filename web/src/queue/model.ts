@@ -35,6 +35,8 @@ export interface QueueInput {
   snoozed: Record<string, string>
   /** Row key → commits since your last look, for MRs whose head moved. */
   commitsSince: Record<string, number>
+  /** Row keys of merge requests merged or closed, from the inbox: their notification-only rows go. */
+  closed?: readonly string[]
   now: Date
 }
 
@@ -145,6 +147,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
     for (const [mrId, items] of orphans) {
       const first = items[0]
       const key = rowKey(host.hostId, mrId)
+      if (input.closed?.includes(key)) continue
       const tags = orphanTags(items)
       rows.push({
         key,

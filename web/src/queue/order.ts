@@ -24,6 +24,9 @@ export interface ListFilters {
   showDone: boolean
 }
 
+/** The sidebar's list: what is active, or what you snoozed or muted. */
+export type SidebarView = 'active' | 'snoozed'
+
 /** Whose MRs the sidebar lists: yours, or everyone else's. */
 export type SidebarTab = 'mine' | 'others'
 export const TABS: SidebarTab[] = ['mine', 'others']
@@ -40,6 +43,8 @@ export interface RowGroup {
   color: string | null
   rows: QueueRow[]
   needsYou: number
+  /** A muted repository's group, in the snoozed view. */
+  muted?: boolean
 }
 
 const time = (iso: string) => Date.parse(iso) || 0
@@ -82,13 +87,18 @@ function haystack(row: QueueRow): string {
 }
 
 /** What the sidebar lists. Snoozed and bot-authored rows never are. */
-export function filterRows(rows: QueueRow[], filters: ListFilters, search: string): QueueRow[] {
+export function filterRows(
+  rows: QueueRow[],
+  filters: ListFilters,
+  search: string,
+  view: SidebarView = 'active',
+): QueueRow[] {
   const query = search.trim().toLowerCase()
   return rows.filter(
     (row) =>
       !row.folded &&
-      !row.snoozed &&
-      (filters.showDone || row.attention !== 'done') &&
+      // The snoozed view lists snoozed MRs whatever their state.
+      (view === 'snoozed' || (!row.snoozed && (filters.showDone || row.attention !== 'done'))) &&
       (!filters.needsMeOnly || row.attention === 'needs-you' || row.attention === 'returned') &&
       (!filters.hideDrafts || !row.mr?.draft) &&
       (!query || haystack(row).includes(query)),

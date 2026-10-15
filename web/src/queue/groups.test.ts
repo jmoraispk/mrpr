@@ -1,6 +1,15 @@
 import { expect, test } from 'vitest'
 
-import { arrangeGroups, moveGroup, normalizeIds, normalizeNames, shiftGroup, withoutMuted } from './groups'
+import {
+  arrangeGroups,
+  moveGroup,
+  normalizeIds,
+  normalizeNames,
+  shiftGroup,
+  snoozedRows,
+  withMutedGroups,
+  withoutMuted,
+} from './groups'
 import type { QueueRow } from './model'
 import type { RowGroup } from './order'
 import type { Project } from './projects'
@@ -73,4 +82,27 @@ test('a move in one tab, or in a narrowed list, leaves the groups you cannot see
   expect(next.indexOf('M')).toBe(next.indexOf('B') + 1)
   // A search shows only C and D; D moves above C. A and B stay first.
   expect(moveGroup(['C', 'D'], stored, 'D', 'C', 'before')).toEqual(['A', 'B', 'D', 'C'])
+})
+
+test('the snoozed view: snoozed rows and muted repositories’ rows, once each, never folded ones', () => {
+  const row = (iid: number, project: string, over: Partial<QueueRow> = {}) =>
+    ({ key: `h:${iid}`, hostId: 'h', project, iid, tags: [], snoozed: false, folded: false, ...over }) as unknown as QueueRow
+  const rows = [
+    row(1, 'g/a', { snoozed: true }),
+    row(2, 'g/b'),
+    row(3, 'g/m'),
+    row(4, 'g/m', { snoozed: true }),
+    row(5, 'g/a', { snoozed: true, folded: true }),
+  ]
+  expect(snoozedRows(rows, { 'repo:h:g/m': 'g/m' }, []).map((r) => r.iid)).toEqual([1, 3, 4])
+})
+
+test('muted repositories show as groups in the snoozed view, empty ones too', () => {
+  const groups = withMutedGroups([A, group('repo:h:g/m')], { 'repo:h:g/m': 'g/m', 'repo:h:g/z': 'g/z' })
+  expect(groups.map((g) => [g.id, Boolean(g.muted), g.rows.length])).toEqual([
+    ['repo:h:g/a', false, 0],
+    ['repo:h:g/m', true, 0],
+    ['repo:h:g/z', true, 0],
+  ])
+  expect(groups[2]).toMatchObject({ repo: 'g/z', name: 'g/z', projectId: null })
 })

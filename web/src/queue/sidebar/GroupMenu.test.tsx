@@ -55,3 +55,12 @@ test('a click outside closes the menu', async () => {
   await user.click(document.body)
   expect(screen.queryByRole('menu')).toBeNull()
 })
+
+test('a muted repository’s menu offers Unmute', async () => {
+  const user = userEvent.setup()
+  const props = show({ muted: true })
+  await user.click(screen.getByRole('button', { name: 'Options for g/sdk' }))
+  expect(screen.queryByRole('menuitem', { name: 'Mute repository' })).toBeNull()
+  await user.click(screen.getByRole('menuitem', { name: 'Unmute' }))
+  expect(props.onMute).toHaveBeenCalledOnce()
+})

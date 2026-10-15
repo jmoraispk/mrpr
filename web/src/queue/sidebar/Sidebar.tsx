@@ -10,7 +10,9 @@ import {
   SORT_LABELS,
   TAB_LABELS,
   TABS,
+  filterRows,
   type RowGroup,
+  type SidebarView,
   type SortBy,
 } from '../order'
 import { ProjectDialog } from '../ProjectDialog'
@@ -20,6 +22,7 @@ import { useTheme } from '../theme'
 import { FiltersPanel } from './FiltersPanel'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
+import { RefreshButton } from './RefreshButton'
 import { SidebarResizer } from './SidebarResizer'
 import type { SidebarList } from './useSidebarList'
 
@@ -37,12 +40,21 @@ export interface SidebarProps {
   onSnoozeRow: (row: QueueRow) => void
   /** ⋮ → Mute repository on a repository's group. */
   onMuteGroup: (group: RowGroup) => void
+  /** ⋮ → Unmute on a muted repository's group (snoozed view). */
+  onUnmuteGroup: (id: string) => void
+  /** Which list the sidebar shows, and the footer's toggle between them. */
+  view: SidebarView
+  onToggleView: () => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
   searchFocus: number
   onSearchFocused: () => void
   /** Enter or ↓ in the search box: on to the results. */
   onSearchDone: () => void
   width: number
+  /** When the list was last read (ms), whether it is being read, and a way to read it now. */
+  updatedAt: number
+  refreshing: boolean
+  onRefresh: () => void
   onResize: (width: number) => void
   onResizeEnd: (width: number) => void
 }
@@ -58,10 +70,16 @@ export function Sidebar({
   onOpenRow,
   onSnoozeRow,
   onMuteGroup,
+  onUnmuteGroup,
+  view,
+  onToggleView,
   searchFocus,
   onSearchFocused,
   onSearchDone,
   width,
+  updatedAt,
+  refreshing,
+  onRefresh,
   onResize,
   onResizeEnd,
 }: SidebarProps) {
@@ -85,6 +103,8 @@ export function Sidebar({
   const hiddenDone = live.filter((row) => row.attention === 'done').length
   const folded = rows.filter((row) => row.folded).length
   const snoozed = rows.filter((row) => row.snoozed && !row.folded).length
+  // What the Active list would hold, both tabs, without a search.
+  const activeCount = filterRows(rows, list.filters, '').length
 
   // A project's rename is the project's own; a repository's is a display name in this browser.
   const renameGroup = (group: RowGroup, value: string): boolean => {
@@ -113,7 +133,9 @@ export function Sidebar({
         onDropRow={(key) => setProjects(moveRow(projects, key, group.projectId))}
         onDropGroup={(id, place) => list.moveGroup(id, group.id, place)}
         onRename={(value) => renameGroup(group, value)}
-        onMute={group.repo ? () => onMuteGroup(group) : undefined}
+        onMute={
+          group.repo ? () => (group.muted ? onUnmuteGroup(group.id) : onMuteGroup(group)) : undefined
+        }
         onMove={(delta) => list.shiftGroup(group.id, delta)}
         canUp={index > 0}
         canDown={index < list.groups.length - 1}
@@ -126,10 +148,13 @@ export function Sidebar({
             current={row.key === openKey}
             onOpen={() => onOpenRow(row)}
             onSnooze={() => onSnoozeRow(row)}
+            action={view === 'snoozed' ? (row.snoozed ? 'unsnooze' : null) : 'snooze'}
           />
         ))}
       </MrGroup>
     ))
+  } else if (view === 'snoozed' && !list.narrowed) {
+    body = <p className="sb-empty">Nothing snoozed.</p>
   } else if (list.narrowed) {
     body = (
       <p className="sb-empty">
@@ -164,6 +189,7 @@ export function Sidebar({
         <p className="sb-need">
           {needsYou} need{needsYou === 1 ? 's' : ''} you
         </p>
+        <RefreshButton updatedAt={updatedAt} refreshing={refreshing} onRefresh={onRefresh} />
       </header>
       <div className="sb-controls">
         <input
@@ -186,31 +212,6 @@ export function Sidebar({
             }
           }}
         />
-        <div className="sb-tabs" role="tablist" aria-label="Whose MRs">
-          {TABS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              className="sb-tab"
-              aria-selected={list.tab === id}
-              tabIndex={list.tab === id ? 0 : -1}
-              data-tab={id}
-              onClick={() => list.setTab(id)}
-              onKeyDown={(event) => {
-                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-                event.preventDefault()
-                const next = TABS[(TABS.indexOf(id) + 1) % TABS.length]
-                list.setTab(next)
-                event.currentTarget.parentElement
-                  ?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)
-                  ?.focus()
-              }}
-            >
-              {TAB_LABELS[id]} ({list.counts[id]})
-            </button>
-          ))}
-        </div>
         <div className="sb-sort-row">
           <label className="sb-sort">
             Sort
@@ -250,6 +251,31 @@ export function Sidebar({
         {filtersOpen ? (
           <FiltersPanel filters={list.filters} onFilters={list.setFilters} activityKey={activityKey} />
         ) : null}
+        <div className="sb-tabs" role="tablist" aria-label="Whose MRs">
+          {TABS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              className="sb-tab"
+              aria-selected={list.tab === id}
+              tabIndex={list.tab === id ? 0 : -1}
+              data-tab={id}
+              onClick={() => list.setTab(id)}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+                event.preventDefault()
+                const next = TABS[(TABS.indexOf(id) + 1) % TABS.length]
+                list.setTab(next)
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)
+                  ?.focus()
+              }}
+            >
+              {TAB_LABELS[id]} ({list.counts[id]})
+            </button>
+          ))}
+        </div>
       </div>
       <div className="sb-groups" role="tabpanel" aria-label={TAB_LABELS[list.tab]}>
         {body}
@@ -261,7 +287,16 @@ export function Sidebar({
           </p>
         ) : null}
         <nav aria-label="More">
-          <a href="#/snoozed">Snoozed ({snoozed + Object.keys(muted).length})</a>
+          <button
+            type="button"
+            className="sb-view-toggle"
+            aria-pressed={view === 'snoozed'}
+            onClick={onToggleView}
+          >
+            {view === 'snoozed'
+              ? `Active (${activeCount})`
+              : `Snoozed (${snoozed + Object.keys(muted).length})`}
+          </button>
           <a href="#/settings">Settings</a>
           <button
             type="button"

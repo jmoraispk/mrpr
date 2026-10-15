@@ -15,6 +15,8 @@ export interface MergeRequestRef {
 
 export interface InvolvedMergeRequest extends MergeRequestRef {
   roles: Role[]
+  /** GitLab's state, when known: a todo can point at a merged or closed merge request. */
+  state?: string
 }
 
 export interface Involved {
@@ -159,7 +161,7 @@ export async function fetchInvolved(
     authored: authoredMergeRequests(state: opened, first: ${PAGE}, sort: UPDATED_DESC) { nodes { ${MR_FIELDS} } }
     reviewing: reviewRequestedMergeRequests(state: opened, first: ${PAGE}, sort: UPDATED_DESC) { nodes { ${MR_FIELDS} } }
     assigned: assignedMergeRequests(state: opened, first: ${PAGE}, sort: UPDATED_DESC) { nodes { ${MR_FIELDS} } }
-    todos(state: pending, type: [MERGEREQUEST], first: ${PAGE}) { nodes { target { ... on MergeRequest { ${MR_FIELDS} } } } }
+    todos(state: pending, type: [MERGEREQUEST], first: ${PAGE}) { nodes { target { ... on MergeRequest { ${MR_FIELDS} state } } } }
   }
 ${extras}
 }`
@@ -169,19 +171,22 @@ ${extras}
         authored: { nodes: RawMergeRequest[] }
         reviewing: { nodes: RawMergeRequest[] }
         assigned: { nodes: RawMergeRequest[] }
-        todos: { nodes: { target: Partial<RawMergeRequest> | null }[] }
+        todos: { nodes: { target: (Partial<RawMergeRequest> & { state?: string }) | null }[] }
       }
     } & Record<string, unknown>
   >(query, {}, signal)
 
   const listed = new Map<number, InvolvedMergeRequest>()
-  const add = (raw: Partial<RawMergeRequest> | null | undefined, role: Role) => {
+  const add = (
+    raw: (Partial<RawMergeRequest> & { state?: string }) | null | undefined,
+    role: Role,
+  ) => {
     // A todo on anything but a merge request matches no fragment and comes
     // back as an empty object.
     if (!raw?.id) return
     const ref = toRef(raw as RawMergeRequest)
     const existing = listed.get(ref.id)
-    if (!existing) listed.set(ref.id, { ...ref, roles: [role] })
+    if (!existing) listed.set(ref.id, { ...ref, roles: [role], ...(raw.state ? { state: raw.state } : {}) })
     else if (!existing.roles.includes(role)) existing.roles.push(role)
   }
   const user = data.currentUser

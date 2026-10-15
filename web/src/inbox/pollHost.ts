@@ -101,6 +101,8 @@ export async function pollHost(input: PollHostInput): Promise<HostInbox> {
         : mr.roles,
       maxSeenNoteId: kept?.maxSeenNoteId ?? 0,
       trackedUntil: null,
+      // The open lists hold opened ones; a todo can point at a merged or closed one.
+      state: mr.state ?? 'opened',
     }
     if (!kept || kept.updatedAt !== mr.updatedAt) changed.add(mr.id)
   }
@@ -116,7 +118,7 @@ export async function pollHost(input: PollHostInput): Promise<HostInbox> {
     }
     const seen = involved.extra[mr.id]
     if (!seen) continue // Deleted, or no longer visible to this user.
-    next[mr.id] = { ...mr }
+    next[mr.id] = { ...mr, state: seen.state }
     if (seen.updatedAt !== mr.updatedAt) changed.add(mr.id)
   }
 
@@ -165,6 +167,7 @@ export async function pollHost(input: PollHostInput): Promise<HostInbox> {
       title: mr.title,
       webUrl: mr.webUrl,
       updatedAt: mr.updatedAt,
+      state: mr.state,
     }
     // A merge request seen before is read from the last note seen. One that
     // just joined is read from shortly before the last poll (see `since`), so

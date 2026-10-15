@@ -5,6 +5,8 @@
   /* Exactly the window: each side scrolls itself, so nothing ever scrolls the page. */
   height: 100vh;
   overflow: hidden;
+  /* Every absolutely placed descendant is contained, and clipped, here. */
+  position: relative;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
@@ -161,13 +163,6 @@
 .q-welcome kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; font: 12px var(--font-mono); }
 .q-page { padding: 20px; }
 .q-page h2 { margin: 0 0 4px; font-size: 18px; }
-.q-page h3 { margin: 0 0 4px; font-size: 15px; }
-.q-page-section { margin-top: 24px; }
-.q-page-note { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
-.q-page-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.q-page-list li { display: flex; gap: 10px; align-items: center; }
-.q-page-ref { color: var(--muted); font: 12px var(--font-mono); }
-.q-page-list button { margin-left: auto; padding: 3px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
 
 /* Narrow windows: the sidebar lies over the page, and an open MR takes the whole width. */
 @media (max-width: 899px) {

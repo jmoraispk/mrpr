@@ -281,3 +281,16 @@ test('the header shows the row’s tags', () => {
   expect(screen.getByText('Changes addressed')).toBeInTheDocument()
   expect(screen.getByText('Waiting on you')).toBeInTheDocument()
 })
+
+test('the header says when the MR opened and changed in short form, with the full time on hover', () => {
+  show(row())
+  const meta = document.querySelector('.mr-meta') as HTMLElement
+  expect(meta.textContent).not.toMatch(/ago|just now/)
+  const times = [...meta.querySelectorAll('time')]
+  expect(times).toHaveLength(2)
+  for (const time of times) {
+    expect(time.getAttribute('dateTime')).toBeTruthy()
+    expect(time.getAttribute('title')).toBeTruthy()
+    expect(time.textContent).toMatch(/^(now|\d+(m|h|d|w|mo|y))$/)
+  }
+})

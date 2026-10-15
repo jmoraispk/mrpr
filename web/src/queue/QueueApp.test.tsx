@@ -298,23 +298,22 @@ test('an approval outlives its row leaving the list, and a failed undo says so',
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't undo the approval")
 })
 
-test('a snooze can be undone, and snoozed MRs are listed on their own page', async () => {
+test('Snoozed flips the sidebar to snoozed MRs and Active flips it back; Unsnooze works there', async () => {
   const user = userEvent.setup()
   renderApp()
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 's' })
-  await waitFor(() =>
-    expect(screen.getAllByRole('article')[0]).not.toHaveTextContent('Retry budget'),
-  )
+  await waitFor(() => expect(screen.getAllByRole('article')[0]).not.toHaveTextContent('Retry budget'))
   await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
   await waitFor(() => expect(screen.getAllByRole('article')[0]).toHaveTextContent('Retry budget'))
-
   fireEvent.keyDown(window, { key: 's' })
-  await user.click(await screen.findByRole('link', { name: 'Snoozed (1)' }))
-  const page = await screen.findByRole('region', { name: 'Snoozed' })
-  expect(within(page).getByRole('link', { name: 'Retry budget for webhooks' })).toBeInTheDocument()
-  await user.click(within(page).getByRole('button', { name: 'Unsnooze' }))
-  await waitFor(() => expect(within(page).getByText('Nothing snoozed.')).toBeInTheDocument())
+  await user.click(await screen.findByRole('button', { name: 'Snoozed (1)' }))
+  expect(screen.getByRole('button', { name: /^Active \(\d+\)$/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getAllByRole('article').map((row) => row.textContent).join()).toContain('Retry budget')
+  await user.click(screen.getByRole('button', { name: 'Unsnooze Retry budget for webhooks' }))
+  await waitFor(() => expect(screen.getByText('Nothing snoozed.')).toBeInTheDocument())
+  await user.click(screen.getByRole('button', { name: /^Active/ }))
+  expect(rowNamed('Retry budget')).toBeInTheDocument()
 })
 
 test('approving counts as a look; a failed approval says so and keeps the row', async () => {
@@ -600,7 +599,7 @@ test('Enter in the search box keeps the search and selects the first match', asy
   expect(await screen.findByRole('status')).toHaveTextContent('Approved Fix flaky test')
 })
 
-test('Settings and Snoozed are pages of their own, with a way back to the MRs', async () => {
+test('Settings is a page of its own, with a way back to the MRs', async () => {
   window.location.hash = '#/settings'
   renderApp()
   await waitFor(() => expect(document.querySelector('.q-shell')).toHaveClass('has-page'))
@@ -682,17 +681,30 @@ test('muting a repository says so with Undo; Undo brings it back', async () => {
   await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
 })
 
-test('muted repositories are listed on the Snoozed page, and Unmute brings them back', async () => {
+test('an old Snoozed link opens the snoozed view; muted repositories are groups there with Unmute', async () => {
   const user = userEvent.setup()
   await fake.store.set({ mutedGroups: { ['repo:' + H + ':g/sdk']: 'g/sdk' } })
   window.location.hash = '#/snoozed'
   renderApp()
-  const page = await screen.findByRole('region', { name: 'Snoozed' })
-  const muted = await within(page).findByRole('region', { name: 'Muted repositories' })
-  expect(within(muted).getByText('g/sdk')).toBeInTheDocument()
-  await user.click(within(muted).getByRole('button', { name: 'Unmute' }))
-  await waitFor(() => expect(within(page).queryByRole('region', { name: 'Muted repositories' })).toBeNull())
+  await waitFor(() => expect(window.location.hash).toBe('#/'))
+  expect(await screen.findByRole('button', { name: /^Active/ })).toHaveAttribute('aria-pressed', 'true')
+  const group = await screen.findByRole('region', { name: 'g/sdk' })
+  expect(within(group).getByText('muted')).toBeInTheDocument()
+  expect(within(group).getAllByRole('article').length).toBeGreaterThan(0)
+  await user.click(within(group).getByRole('button', { name: 'Options for g/sdk' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Unmute' }))
   await waitFor(async () => expect(await fake.store.get('mutedGroups')).toEqual({}))
+})
+
+test('switching views keeps the open MR open and its keys working', async () => {
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  const user = userEvent.setup()
+  renderApp()
+  expect(await screen.findByRole('region', { name: 'Fix flaky test' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /^Snoozed/ }))
+  expect(screen.getByRole('region', { name: 'Fix flaky test' })).toBeInTheDocument()
+  fireEvent.keyDown(window, { key: 'a' })
+  await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
 })
 
 test('with its repository muted, the open MR still answers a', async () => {
@@ -703,4 +715,80 @@ test('with its repository muted, the open MR still answers a', async () => {
   await waitFor(() => expect(within(sidebar()!).getByText('0 need you')).toBeInTheDocument())
   fireEvent.keyDown(window, { key: 'a' })
   await waitFor(() => expect(transport.approve).toHaveBeenCalledOnce())
+})
+
+test('↻ polls GitLab and reads the MRs again now', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('button', { name: /^Refresh/ }))
+  expect(fake.sent).toContainEqual({ kind: 'delta/hub', op: 'pollNow', payload: { maxAgeMs: 0 } })
+  await waitFor(() =>
+    expect(fake.sent.filter((message: { op?: string }) => message.op === 'listQueue').length).toBeGreaterThan(1),
+  )
+})
+
+test('if anything scrolls the page itself, it snaps back to the top', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  const root = document.scrollingElement ?? document.documentElement
+  const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  Object.defineProperty(root, 'scrollTop', { configurable: true, value: 120 })
+  fireEvent.scroll(window)
+  expect(scrollTo).toHaveBeenCalledWith(0, 0)
+  Object.defineProperty(root, 'scrollTop', { configurable: true, value: 0 })
+  scrollTo.mockRestore()
+})
+
+test('a reply survives leaving the MR and coming back at once', async () => {
+  const user = userEvent.setup()
+  const thread = (replied: boolean) => ({
+    id: 'd1', resolvable: true, resolved: false,
+    notes: [
+      {
+        id: 55, body: 'Should the budget reset?', system: false, icon: null,
+        createdAt: '2026-10-11T09:00:00Z',
+        author: { username: 'li', name: 'Li', avatarUrl: null, bot: false }, position: null,
+      },
+      ...(replied
+        ? [{
+            id: 56, body: 'Only on success', system: false, icon: null,
+            createdAt: '2026-10-11T10:00:00Z',
+            author: { username: 'joao', name: 'Joao', avatarUrl: null, bot: false }, position: null,
+          }]
+        : []),
+    ],
+  })
+  let replied = false
+  transport.replyToDiscussion.mockImplementation(async () => {
+    replied = true
+    return { id: 56, body: 'Only on success', author: { name: 'Joao', username: 'joao' } }
+  })
+  transport.getOverview.mockImplementation(async (target: { iid: number }) => ({
+    ...overview(target.iid === 1 ? 'Retry budget for webhooks' : 'Fix flaky test'),
+    discussions: target.iid === 1 ? [thread(replied)] : [],
+  }))
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  renderApp()
+  const box = await waitFor(() => {
+    const found = document.querySelector('[data-discussion-id="d1"] textarea') as HTMLTextAreaElement
+    expect(found).not.toBeNull()
+    return found
+  })
+  await user.type(box, 'Only on success')
+  await user.click(within(box.closest('[data-discussion-id]') as HTMLElement).getByRole('button', { name: 'Reply' }))
+  await waitFor(() => expect(replied).toBe(true))
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  await screen.findByRole('region', { name: 'Fix flaky test' })
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
+  const back = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
+  expect(await within(back).findByText('Only on success')).toBeInTheDocument()
+})
+
+test('an old Snoozed link replaces itself, so Back does not bring it back', async () => {
+  window.location.hash = '#/snoozed'
+  const before = history.length
+  renderApp()
+  await waitFor(() => expect(window.location.hash).toBe('#/'))
+  expect(history.length).toBe(before)
 })

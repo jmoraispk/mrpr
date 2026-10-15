@@ -247,3 +247,9 @@ test('tags: your own pushes are not new commits for you', () => {
   expect(row.newCommits).toBe(0)
   expect(row.attention).toBe('waiting')
 })
+
+test('an MR known only from notifications leaves once merged or closed', () => {
+  const items = [item(9, 'mention'), item(10, 'reply')]
+  expect(run([], { items }).map((row) => row.iid)).toEqual(expect.arrayContaining([9, 10]))
+  expect(run([], { items, closed: [`${H}:9`] }).map((row) => row.iid)).toEqual([10])
+})

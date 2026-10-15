@@ -115,3 +115,15 @@ test('settings default to hiding bots', async () => {
   fake.data.inboxSettings = { hideBots: false }
   expect(await loadSettings()).toEqual({ hideBots: false })
 })
+
+test('the view names merged and closed merge requests, and ignores ones stored without a state', () => {
+  const tracked = (id: number, state?: string) => ({
+    id, iid: id, project: 'g/p', title: 'x', webUrl: '', updatedAt: '', roles: [],
+    maxSeenNoteId: 0, trackedUntil: null, ...(state ? { state } : {}),
+  })
+  const view = inboxView(
+    { hosts: { [A]: host([], { mrs: { 1: tracked(1, 'merged'), 2: tracked(2, 'opened'), 3: tracked(3, 'closed'), 4: tracked(4) } }) } },
+    [{ id: A, host: A, apiBase: '', userId: 1, username: 'j' }],
+  )
+  expect(view.closed.sort()).toEqual([`${A}:1`, `${A}:3`])
+})

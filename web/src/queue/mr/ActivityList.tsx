@@ -1,11 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect } from 'react'
 
-import { relativeTime } from '../../hub/relativeTime'
 import { DiscussionThread } from '../../review/DiscussionThread'
 import type { ReviewTarget } from '../../transport/types'
 import { firstNote, toThreadDiscussion, type Activity } from '../activity'
 import { reviewHash } from '../route'
+import { QUEUE_QUERY_KEY } from '../useQueue'
+import { CodeSnippet } from './CodeSnippet'
+import { When } from './When'
 
 const EMPTY: ReadonlySet<string> = new Set()
 
@@ -49,11 +51,14 @@ export function ActivityList({
   expanded?: ReadonlySet<string>
 }) {
   const queryClient = useQueryClient()
-  // A reply or resolve changes the MR: read it again so Overview shows it.
-  const refresh = useCallback(
-    () => void queryClient.invalidateQueries({ queryKey: ['overview'] }),
-    [queryClient],
-  )
+  // A reply or resolve shows in its own thread at once; only the list is read
+  // again now, so the row's state follows. The MR page is not reloaded for it,
+  // only marked stale: coming back to it reads it again, reply included.
+  const overviewKey = `${target.hostId}/${target.project}/${target.iid}`
+  const refresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: QUEUE_QUERY_KEY })
+    void queryClient.invalidateQueries({ queryKey: ['overview', overviewKey], refetchType: 'none' })
+  }, [queryClient, overviewKey])
   // A reply asked for from the header: focus that thread's reply box.
   useEffect(() => {
     if (!replyTo) return
@@ -94,7 +99,7 @@ export function ActivityList({
             {item.kind === 'event' ? (
               <p className={`mr-event${item.isNew ? ' is-new' : ''}`}>
                 {item.note.author?.name ?? 'GitLab'} {item.note.body.split('\n')[0]} ·{' '}
-                {relativeTime(item.at)}
+                <When iso={item.at} />
               </p>
             ) : (
               <div
@@ -115,6 +120,10 @@ export function ActivityList({
                   {item.category === 'resolved' ? ' · resolved' : ''}
                   {item.you ? <strong className="mr-you"> · {YOU_TAGS[item.you]}</strong> : null}
                 </p>
+                {first?.position && !(item.category === 'resolved' && !expanded.has(item.discussion.id)) ? (
+                  // A resolved thread folded to one line shows (and fetches) no code.
+                  <CodeSnippet position={first.position} />
+                ) : null}
                 {item.category === 'resolved' && !expanded.has(item.discussion.id) ? (
                   // A shown resolved thread takes one line until opened.
                   <details className="mr-resolved">

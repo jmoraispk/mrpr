@@ -56,6 +56,7 @@ function view(items: InboxItem[], hostError: InboxView['hosts'][number]['error']
     hosts: [{ hostId: HOST, host: HOST, lastPollAt: new Date().toISOString(), error: hostError }],
     items,
     unread: items.filter((value) => !value.read).length,
+    closed: [],
   }
 }
 

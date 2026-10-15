@@ -81,3 +81,37 @@ export const useGroupOrder = () => useStored('groupOrder', NO_IDS, normalizeIds)
 export const useGroupNames = () => useStored('groupNames', NO_NAMES, normalizeNames)
 /** Muted repository group id → its path, so a muted repository with no MRs can still be named. */
 export const useMutedGroups = () => useStored('mutedGroups', NO_NAMES, normalizeNames)
+
+/** The snoozed view's rows: snoozed MRs and the muted repositories' own, never bot MRs. */
+export function snoozedRows(
+  rows: QueueRow[],
+  muted: Record<string, string>,
+  projects: Project[],
+): QueueRow[] {
+  return rows.filter(
+    (row) =>
+      !row.folded &&
+      (row.snoozed || (Boolean(muted[repoGroupId(row)]) && !projectOf(row, projects))),
+  )
+}
+
+/** Marks muted repositories' groups, and adds an empty group for each muted one without rows. */
+export function withMutedGroups(groups: RowGroup[], muted: Record<string, string>): RowGroup[] {
+  const marked = groups.map((group) => (muted[group.id] ? { ...group, muted: true } : group))
+  const present = new Set(groups.map((group) => group.id))
+  const empty = Object.entries(muted)
+    .filter(([id]) => !present.has(id))
+    .map(
+      ([id, repo]): RowGroup => ({
+        id,
+        projectId: null,
+        repo,
+        name: repo,
+        color: null,
+        rows: [],
+        needsYou: 0,
+        muted: true,
+      }),
+    )
+  return [...marked, ...empty]
+}

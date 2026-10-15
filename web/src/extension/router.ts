@@ -104,6 +104,10 @@ async function runReview(
       }
       return diffsSince(client, project, from, mr.sha)
     }
+    case 'getDiffsBetween': {
+      const { from, to } = payload as { from: string; to: string }
+      return diffsSince(client, project, from, to)
+    }
     case 'getOverview':
       return fetchMrOverview(client, project, iid)
     case 'rebase':

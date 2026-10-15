@@ -136,5 +136,10 @@ export function inboxView(state: InboxState, hosts: HostConfig[]): InboxView {
     })),
     items,
     unread: items.filter((item) => !item.read).length,
+    closed: hosts.flatMap((host) =>
+      Object.values(state.hosts[host.id]?.mrs ?? {})
+        .filter((mr) => mr.state === 'merged' || mr.state === 'closed')
+        .map((mr) => `${host.id}:${mr.id}`),
+    ),
   }
 }

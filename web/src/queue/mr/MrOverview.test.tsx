@@ -5,10 +5,11 @@ import { useState } from 'react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import type { MrOverview, OverviewNote } from '../../gitlab/mrOverview'
-import { installPlatform } from '../../platform/platform'
+import { installPlatform, platform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { TransportProvider } from '../../transport/context'
 import type { DeltaTransport } from '../../transport/types'
+import { QUEUE_QUERY_KEY } from '../useQueue'
 import { MrOverviewView } from './MrOverview'
 
 const transport = {
@@ -17,6 +18,26 @@ const transport = {
   getMergeRequest: vi.fn(),
   getDiffs: vi.fn(),
   getDiscussions: vi.fn(async () => []),
+  getDiffsBetween: vi.fn(async () => [
+    {
+      old_path: 'src/retry.py',
+      new_path: 'src/retry.py',
+      diff: [
+        '@@ -10,6 +10,7 @@ def retry():',
+        ' a = 1',
+        ' b = 2',
+        '-c = 3',
+        '+c = 4',
+        '+d = 5',
+        ' e = 6',
+      ].join('\n'),
+      new_file: false,
+      renamed_file: false,
+      deleted_file: false,
+      collapsed: false,
+      too_large: false,
+    },
+  ]),
   createDiscussion: vi.fn(),
   setResolved: vi.fn(),
   replyToDiscussion: vi.fn(async (_id: string, body: string) => ({
@@ -224,7 +245,7 @@ test('an inline thread links to its line in Changes; a shown resolved thread is 
           resolved: false,
           notes: [
             note(7, 'li', 'Off by one?', '2026-10-10T09:00:00Z', {
-              position: { filePath: 'src/retry.py', newLine: 42, oldLine: null },
+              position: { filePath: 'src/retry.py', newLine: 42, oldLine: null, baseSha: null, headSha: null },
             }),
           ],
         },
@@ -355,4 +376,120 @@ test('Activity threads read like a chat: the opener on the left, everyone else o
   expect(thread.querySelector('.chat-meta time')).toHaveAttribute('dateTime', '2026-10-11T08:00:00Z')
   // Reply and Resolve stay below the bubbles.
   expect(within(thread).getByRole('textbox', { name: 'Reply' })).toBeInTheDocument()
+})
+
+test('the details column and Activity events use short times', () => {
+  show()
+  const rail = screen.getByRole('complementary', { name: 'Details' })
+  expect(rail.textContent).not.toMatch(/ago|just now/)
+  expect(within(rail).getByText(/^updated/).querySelector('time')).not.toBeNull()
+  const events = [...document.querySelectorAll('.mr-event')]
+  expect(events.length).toBeGreaterThan(0)
+  for (const event of events) {
+    expect(event.textContent).not.toMatch(/ago|just now/)
+    expect(event.querySelector('time')?.getAttribute('title')).toBeTruthy()
+  }
+})
+
+test('a reply reads the list again at once, and does not read the whole MR again', async () => {
+  const user = userEvent.setup()
+  const client = new QueryClient()
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
+  render(
+    <QueryClientProvider client={client}>
+      <TransportProvider transport={transport}>
+        <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
+          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  const thread = screen.getByText('Should the budget reset?').closest('[data-discussion-id]') as HTMLElement
+  await user.type(within(thread).getByRole('textbox', { name: 'Reply' }), 'Only on success')
+  await user.click(within(thread).getByRole('button', { name: 'Reply' }))
+  expect(await within(thread).findByText('Only on success')).toBeInTheDocument()
+  await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: QUEUE_QUERY_KEY }))
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['overview'] })
+})
+
+test('an inline thread shows the code it was made on, the commented line marked', async () => {
+  show({
+    overview: overview({
+      discussions: [
+        {
+          id: 'inline',
+          resolvable: true,
+          resolved: false,
+          notes: [
+            note(401, 'li', 'Why 5?', '2026-10-11T08:00:00Z', {
+              position: { filePath: 'src/retry.py', newLine: 13, oldLine: null, baseSha: 'b1', headSha: 'h1' },
+            }),
+          ],
+        },
+      ],
+    }),
+  })
+  const thread = document.querySelector('[data-discussion-id="inline"]')!.closest('.mr-thread') as HTMLElement
+  const code = await within(thread).findByRole('figure', { name: 'src/retry.py, line 13' })
+  expect(code).toHaveTextContent('d = 5')
+  expect(code.querySelector('.is-target')).toHaveTextContent('d = 5')
+  expect(transport.getDiffsBetween).toHaveBeenCalledWith('b1', 'h1')
+})
+
+test('an inline thread whose line is gone keeps just its link', async () => {
+  show({
+    overview: overview({
+      discussions: [
+        {
+          id: 'old',
+          resolvable: true,
+          resolved: false,
+          notes: [
+            note(402, 'li', 'Old one', '2026-10-11T08:00:00Z', {
+              position: { filePath: 'src/retry.py', newLine: 99, oldLine: null, baseSha: 'b1', headSha: 'h1' },
+            }),
+          ],
+        },
+      ],
+    }),
+  })
+  const thread = document.querySelector('[data-discussion-id="old"]')!.closest('.mr-thread') as HTMLElement
+  await waitFor(() => expect(transport.getDiffsBetween).toHaveBeenCalled())
+  expect(within(thread).queryByRole('figure')).toBeNull()
+  expect(within(thread).getByRole('link', { name: /src\/retry\.py · line 99/ })).toBeInTheDocument()
+})
+
+test('coming back to Overview re-reads the MR if a reply marked it stale', () => {
+  const client = new QueryClient()
+  const refetch = vi.spyOn(client, 'refetchQueries')
+  render(
+    <QueryClientProvider client={client}>
+      <TransportProvider transport={transport}>
+        <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
+          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  expect(refetch).toHaveBeenCalledWith({ queryKey: ['overview', 'gitlab.example.com/g/p/1'], stale: true })
+})
+
+test('a resolved inline thread folded to one line shows no code and asks for none', async () => {
+  await platform().store.set({ activityFilters: { defaults: { unresolved: true, resolved: true, commits: true, bots: false, other: false }, perMr: {} } })
+  ;(transport.getDiffsBetween as ReturnType<typeof vi.fn>).mockClear()
+  show({
+    overview: overview({
+      discussions: [
+        {
+          id: 'done', resolvable: true, resolved: true,
+          notes: [
+            note(403, 'li', 'Fixed now', '2026-10-11T08:00:00Z', {
+              position: { filePath: 'src/retry.py', newLine: 13, oldLine: null, baseSha: 'b1', headSha: 'h1' },
+            }),
+          ],
+        },
+      ],
+    }),
+  })
+  await screen.findByText(/LI: Fixed now/)
+  expect(document.querySelector('.mr-snippet')).toBeNull()
+  expect(transport.getDiffsBetween).not.toHaveBeenCalled()
 })

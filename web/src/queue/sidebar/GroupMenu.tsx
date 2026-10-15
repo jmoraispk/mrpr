@@ -6,10 +6,11 @@ interface Item {
   run: () => void
 }
 
-/** The ⋮ on a group header: Rename…, Mute repository, Move up, Move down. */
+/** The ⋮ on a group header: Rename…, Mute repository (or Unmute), Move up, Move down. */
 export function GroupMenu({
   name,
   canMute,
+  muted = false,
   canUp,
   canDown,
   onRename,
@@ -19,6 +20,8 @@ export function GroupMenu({
 }: {
   name: string
   canMute: boolean
+  /** A muted repository: the menu offers Unmute (onMute) instead. */
+  muted?: boolean
   canUp: boolean
   canDown: boolean
   onRename: () => void
@@ -31,7 +34,7 @@ export function GroupMenu({
   const menu = useRef<HTMLDivElement>(null)
   const items: Item[] = [
     { label: 'Rename…', disabled: false, run: onRename },
-    ...(canMute ? [{ label: 'Mute repository', disabled: false, run: onMute }] : []),
+    ...(canMute ? [{ label: muted ? 'Unmute' : 'Mute repository', disabled: false, run: onMute }] : []),
     { label: 'Move up', disabled: !canUp, run: onUp },
     { label: 'Move down', disabled: !canDown, run: onDown },
   ]

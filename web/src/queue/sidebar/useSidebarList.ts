@@ -4,6 +4,7 @@ import {
   arrangeGroups,
   moveGroup as movedOrder,
   shiftGroup as shiftedOrder,
+  withMutedGroups,
   useGroupNames,
   useGroupOrder,
 } from '../groups'
@@ -17,6 +18,7 @@ import {
   type ListOrder,
   type RowGroup,
   type SidebarTab,
+  type SidebarView,
 } from '../order'
 import type { Project } from '../projects'
 
@@ -50,11 +52,16 @@ export interface SidebarList {
   clear: () => void
 }
 
+const NO_MUTED: Record<string, string> = {}
+
 export function useSidebarList(
   rows: QueueRow[],
   projects: Project[],
   /** Whether you opened this MR; keep it stable (useCallback), it is a memo input. */
   isMine: (row: QueueRow) => boolean,
+  /** The snoozed view lists snoozed rows and adds the muted repositories' groups. */
+  view: SidebarView = 'active',
+  muted: Record<string, string> = NO_MUTED,
 ): SidebarList {
   const [filters, setFilters] = useListFilters()
   const [order, setOrder] = useListOrder()
@@ -63,7 +70,7 @@ export function useSidebarList(
   const [search, setSearch] = useState('')
   const [groupOrder, setGroupOrder] = useGroupOrder()
   const [names, setNames] = useGroupNames()
-  const listed = useMemo(() => filterRows(rows, filters, search), [rows, filters, search])
+  const listed = useMemo(() => filterRows(rows, filters, search, view), [rows, filters, search, view])
   const counts = useMemo(() => {
     const mine = listed.filter(isMine).length
     return { mine, others: listed.length - mine }
@@ -72,10 +79,10 @@ export function useSidebarList(
     () => listed.filter((row) => isMine(row) === (tab === 'mine')),
     [listed, isMine, tab],
   )
-  const groups = useMemo(
-    () => arrangeGroups(groupRows(sortRows(inTab, order), projects), groupOrder, names),
-    [inTab, order, projects, groupOrder, names],
-  )
+  const groups = useMemo(() => {
+    const grouped = groupRows(sortRows(inTab, order), projects)
+    return arrangeGroups(view === 'snoozed' ? withMutedGroups(grouped, muted) : grouped, groupOrder, names)
+  }, [inTab, order, projects, groupOrder, names, view, muted])
   const listedIds = groups.map((group) => group.id)
   const flat = useMemo(
     () => groups.filter((group) => !collapsed.includes(group.id)).flatMap((group) => group.rows),

@@ -67,3 +67,31 @@ test('an MR that is gone or hidden is a 404 with a plain sentence', async () => 
     message: 'This merge request is gone or you no longer have access',
   })
 })
+
+test('an inline note keeps its file, line and the commits it was written against', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(
+    fakeMergeRequest(1, {
+      discussions: [
+        {
+          id: 'inline',
+          resolvable: true,
+          resolved: false,
+          notes: [
+            fakeNote(21, 'li', 'Why 3?', '2026-10-11T08:00:00Z', {
+              position: { filePath: 'a.py', newLine: 3, oldLine: null, diffRefs: { baseSha: 'b1', headSha: 'h1' } },
+            }),
+          ],
+        },
+      ],
+    }),
+  )
+  const mr = await fetchMrOverview(new GitLabClient(API, 'secret'), 'g/p', 1)
+  expect(mr.discussions[0].notes[0].position).toEqual({
+    filePath: 'a.py',
+    newLine: 3,
+    oldLine: null,
+    baseSha: 'b1',
+    headSha: 'h1',
+  })
+})
