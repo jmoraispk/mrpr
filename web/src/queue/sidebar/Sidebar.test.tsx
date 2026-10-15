@@ -59,10 +59,12 @@ function Harness({
   rows,
   onOpen,
   onSnooze,
+  activityKey,
 }: {
   rows: QueueRow[]
   onOpen: (row: QueueRow) => void
   onSnooze: (row: QueueRow) => void
+  activityKey: string | null
 }) {
   const [projects] = useProjects()
   const list = useSidebarList(rows, projects, isMine)
@@ -74,6 +76,7 @@ function Harness({
       loading={false}
       selectedKey={selected}
       openKey={null}
+      activityKey={activityKey}
       onSnoozeRow={onSnooze}
       onOpenRow={(row) => {
         setSelected(row.key)
@@ -89,15 +92,16 @@ function Harness({
   )
 }
 
-function show(rows: QueueRow[] = rowsOf(MRS)) {
+function show(rows: QueueRow[] = rowsOf(MRS), activityKey: string | null = null) {
   const onOpen = vi.fn()
   const onSnooze = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} />,
+    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} activityKey={activityKey} />,
   )
   return { onOpen, onSnooze, ...view }
 }
 
+const filtersButton = () => screen.getByRole('button', { name: /^Filters/ })
 const titles = () =>
   screen.getAllByRole('article').map((row) => row.querySelector('.sb-title-text')?.textContent)
 const rowNamed = (title: string) =>
@@ -174,6 +178,7 @@ test('no tag chips above the list', () => {
 test('filters: needs me only, hide drafts, show done, search, and clearing them', async () => {
   const user = userEvent.setup()
   show()
+  await user.click(filtersButton())
   await user.click(screen.getByRole('checkbox', { name: 'Show done' }))
   expect(titles()).toContain('Already approved')
   await user.click(screen.getByRole('checkbox', { name: 'Needs me only' }))
@@ -233,4 +238,30 @@ test('two tabs: From others first, From me for your own MRs, with counts, and th
   await user.type(screen.getByRole('searchbox', { name: 'Search MRs' }), 'flaky')
   expect(screen.getByRole('tab', { name: 'From others (1)' })).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'From me (0)' })).toBeInTheDocument()
+})
+
+test('Filters opens under the Sort row, one box per line, and stays open', async () => {
+  const user = userEvent.setup()
+  show()
+  expect(screen.queryByRole('checkbox', { name: 'Needs me only' })).toBeNull()
+  await user.click(filtersButton())
+  expect(filtersButton()).toHaveAttribute('aria-expanded', 'true')
+  for (const name of ['Needs me only', 'Hide drafts', 'Show done', 'Unresolved threads', 'Resolved threads',
+    'New commits', 'Bot comments', 'Other activity (labels, assignees, edits)']) {
+    expect(screen.getByRole('checkbox', { name })).toBeInTheDocument()
+  }
+  await waitFor(async () => expect(await fake.store.get('filtersOpen')).toBe(true))
+})
+
+test('with an MR open, Activity boxes change that MR, and Apply to all MRs makes them the default', async () => {
+  const user = userEvent.setup()
+  show(undefined, 'h:g/p!1')
+  await user.click(filtersButton())
+  expect(screen.getByText('For the open MR')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Apply to all MRs' })).toBeNull()
+  await user.click(screen.getByRole('checkbox', { name: 'Bot comments' }))
+  await user.click(await screen.findByRole('button', { name: 'Apply to all MRs' }))
+  await waitFor(async () =>
+    expect(await fake.store.get('activityFilters')).toMatchObject({ defaults: { bots: true }, perMr: {} }),
+  )
 })

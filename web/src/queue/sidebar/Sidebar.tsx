@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { useFiltersOpen } from '../listSettings'
 import type { QueueRow } from '../model'
 import {
   directionLabel,
@@ -8,13 +9,13 @@ import {
   SORT_LABELS,
   TAB_LABELS,
   TABS,
-  type ListFilters,
   type SortBy,
 } from '../order'
 import { ProjectDialog } from '../ProjectDialog'
 import { moveRow } from '../projects'
 import { useProjects } from '../state'
 import { useTheme } from '../theme'
+import { FiltersPanel } from './FiltersPanel'
 import { MrGroup } from './MrGroup'
 import { MrRow } from './MrRow'
 import { SidebarResizer } from './SidebarResizer'
@@ -28,6 +29,8 @@ export interface SidebarProps {
   selectedKey: string | null
   /** The row of the MR open on the right. */
   openKey: string | null
+  /** The open MR's look key, for the Activity filters; null with no MR open. */
+  activityKey: string | null
   onOpenRow: (row: QueueRow) => void
   onSnoozeRow: (row: QueueRow) => void
   /** Non-zero when `/` asks for the search box; reset through onSearchFocused. */
@@ -40,12 +43,6 @@ export interface SidebarProps {
   onResizeEnd: (width: number) => void
 }
 
-const FILTER_LABELS: [keyof ListFilters, string][] = [
-  ['needsMeOnly', 'Needs me only'],
-  ['hideDrafts', 'Hide drafts'],
-  ['showDone', 'Show done'],
-]
-
 /** Every MR, grouped by project, with the filters, sort and tag chips that order them. */
 export function Sidebar({
   rows,
@@ -53,6 +50,7 @@ export function Sidebar({
   loading,
   selectedKey,
   openKey,
+  activityKey,
   onOpenRow,
   onSnoozeRow,
   searchFocus,
@@ -65,6 +63,8 @@ export function Sidebar({
   const [projects, setProjects] = useProjects()
   const theme = useTheme()
   const [newProjectOpen, setNewProjectOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useFiltersOpen()
+  const activeFilters = Object.values(list.filters).filter(Boolean).length
   const search = useRef<HTMLInputElement>(null)
   // Focus once per ask: the sidebar mounting again (after full screen, or b) must not take it.
   useEffect(() => {
@@ -184,19 +184,6 @@ export function Sidebar({
             </button>
           ))}
         </div>
-        <fieldset className="sb-filters">
-          <legend className="visually-hidden">Filters</legend>
-          {FILTER_LABELS.map(([key, label]) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={list.filters[key]}
-                onChange={(event) => list.setFilters({ ...list.filters, [key]: event.target.checked })}
-              />
-              {label}
-            </label>
-          ))}
-        </fieldset>
         <div className="sb-sort-row">
           <label className="sb-sort">
             Sort
@@ -223,7 +210,19 @@ export function Sidebar({
           >
             {list.order.descending ? '↓' : '↑'}
           </button>
+          <button
+            type="button"
+            className="sb-filters-toggle"
+            aria-expanded={filtersOpen}
+            aria-controls="sb-filters-panel"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            Filters{activeFilters ? ` · ${activeFilters}` : ''} {filtersOpen ? '▴' : '▾'}
+          </button>
         </div>
+        {filtersOpen ? (
+          <FiltersPanel filters={list.filters} onFilters={list.setFilters} activityKey={activityKey} />
+        ) : null}
       </div>
       <div className="sb-groups" role="tabpanel" aria-label={TAB_LABELS[list.tab]}>
         {body}

@@ -26,7 +26,7 @@ function hiddenSentence(hidden: Activity['hidden']): string | null {
     hidden.commits ? count(hidden.commits, 'commit event') : null,
     hidden.other ? count(hidden.other, 'other event') : null,
   ].filter(Boolean)
-  return `${total} hidden by your Show settings: ${parts.join(', ')}`
+  return `${total} hidden by your Filters: ${parts.join(', ')}`
 }
 
 /** Threads and events in time order, with the divider and what is hidden. */

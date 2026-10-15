@@ -28,16 +28,12 @@
 .mr-main { min-width: 0; }
 .mr-description { margin-bottom: 20px; padding: 12px 14px; border: 1px solid var(--line-3); border-radius: 10px; color: var(--ink-2); line-height: 1.55; }
 .mr-description.is-clipped .mr-markdown { max-height: 18em; overflow: hidden; mask-image: linear-gradient(#000 70%, transparent); }
-.mr-description > button, .mr-hidden button, .mr-activity-head button { border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
+.mr-description > button, .mr-hidden button { border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
 .mr-markdown img { max-width: 100%; }
 .mr-markdown pre { overflow-x: auto; padding: 10px; border-radius: 8px; background: var(--soft); }
 .mr-markdown a { color: var(--link); }
 .mr-activity-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .mr-activity-head h3 { margin: 0; color: var(--ink); font-size: 15px; }
-.mr-show { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink); font-size: 13px; }
-.mr-show > label { display: inline-flex; gap: 6px; margin: 0 14px 6px 0; }
-.mr-show-scope { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; color: var(--muted); }
-.mr-show-scope button { border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
 .mr-divider { display: flex; align-items: center; gap: 10px; margin: 14px 0 8px; color: var(--accent-ink); font: 600 12px var(--font-body); }
 .mr-divider::before, .mr-divider::after { content: ''; flex: 1; height: 1px; background: var(--accent); opacity: .35; }
 .mr-event { margin: 6px 0; padding: 2px 0 2px 18px; color: var(--muted); font-size: 13px; }

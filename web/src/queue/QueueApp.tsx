@@ -10,7 +10,7 @@ import { platform } from '../platform/platform'
 import type { ReviewTarget } from '../transport/types'
 import { KeyHelp } from './KeyHelp'
 import { useSidebar } from './listSettings'
-import type { QueueRow } from './model'
+import { lookKeyFor, type QueueRow } from './model'
 import { MrHeader, type HeaderRequest } from './mr/MrHeader'
 import { MrOverviewView } from './mr/MrOverview'
 import { MrPanel } from './mr/MrPanel'
@@ -226,6 +226,7 @@ export function QueueApp() {
           loading={queue.isLoading}
           selectedKey={current?.key ?? null}
           openKey={openRowKey}
+          activityKey={openTarget ? lookKeyFor(openTarget.hostId, openTarget.project, openTarget.iid) : null}
           onOpenRow={(row) => open(row)}
           onSnoozeRow={actions.snooze}
           searchFocus={searchFocus}

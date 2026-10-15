@@ -8,7 +8,6 @@ import { lookKeyFor } from '../model'
 import { ActivityList } from './ActivityList'
 import { DetailsRail } from './DetailsRail'
 import { Markdown } from './Markdown'
-import { ShowSettings } from './ShowSettings'
 
 const LONG_LINES = 12
 const LONG_CHARS = 1200
@@ -39,7 +38,6 @@ export function MrOverviewView({
   focusNoteId?: number | null
 }) {
   const settings = useActivityFilters(lookKeyFor(target.hostId, target.project, target.iid))
-  const [showOpen, setShowOpen] = useState(false)
   const [reveal, setReveal] = useState(false)
   const [descriptionOpen, setDescriptionOpen] = useState(false)
   // Threads kept on screen whatever the filters say: the one a link pointed
@@ -90,18 +88,7 @@ export function MrOverviewView({
         <section className="mr-activity" aria-label="Activity">
           <div className="mr-activity-head">
             <h3>Activity</h3>
-            <button type="button" aria-expanded={showOpen} onClick={() => setShowOpen((open) => !open)}>
-              ⚙ Show
-            </button>
           </div>
-          {showOpen ? (
-            <ShowSettings
-              filters={settings.filters}
-              scope={settings.scope}
-              onChange={settings.setFilter}
-              onReset={settings.reset}
-            />
-          ) : null}
           <ActivityList
             activity={activity}
             target={target}
