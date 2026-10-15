@@ -1,7 +1,7 @@
 import { Extension } from '@tiptap/core'
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
 import type { ReplyBoxProps } from './ReplyBox'
 import { toMarkdown } from './richMarkdown'
@@ -85,6 +85,19 @@ export default function RichReply({
       else chain.setLink({ href: href.trim() }).run()
     }
   })
+  // Take the keyboard in the same task that replaced the loading field: Tiptap's
+  // own autofocus waits a timer and a frame, and keys typed meanwhile were lost.
+  const focusOnMount = useRef(autoFocus)
+  useLayoutEffect(() => {
+    if (!focusOnMount.current || !editor || editor.isDestroyed) return
+    try {
+      if (!editor.view.dom.isConnected) return
+      focusOnMount.current = false
+      editor.view.focus()
+    } catch {
+      // Not mounted yet (Tiptap's view throws until then): its own autofocus follows.
+    }
+  }, [editor])
   // A post that went through clears the box.
   useEffect(() => {
     if (editor && value === '' && !editor.isEmpty) editor.commands.clearContent()
