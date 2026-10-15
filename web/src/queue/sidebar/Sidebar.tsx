@@ -88,7 +88,6 @@ export function Sidebar({
           <MrRow
             key={row.key}
             row={row}
-            order={list.order.tags}
             selected={row.key === selectedKey}
             current={row.key === openKey}
             onOpen={() => onOpenRow(row)}

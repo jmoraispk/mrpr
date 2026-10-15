@@ -10,6 +10,7 @@ import {
   normalizeListFilters,
   normalizeListOrder,
   normalizeSidebar,
+  SIDEBAR_WIDTH,
   toggleTag,
   useListOrder,
 } from './listSettings'
@@ -42,8 +43,8 @@ test('a stored order drops unknown tags, repeats and sorts', () => {
 })
 
 test('the sidebar is open unless stored closed; collapsed groups are distinct strings', () => {
-  expect(normalizeSidebar(undefined)).toEqual({ open: true, width: 360 })
-  expect(normalizeSidebar({ open: false })).toEqual({ open: false, width: 360 })
+  expect(normalizeSidebar(undefined)).toEqual({ open: true, width: 400 })
+  expect(normalizeSidebar({ open: false })).toEqual({ open: false, width: 400 })
   expect(normalizeSidebar({ open: 'no', width: 420 })).toEqual({ open: true, width: 420 })
   expect(normalizeCollapsed(['a', 3, 'a', 'b'])).toEqual(['a', 'b'])
   expect(normalizeCollapsed({})).toEqual([])
@@ -78,5 +79,12 @@ test('an old tag order drops the labels that no longer exist', () => {
 test('a stored width is kept within its limits', () => {
   expect(normalizeSidebar({ open: true, width: 9999 })).toEqual({ open: true, width: 600 })
   expect(normalizeSidebar({ open: true, width: 10 })).toEqual({ open: true, width: 260 })
-  expect(normalizeSidebar({ open: true, width: 'wide' })).toEqual({ open: true, width: 360 })
+  expect(normalizeSidebar({ open: true, width: 'wide' })).toEqual({ open: true, width: 400 })
+})
+
+test('the sidebar is 400 wide by default; the old default of 360 reads as 400', () => {
+  expect(SIDEBAR_WIDTH.default).toBe(400)
+  expect(normalizeSidebar({ open: true, width: 360 })).toEqual({ open: true, width: 400 })
+  expect(normalizeSidebar({ open: false, width: 361 })).toEqual({ open: false, width: 361 })
+  expect(normalizeSidebar('junk')).toEqual({ open: true, width: 400 })
 })

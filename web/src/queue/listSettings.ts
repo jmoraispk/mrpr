@@ -30,7 +30,9 @@ export function normalizeListOrder(stored: unknown): ListOrder {
 }
 
 /** The sidebar's width in pixels: dragged within these limits, saved in this browser. */
-export const SIDEBAR_WIDTH = { min: 260, max: 600, default: 360 } as const
+export const SIDEBAR_WIDTH = { min: 260, max: 600, default: 400 } as const
+// The default before 400; every toggle of the sidebar stored it, so it is read as "the default".
+const OLD_DEFAULT_WIDTH = 360
 
 export interface SidebarSettings {
   open: boolean
@@ -47,7 +49,7 @@ export function normalizeSidebar(stored: unknown): SidebarSettings {
   return {
     open: typeof stored.open === 'boolean' ? stored.open : true,
     width:
-      typeof stored.width === 'number' && Number.isFinite(stored.width)
+      typeof stored.width === 'number' && Number.isFinite(stored.width) && stored.width !== OLD_DEFAULT_WIDTH
         ? clampWidth(stored.width)
         : SIDEBAR_WIDTH.default,
   }

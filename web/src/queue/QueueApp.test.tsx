@@ -155,7 +155,7 @@ test('the sidebar says what needs you, today’s budget and the folded bot MRs',
   expect(within(side).getByText('1 bot MR folded away')).toBeInTheDocument()
 })
 
-test('MRs are grouped by repository, what needs you first, each with its tags', async () => {
+test('MRs are grouped by repository, each row without labels', async () => {
   renderApp()
   const rows = await screen.findAllByRole('article')
   expect(rows.map((row) => row.querySelector('.sb-title-text')?.textContent)).toEqual([
@@ -164,11 +164,8 @@ test('MRs are grouped by repository, what needs you first, each with its tags', 
     'Port billing',
   ])
   expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 3/ })).toBeInTheDocument()
-  expect(within(rows[0]).getByText('Blocking 1 person')).toBeInTheDocument()
-  expect(within(rows[0]).getByText(/by Ana/)).toBeInTheDocument()
-  expect(within(rows[1]).getByText('Quick win · ~1 min')).toBeInTheDocument()
-  // Days counted from now, so only the name is fixed.
-  expect(within(rows[2]).getByText(/^Waiting on others/)).toBeInTheDocument()
+  expect(within(rows[0]).getByText(/· Ana ·/)).toBeInTheDocument()
+  expect(rows[0].querySelector('.q-tag')).toBeNull()
 })
 
 test('a host error shows its sentence and offers to sign in again', async () => {
@@ -528,7 +525,7 @@ test('b and Ctrl+B hide and show the sidebar, and it stays as you left it', asyn
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'b' })
   await waitFor(() => expect(sidebar()).toBeNull())
-  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false, width: 360 }))
+  await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: false, width: 400 }))
   fireEvent.keyDown(window, { key: 'b', ctrlKey: true })
   await waitFor(() => expect(sidebar()).toBeInTheDocument())
 })

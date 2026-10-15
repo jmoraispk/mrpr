@@ -124,28 +124,20 @@ test('one group per repository, needs-you first, and done hidden', () => {
   ])
 })
 
-test('a row: its title, three labels then +N, and a grey line', () => {
-  // Your own small MR that you also review, with changes requested and behind its target: five labels.
-  const busy = mr(9, {
-    title: 'Busy one',
-    roles: ['author', 'reviewer'],
-    author: JOAO,
-    additions: 4,
-    deletions: 1,
-    needsRebase: true,
-    reviewers: [
-      { username: 'joao', name: 'Joao', state: 'UNREVIEWED' },
-      { username: 'ana', name: 'Ana', state: 'REQUESTED_CHANGES' },
-    ],
-  })
-  show(rowsOf([MRS[0], busy]))
-  const row = rowNamed('Busy one')
-  expect(within(row).getByText('Blocking 1 person')).toBeInTheDocument()
-  expect(within(row).getByText('Returned to you')).toBeInTheDocument()
-  expect(within(row).getByText('Quick win · ~1 min')).toBeInTheDocument()
-  expect(within(row).queryByText(/Waiting on others/)).toBeNull()
-  expect(within(row).getByText('+2')).toBeInTheDocument()
-  expect(rowNamed('Retry budget')).toHaveTextContent(/!1 · by Ana · \+120 −10 ·/)
+test('a row: its title, then number, author, size and a short time; no labels', () => {
+  show()
+  const row = rowNamed('Retry budget')
+  expect(row).toHaveTextContent(/!1 · Ana · \+120 −10 · \S+$/)
+  expect(row.querySelector('time')).toHaveAttribute('dateTime', '2026-10-11T10:00:00Z')
+  expect(row.querySelector('time')?.textContent).not.toMatch(/ago/)
+  expect(row.querySelector('.q-tag')).toBeNull()
+  expect(within(row).queryByText(/Waiting on you|Quick win|Blocking/)).toBeNull()
+})
+
+test('a row that needs you has the accent bar; one waiting on others does not', () => {
+  show()
+  expect(rowNamed('Retry budget')).toHaveClass('is-needs-you')
+  expect(rowNamed('Port billing')).not.toHaveClass('is-needs-you')
 })
 
 test('one click opens a row', () => {

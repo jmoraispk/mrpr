@@ -24,7 +24,8 @@
 .sb-row { padding: 8px 16px 8px 25px; border-left: 3px solid transparent; cursor: pointer; }
 .sb-row:hover, .sb-row.is-selected { background: var(--hl); }
 .sb-row.is-current { border-left-color: var(--accent); }
-.sb-row .q-tags { margin-top: 4px; }
+/* What needs you: a quiet bar inside the left edge (the open MR's border sits outside it). */
+.sb-row.is-needs-you { box-shadow: inset 3px 0 color-mix(in srgb, var(--accent) 60%, transparent); }
 .sb-title { display: flex; gap: 6px; align-items: center; margin: 0; overflow: hidden; color: var(--ink); font: 500 14px/1.35 var(--font-body); white-space: nowrap; }
 .sb-title-text { overflow: hidden; text-overflow: ellipsis; }
 .sb-unread { flex: none; width: 7px; height: 7px; border-radius: 4px; background: var(--accent); }

@@ -22,13 +22,13 @@ test('arrow keys resize by 16, with Shift by 48, and Home resets', () => {
   fireEvent.keyDown(handle, { key: 'ArrowRight' })
   fireEvent.keyDown(handle, { key: 'ArrowLeft', shiftKey: true })
   fireEvent.keyDown(handle, { key: 'Home' })
-  expect(onResizeEnd.mock.calls).toEqual([[376], [312], [360]])
+  expect(onResizeEnd.mock.calls).toEqual([[376], [312], [400]])
 })
 
 test('a double-click resets the width', () => {
   const { handle, onResizeEnd } = show(500)
   fireEvent.doubleClick(handle)
-  expect(onResizeEnd).toHaveBeenCalledWith(360)
+  expect(onResizeEnd).toHaveBeenCalledWith(400)
 })
 
 test('dragging resizes as it goes and saves on release', () => {

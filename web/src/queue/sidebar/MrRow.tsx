@@ -1,21 +1,17 @@
 import { useEffect, useRef } from 'react'
 
-import { relativeTime } from '../../hub/relativeTime'
+import { shortTime } from '../../hub/relativeTime'
 import type { QueueRow } from '../model'
-import { TagList } from '../TagList'
-import type { TagKind } from '../tags'
 
-/** One MR: title, three tags, a grey line. A click opens it. */
+/** One MR: title, then number, author, size and when it last changed. A click opens it. */
 export function MrRow({
   row,
-  order,
   selected,
   current,
   onOpen,
   onSnooze,
 }: {
   row: QueueRow
-  order: TagKind[]
   selected: boolean
   /** The MR open on the right. */
   current: boolean
@@ -28,10 +24,13 @@ export function MrRow({
     if (selected) ref.current?.scrollIntoView?.({ block: 'nearest' })
   }, [selected])
   const unread = row.items.some((item) => !item.read)
+  const needsYou = row.attention === 'needs-you' || row.attention === 'returned'
   return (
     <article
       ref={ref}
-      className={`sb-row${selected ? ' is-selected' : ''}${current ? ' is-current' : ''}`}
+      className={`sb-row${selected ? ' is-selected' : ''}${current ? ' is-current' : ''}${
+        needsYou ? ' is-needs-you' : ''
+      }`}
       aria-current={current ? 'true' : undefined}
       data-key={row.key}
       draggable
@@ -57,19 +56,21 @@ export function MrRow({
           💤
         </button>
       </div>
-      <TagList tags={row.tags} order={order} max={3} />
       <p className="sb-meta">
         !{row.iid}
         {row.mr ? (
           <>
-            {' · '}by {row.mr.author.name}
+            {' · '}
+            {row.mr.author.name}
             {' · '}
             <span className="q-plus">+{row.mr.additions}</span>{' '}
             <span className="q-minus">−{row.mr.deletions}</span>
           </>
         ) : null}
         {' · '}
-        <time dateTime={row.updatedAt}>{relativeTime(row.updatedAt)}</time>
+        <time dateTime={row.updatedAt} title={new Date(row.updatedAt).toLocaleString()}>
+          {shortTime(row.updatedAt)}
+        </time>
       </p>
     </article>
   )
