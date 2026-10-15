@@ -26,6 +26,8 @@ export interface QueueRow {
   score: number
   items: InboxItem[]
   snoozed: boolean
+  /** You wrote it, review it, or were told about it; false for MRs listed only by All MRs. */
+  involved: boolean
 }
 
 export interface QueueInput {
@@ -136,6 +138,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         score: blocking * 10 + ageHours / 6 + (quickWin ? 5 : 0) - (mr.draft ? 20 : 0),
         items,
         snoozed: input.snoozed[key] === mr.updatedAt,
+        involved: mr.roles.length > 0 || items.length > 0,
       })
     }
     // Inbox items on MRs the facts query did not return (assignee-only, mentions).
@@ -167,6 +170,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         score: 0,
         items,
         snoozed: input.snoozed[key] === first.createdAt,
+        involved: true,
       })
     }
   }

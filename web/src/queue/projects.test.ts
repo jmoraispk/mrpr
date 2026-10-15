@@ -31,6 +31,7 @@ function row(key: string, project: string, labels: string[] = []): QueueRow {
     newCommits: 0,
     items: [],
     snoozed: false,
+    involved: true,
     mr: { labels } as never,
   }
 }

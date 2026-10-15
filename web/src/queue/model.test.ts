@@ -253,3 +253,10 @@ test('an MR known only from notifications leaves once merged or closed', () => {
   expect(run([], { items }).map((row) => row.iid)).toEqual(expect.arrayContaining([9, 10]))
   expect(run([], { items, closed: [`${H}:9`] }).map((row) => row.iid)).toEqual([10])
 })
+
+test('a row knows whether it involves you: a role, or a notification', () => {
+  const rows = run([mr(1, { roles: ['reviewer'] }), mr(2, { roles: [] })], { items: [item(9, 'mention')] })
+  expect(rows.find((row) => row.iid === 1)?.involved).toBe(true)
+  expect(rows.find((row) => row.iid === 2)?.involved).toBe(false)
+  expect(rows.find((row) => row.iid === 9)?.involved).toBe(true)
+})

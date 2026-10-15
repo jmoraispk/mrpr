@@ -88,7 +88,10 @@ export function Sidebar({
   const [newProjectOpen, setNewProjectOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useFiltersOpen()
   const [muted] = useMutedGroups()
-  const activeFilters = Object.values(list.filters).filter(Boolean).length
+  // The toggles that are on, plus one when Show is not the default (yours and your reviews).
+  const activeFilters =
+    [list.filters.needsMeOnly, list.filters.hideDrafts, list.filters.showDone].filter(Boolean).length +
+    (list.filters.allMrs || !list.filters.authored || !list.filters.reviewing ? 1 : 0)
   const search = useRef<HTMLInputElement>(null)
   // Focus once per ask: the sidebar mounting again (after full screen, or b) must not take it.
   useEffect(() => {

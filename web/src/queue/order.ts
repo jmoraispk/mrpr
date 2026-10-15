@@ -22,6 +22,10 @@ export interface ListFilters {
   needsMeOnly: boolean
   hideDrafts: boolean
   showDone: boolean
+  /** Which MRs: yours, your reviews, or every open MR in your repositories. */
+  authored: boolean
+  reviewing: boolean
+  allMrs: boolean
 }
 
 /** The sidebar's list: what is active, or what you snoozed or muted. */
@@ -98,7 +102,13 @@ export function filterRows(
     (row) =>
       !row.folded &&
       // The snoozed view lists snoozed MRs whatever their state.
-      (view === 'snoozed' || (!row.snoozed && (filters.showDone || row.attention !== 'done'))) &&
+      (view === 'snoozed' ||
+        (!row.snoozed && (filters.showDone || row.attention !== 'done' || !row.involved))) &&
+      // Which MRs: notification-only rows (no facts) always; with All MRs, every row.
+      (filters.allMrs ||
+        !row.mr ||
+        (filters.authored && row.mr.roles.includes('author')) ||
+        (filters.reviewing && row.mr.roles.includes('reviewer'))) &&
       (!filters.needsMeOnly || row.attention === 'needs-you' || row.attention === 'returned') &&
       (!filters.hideDrafts || !row.mr?.draft) &&
       (!query || haystack(row).includes(query)),

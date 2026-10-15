@@ -25,9 +25,17 @@ test('stored filters keep what is valid and default the rest', () => {
   expect(normalizeListFilters(undefined)).toEqual(DEFAULT_LIST_FILTERS)
   expect(normalizeListFilters('junk')).toEqual(DEFAULT_LIST_FILTERS)
   expect(normalizeListFilters({ needsMeOnly: true, hideDrafts: 'yes', extra: 1 })).toEqual({
+    ...DEFAULT_LIST_FILTERS,
     needsMeOnly: true,
+  })
+  expect(normalizeListFilters({ allMrs: true, authored: 'x' })).toEqual({ ...DEFAULT_LIST_FILTERS, allMrs: true })
+  expect(DEFAULT_LIST_FILTERS).toEqual({
+    needsMeOnly: false,
     hideDrafts: false,
     showDone: false,
+    authored: true,
+    reviewing: true,
+    allMrs: false,
   })
 })
 

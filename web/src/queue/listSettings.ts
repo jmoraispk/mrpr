@@ -5,6 +5,9 @@ export const DEFAULT_LIST_FILTERS: ListFilters = {
   needsMeOnly: false,
   hideDrafts: false,
   showDone: false,
+  authored: true,
+  reviewing: true,
+  allMrs: false,
 }
 export const DEFAULT_LIST_ORDER: ListOrder = { sortBy: 'changed', descending: true }
 const NONE: string[] = []
@@ -16,7 +19,14 @@ export function normalizeListFilters(stored: unknown): ListFilters {
   if (!isRecord(stored)) return DEFAULT_LIST_FILTERS
   const flag = (key: keyof ListFilters) =>
     typeof stored[key] === 'boolean' ? (stored[key] as boolean) : DEFAULT_LIST_FILTERS[key]
-  return { needsMeOnly: flag('needsMeOnly'), hideDrafts: flag('hideDrafts'), showDone: flag('showDone') }
+  return {
+    needsMeOnly: flag('needsMeOnly'),
+    hideDrafts: flag('hideDrafts'),
+    showDone: flag('showDone'),
+    authored: flag('authored'),
+    reviewing: flag('reviewing'),
+    allMrs: flag('allMrs'),
+  }
 }
 
 export function normalizeListOrder(stored: unknown): ListOrder {

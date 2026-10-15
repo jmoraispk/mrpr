@@ -424,3 +424,18 @@ test('an empty snoozed view says Nothing snoozed.', () => {
   show([], null, 'snoozed')
   expect(screen.getByText('Nothing snoozed.')).toBeInTheDocument()
 })
+
+test('the Show boxes: All MRs greys out the other two as ticked', async () => {
+  const user = userEvent.setup()
+  show()
+  await user.click(screen.getByRole('button', { name: /^Filters/ }))
+  const authored = screen.getByRole('checkbox', { name: 'Authored by me' })
+  const reviewing = screen.getByRole('checkbox', { name: "I'm the reviewer" })
+  expect(authored).toBeChecked()
+  expect(reviewing).toBeChecked()
+  await user.click(screen.getByRole('checkbox', { name: 'All MRs' }))
+  expect(authored).toBeChecked()
+  expect(authored).toBeDisabled()
+  expect(reviewing).toBeDisabled()
+  await waitFor(async () => expect(await fake.store.get('listFilters')).toMatchObject({ allMrs: true }))
+})

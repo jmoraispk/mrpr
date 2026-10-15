@@ -12,6 +12,7 @@ function facts(over: Partial<QueueMr> = {}): QueueMr {
     createdAt: '2026-10-01T00:00:00Z',
     draft: false,
     labels: [],
+    roles: ['reviewer'],
     author: { username: 'ana', name: 'Ana', avatarUrl: null, bot: false },
     ...over,
   } as QueueMr
@@ -35,6 +36,7 @@ function row(n: number, over: Partial<QueueRow> = {}): QueueRow {
     score: 0,
     items: [],
     snoozed: false,
+    involved: true,
     ...over,
   } as QueueRow
 }
@@ -82,7 +84,14 @@ test('the direction button says which way the list runs', () => {
   expect(directionLabel({ sortBy: 'size', descending: true })).toBe('Largest first')
 })
 
-const NONE: ListFilters = { needsMeOnly: false, hideDrafts: false, showDone: false }
+const NONE: ListFilters = {
+  needsMeOnly: false,
+  hideDrafts: false,
+  showDone: false,
+  authored: true,
+  reviewing: true,
+  allMrs: false,
+}
 
 test('done rows hide unless Show done; snoozed and folded rows never list', () => {
   const rows = [
@@ -152,4 +161,18 @@ test('the snoozed view keeps snoozed and done rows, still never folded ones', ()
   ]
   expect(iids(filterRows(rows, NONE, '', 'snoozed'))).toEqual([1, 2])
   expect(iids(filterRows(rows, NONE, ''))).toEqual([])
+})
+
+test('Show: authored and reviewing pick rows by role; notification-only rows always show; All MRs shows the rest', () => {
+  const mine = row(1, { attention: 'needs-you', mr: facts({ roles: ['author'] }), involved: true })
+  const review = row(2, { attention: 'needs-you', mr: facts({ roles: ['reviewer'] }), involved: true })
+  const note = row(3, { attention: 'needs-you', mr: null, involved: true })
+  const other = row(4, { attention: 'done', mr: facts({ roles: [] }), involved: false })
+  const rows = [mine, review, note, other]
+  expect(iids(filterRows(rows, NONE, ''))).toEqual([1, 2, 3])
+  expect(iids(filterRows(rows, { ...NONE, authored: false }, ''))).toEqual([2, 3])
+  expect(iids(filterRows(rows, { ...NONE, reviewing: false }, ''))).toEqual([1, 3])
+  expect(iids(filterRows(rows, { ...NONE, authored: false, reviewing: false }, ''))).toEqual([3])
+  // All MRs: everything, the role-less row even though it reads as done.
+  expect(iids(filterRows(rows, { ...NONE, authored: false, reviewing: false, allMrs: true }, ''))).toEqual([1, 2, 3, 4])
 })

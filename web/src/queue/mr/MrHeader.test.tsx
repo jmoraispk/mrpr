@@ -43,6 +43,7 @@ function row(over: Partial<QueueRow> = {}): QueueRow {
     newCommits: 0,
     items: [],
     snoozed: false,
+    involved: true,
     ...over,
   }
 }
