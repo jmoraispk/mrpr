@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { QueueRow } from '../model'
-import { directionLabel, FIRST_DESCENDING, SORTS, SORT_LABELS, type ListFilters, type SortBy } from '../order'
+import {
+  directionLabel,
+  FIRST_DESCENDING,
+  SORTS,
+  SORT_LABELS,
+  TAB_LABELS,
+  TABS,
+  type ListFilters,
+  type SortBy,
+} from '../order'
 import { ProjectDialog } from '../ProjectDialog'
 import { moveRow } from '../projects'
 import { useProjects } from '../state'
@@ -106,7 +115,7 @@ export function Sidebar({
   } else {
     body = (
       <p className="sb-empty">
-        Nothing waiting on you.
+        {list.tab === 'mine' ? 'No open MRs from you.' : 'Nothing waiting on you.'}
         {!list.filters.showDone && hiddenDone ? (
           <>
             {' '}
@@ -150,6 +159,31 @@ export function Sidebar({
             }
           }}
         />
+        <div className="sb-tabs" role="tablist" aria-label="Whose MRs">
+          {TABS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              className="sb-tab"
+              aria-selected={list.tab === id}
+              tabIndex={list.tab === id ? 0 : -1}
+              data-tab={id}
+              onClick={() => list.setTab(id)}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+                event.preventDefault()
+                const next = TABS[(TABS.indexOf(id) + 1) % TABS.length]
+                list.setTab(next)
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)
+                  ?.focus()
+              }}
+            >
+              {TAB_LABELS[id]} ({list.counts[id]})
+            </button>
+          ))}
+        </div>
         <fieldset className="sb-filters">
           <legend className="visually-hidden">Filters</legend>
           {FILTER_LABELS.map(([key, label]) => (
@@ -191,7 +225,9 @@ export function Sidebar({
           </button>
         </div>
       </div>
-      <div className="sb-groups">{body}</div>
+      <div className="sb-groups" role="tabpanel" aria-label={TAB_LABELS[list.tab]}>
+        {body}
+      </div>
       <footer className="sb-foot">
         {folded ? (
           <p className="q-folded">

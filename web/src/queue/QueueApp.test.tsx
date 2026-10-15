@@ -160,11 +160,20 @@ test('MRs are grouped by repository, each row without labels', async () => {
   expect(rows.map((row) => row.querySelector('.sb-title-text')?.textContent)).toEqual([
     'Retry budget for webhooks',
     'Fix flaky test',
-    'Port billing',
   ])
-  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 3/ })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 2/ })).toBeInTheDocument()
   expect(within(rows[0]).getByText(/· Ana ·/)).toBeInTheDocument()
   expect(rows[0].querySelector('.q-tag')).toBeNull()
+})
+
+test('your own MRs are under From me', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.click(screen.getByRole('tab', { name: /^From me/ }))
+  expect(screen.getAllByRole('article').map((row) => row.querySelector('.sb-title-text')?.textContent)).toEqual([
+    'Port billing',
+  ])
 })
 
 test('a host error shows its sentence and offers to sign in again', async () => {
@@ -233,7 +242,7 @@ test('opening a review lands on the waiting thread and reads what was folded int
 test('dropping a row on a project’s header moves it there', async () => {
   await fake.store.set({
     projects: [
-      { id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: [], labels: [] }, pinned: [`${H}:3`] },
+      { id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: [], labels: [] }, pinned: [`${H}:2`] },
     ],
   })
   renderApp()
@@ -247,7 +256,7 @@ test('dropping a row on a project’s header moves it there', async () => {
   fireEvent.dragOver(target, { dataTransfer })
   fireEvent.drop(target, { dataTransfer })
   await waitFor(async () =>
-    expect(await fake.store.get('projects')).toMatchObject([{ pinned: [`${H}:3`, `${H}:1`] }]),
+    expect(await fake.store.get('projects')).toMatchObject([{ pinned: [`${H}:2`, `${H}:1`] }]),
   )
 })
 
@@ -464,6 +473,13 @@ test('after opening an MR, Reply still reaches the thread waiting on you', async
 })
 
 test('after the selected row leaves the list, j goes on to the next one, not back to the top', async () => {
+  // A third MR from someone else, so the list goes on after the one that leaves.
+  hosts[0].mrs[2] = {
+    ...hosts[0].mrs[2],
+    roles: ['reviewer'],
+    author: { username: 'ana', name: 'Ana', avatarUrl: null, bot: false },
+    reviewers: [{ username: 'joao', name: 'Joao', state: 'UNREVIEWED' }],
+  }
   transport.approve.mockImplementationOnce(async () => {
     hosts[0].mrs[1] = {
       ...hosts[0].mrs[1],
@@ -541,7 +557,7 @@ test('nothing open: the right says how to open an MR; an old bucket link lands h
   renderApp()
   await screen.findAllByRole('article')
   expect(screen.getByText('Click an MR to open it.')).toBeInTheDocument()
-  expect(screen.getAllByRole('article')).toHaveLength(3)
+  expect(screen.getAllByRole('article')).toHaveLength(2)
 })
 
 test('with the sidebar hidden, j opens the next MR and keys act on the one on screen', async () => {

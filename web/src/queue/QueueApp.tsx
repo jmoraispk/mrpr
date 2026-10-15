@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { MrOverview } from '../gitlab/mrOverview'
 import { hubRequest } from '../hub/api'
@@ -48,7 +48,15 @@ export function QueueApp() {
   const route = useSiteRoute()
   const queue = useQueue()
   const [projects] = useProjects()
-  const list = useSidebarList(queue.rows, projects)
+  // Who you are on each host: your MRs go under From me.
+  const users = queue.hosts.map((host) => `${host.hostId}=${host.username}`).join('\n')
+  const isMine = useCallback(
+    (row: QueueRow) =>
+      row.mr?.author.username === queue.hosts.find((host) => host.hostId === row.hostId)?.username,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [users],
+  )
+  const list = useSidebarList(queue.rows, projects, isMine)
   const [sidebar, setSidebar] = useSidebar()
   // While dragging, the width follows the pointer; it is saved on release.
   const [dragWidth, setDragWidth] = useState<number | null>(null)

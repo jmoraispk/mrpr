@@ -52,6 +52,8 @@ beforeEach(() => {
   installPlatform(fake)
 })
 
+const isMine = (row: QueueRow) => row.mr?.author.username === 'joao'
+
 /** The sidebar with the selection QueueApp would keep. */
 function Harness({
   rows,
@@ -63,7 +65,7 @@ function Harness({
   onSnooze: (row: QueueRow) => void
 }) {
   const [projects] = useProjects()
-  const list = useSidebarList(rows, projects)
+  const list = useSidebarList(rows, projects, isMine)
   const [selected, setSelected] = useState<string | null>(null)
   return (
     <Sidebar
@@ -113,14 +115,9 @@ test('the header counts what needs you; the footer, the rest', () => {
 
 test('one group per repository, needs-you first, and done hidden', () => {
   show()
-  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 3/ })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 2/ })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /g\/docs\s*1 \/ 1/ })).toBeInTheDocument()
-  expect(titles()).toEqual([
-    'Retry budget for webhooks',
-    'Fix flaky test',
-    'Port billing',
-    'Docs for the CLI',
-  ])
+  expect(titles()).toEqual(['Retry budget for webhooks', 'Fix flaky test', 'Docs for the CLI'])
 })
 
 test('a row: its title, then number, author, size and a short time; no labels', () => {
@@ -133,9 +130,11 @@ test('a row: its title, then number, author, size and a short time; no labels', 
   expect(within(row).queryByText(/Waiting on you|Quick win|Blocking/)).toBeNull()
 })
 
-test('a row that needs you has the accent bar; one waiting on others does not', () => {
+test('a row that needs you has the accent bar; one waiting on others does not', async () => {
+  const user = userEvent.setup()
   show()
   expect(rowNamed('Retry budget')).toHaveClass('is-needs-you')
+  await user.click(screen.getByRole('tab', { name: /^From me/ }))
   expect(rowNamed('Port billing')).not.toHaveClass('is-needs-you')
 })
 
@@ -187,7 +186,7 @@ test('filters: needs me only, hide drafts, show done, search, and clearing them'
   // Clearing keeps Show done: it is a preference, not a narrowing.
   await user.click(screen.getByRole('button', { name: 'Clear filters' }))
   expect(titles()).toEqual(
-    expect.arrayContaining(['Port billing', 'Docs for the CLI', 'Already approved']),
+    expect.arrayContaining(['Docs for the CLI', 'Already approved']),
   )
   expect(screen.getByRole('searchbox', { name: 'Search MRs' })).toHaveValue('')
 })
@@ -219,4 +218,19 @@ test('the snooze button snoozes and never opens the row', () => {
   expect(onSnooze).toHaveBeenCalledOnce()
   expect(onSnooze.mock.calls[0][0]).toMatchObject({ iid: 2 })
   expect(onOpen).not.toHaveBeenCalled()
+})
+
+test('two tabs: From others first, From me for your own MRs, with counts, and the choice is saved', async () => {
+  const user = userEvent.setup()
+  show()
+  const others = screen.getByRole('tab', { name: 'From others (3)' })
+  expect(others).toHaveAttribute('aria-selected', 'true')
+  expect(titles()).not.toContain('Port billing')
+  await user.click(screen.getByRole('tab', { name: 'From me (1)' }))
+  expect(titles()).toEqual(['Port billing'])
+  await waitFor(async () => expect(await fake.store.get('sidebarTab')).toBe('mine'))
+  // The counts follow the search.
+  await user.type(screen.getByRole('searchbox', { name: 'Search MRs' }), 'flaky')
+  expect(screen.getByRole('tab', { name: 'From others (1)' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'From me (0)' })).toBeInTheDocument()
 })

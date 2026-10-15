@@ -24,6 +24,11 @@ export interface ListFilters {
   showDone: boolean
 }
 
+/** Whose MRs the sidebar lists: yours, or everyone else's. */
+export type SidebarTab = 'mine' | 'others'
+export const TABS: SidebarTab[] = ['mine', 'others']
+export const TAB_LABELS: Record<SidebarTab, string> = { mine: 'From me', others: 'From others' }
+
 /** One project, or one repository no project claims, with its rows in list order. */
 export interface RowGroup {
   id: string

@@ -10,6 +10,7 @@ import {
   normalizeListFilters,
   normalizeListOrder,
   normalizeSidebar,
+  normalizeTab,
   SIDEBAR_WIDTH,
   useListOrder,
 } from './listSettings'
@@ -67,4 +68,11 @@ test('the list order: a sort and a direction; anything else, old shapes included
   expect(normalizeListOrder({ tags: ['returned'], sortBy: 'waiting' })).toEqual(DEFAULT_LIST_ORDER)
   expect(normalizeListOrder({ sortBy: 'age' })).toEqual(DEFAULT_LIST_ORDER)
   expect(normalizeListOrder('junk')).toEqual(DEFAULT_LIST_ORDER)
+})
+
+test('the sidebar tab: From others unless From me was chosen', () => {
+  expect(normalizeTab('mine')).toBe('mine')
+  expect(normalizeTab('others')).toBe('others')
+  expect(normalizeTab('junk')).toBe('others')
+  expect(normalizeTab(undefined)).toBe('others')
 })

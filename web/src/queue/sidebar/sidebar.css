@@ -7,6 +7,9 @@
 .sb-search { box-sizing: border-box; width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: 14px var(--font-body); }
 .sb-filters { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; border: 0; color: var(--ink-2); font-size: 13px; }
 .sb-filters label { display: inline-flex; gap: 4px; align-items: center; }
+.sb-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line-2); }
+.sb-tab { flex: 1; padding: 6px 4px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: 500 13px var(--font-body); cursor: pointer; }
+.sb-tab[aria-selected='true'] { border-bottom-color: var(--accent); color: var(--ink); font-weight: 600; }
 .sb-sort-row { display: flex; gap: 6px; align-items: center; }
 .sb-direction { min-width: 28px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: 14px var(--font-body); cursor: pointer; }
 .sb-sort { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }

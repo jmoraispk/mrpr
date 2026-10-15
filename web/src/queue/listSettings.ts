@@ -1,4 +1,4 @@
-import { SORTS, type ListFilters, type ListOrder, type SortBy } from './order'
+import { SORTS, type ListFilters, type ListOrder, type SidebarTab, type SortBy } from './order'
 import { useStored } from './state'
 
 export const DEFAULT_LIST_FILTERS: ListFilters = {
@@ -64,3 +64,5 @@ export const useListFilters = () =>
 export const useListOrder = () => useStored('listOrder', DEFAULT_LIST_ORDER, normalizeListOrder)
 export const useSidebar = () => useStored('sidebar', OPEN, normalizeSidebar)
 export const useCollapsedGroups = () => useStored('collapsedGroups', NONE, normalizeCollapsed)
+export const normalizeTab = (stored: unknown): SidebarTab => (stored === 'mine' ? 'mine' : 'others')
+export const useSidebarTab = () => useStored<SidebarTab>('sidebarTab', 'others', normalizeTab)
