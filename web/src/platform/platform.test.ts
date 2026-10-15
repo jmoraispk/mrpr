@@ -19,7 +19,7 @@ vi.mock('webextension-polyfill', () => ({ default: fake }))
 
 const { installPlatform, platform } = await import('./platform')
 const { createExtensionPlatform } = await import('./extension')
-const { getToken, listHosts, saveHost } = await import('../extension/hosts')
+const { getToken, listHosts, saveHost } = await import('../core/hosts')
 
 const HOST = {
   id: 'gitlab.example.com',

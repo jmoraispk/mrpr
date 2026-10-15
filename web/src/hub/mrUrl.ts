@@ -1,5 +1,5 @@
-import type { HostConfig } from '../extension/hosts'
-import { hostIdFor } from '../extension/hosts'
+import type { HostConfig } from '../core/hosts'
+import { hostIdFor } from '../core/hosts'
 import type { ReviewTarget } from '../transport/types'
 
 /** Mirrors `_MR_PATH` in src/delta_review/config.py. */

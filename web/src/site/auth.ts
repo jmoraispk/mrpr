@@ -1,4 +1,4 @@
-import { hostIdFor, listHosts, removeHost, saveHost } from '../extension/hosts'
+import { hostIdFor, listHosts, removeHost, saveHost } from '../core/hosts'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
 import { updateInbox } from '../inbox/store'

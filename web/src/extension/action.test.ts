@@ -45,7 +45,7 @@ fake.windows = {
 vi.mock('webextension-polyfill', () => ({ default: fake }))
 await import('../test/installExtensionPlatform')
 
-const { saveHost } = await import('./hosts')
+const { saveHost } = await import('../core/hosts')
 const { forgetHubTab, hashForTab, openHub } = await import('./action')
 
 const HOSTS = [

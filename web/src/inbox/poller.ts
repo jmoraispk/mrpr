@@ -1,4 +1,4 @@
-import { listHosts } from '../extension/hosts'
+import { listHosts } from '../core/hosts'
 import { GitLabError } from '../gitlab/errors'
 import { platform } from '../platform/platform'
 import { pollHost } from './pollHost'

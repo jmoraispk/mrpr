@@ -1,5 +1,5 @@
-import type { DeltaMessage, DeltaResponse } from '../extension/messages'
-import type { HostConfig } from '../extension/hosts'
+import type { DeltaMessage, DeltaResponse } from '../core/messages'
+import type { HostConfig } from '../core/hosts'
 import type { GitLabClient } from '../gitlab/client'
 
 export interface KeyValueStore {

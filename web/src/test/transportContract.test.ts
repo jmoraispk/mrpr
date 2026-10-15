@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest'
 
 import { createFakeBrowser } from './fakeBrowser'
-import type { DeltaResponse } from '../extension/messages'
+import type { DeltaResponse } from '../core/messages'
 
 const fake = createFakeBrowser() as ReturnType<typeof createFakeBrowser> & {
   runtime: { sendMessage: (message: unknown) => Promise<DeltaResponse> }

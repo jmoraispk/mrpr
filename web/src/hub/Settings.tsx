@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
-import type { HostConfig } from '../extension/hosts'
+import type { HostConfig } from '../core/hosts'
 import { INBOX_SETTINGS_KEY, loadSettings } from '../inbox/store'
 import type { InboxSettings } from '../inbox/types'
 import { platform } from '../platform/platform'

@@ -1,5 +1,5 @@
 import { ApiError } from '../api/client'
-import type { HubOp } from '../extension/messages'
+import type { HubOp } from '../core/messages'
 import type { MergeRequestPage } from '../gitlab/mergeRequests'
 import { platform } from '../platform/platform'
 

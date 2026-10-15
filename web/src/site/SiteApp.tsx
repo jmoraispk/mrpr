@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent } from 'react'
 
-import type { HostConfig } from '../extension/hosts'
+import type { HostConfig } from '../core/hosts'
 import { QueueApp } from '../queue/QueueApp'
 import { hubRequest } from '../hub/api'
 import { lockedPoll, startPageSchedule } from '../inbox/pageSchedule'

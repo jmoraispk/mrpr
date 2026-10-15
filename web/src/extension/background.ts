@@ -4,8 +4,8 @@ import { installInboxPolling, startInboxPolling } from '../inbox/schedule'
 import { createExtensionPlatform } from '../platform/extension'
 import { installPlatform } from '../platform/platform'
 import { forgetHubTab, openHub } from './action'
-import type { DeltaMessage } from './messages'
-import { handleMessage } from './router'
+import type { DeltaMessage } from '../core/messages'
+import { handleMessage } from '../core/router'
 
 // Before any listener: every handler below reaches storage through it.
 installPlatform(createExtensionPlatform())

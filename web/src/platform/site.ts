@@ -1,5 +1,5 @@
-import { listHosts } from '../extension/hosts'
-import { handleMessage } from '../extension/router'
+import { listHosts } from '../core/hosts'
+import { handleMessage } from '../core/router'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
 import { accessToken, canPost, sessionHosts, signIn, signOut } from '../site/auth'

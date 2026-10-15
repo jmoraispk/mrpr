@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, expect, test } from 'vitest'
 
-import { listHosts } from '../extension/hosts'
+import { listHosts } from '../core/hosts'
 import { installPlatform, platform } from '../platform/platform'
 import { createFakePlatform } from '../test/fakePlatform'
 import { server } from '../test/server'

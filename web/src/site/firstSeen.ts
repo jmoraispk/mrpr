@@ -1,4 +1,4 @@
-import type { HostConfig } from '../extension/hosts'
+import type { HostConfig } from '../core/hosts'
 import { platform } from '../platform/platform'
 
 /** `host:userId` of every user already reported from this browser. */

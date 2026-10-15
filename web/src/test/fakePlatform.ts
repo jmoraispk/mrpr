@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-import type { DeltaMessage, DeltaResponse } from '../extension/messages'
+import type { DeltaMessage, DeltaResponse } from '../core/messages'
 import type { KeyValueStore, Platform } from '../platform/types'
 
 export function createMemoryStore(): KeyValueStore {

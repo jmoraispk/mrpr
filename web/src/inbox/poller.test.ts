@@ -16,7 +16,7 @@ const fake = createFakeBrowser()
 vi.mock('webextension-polyfill', () => ({ default: fake }))
 await import('../test/installExtensionPlatform')
 
-const { saveHost } = await import('../extension/hosts')
+const { saveHost } = await import('../core/hosts')
 const { pollAll } = await import('./poller')
 const { loadInbox, markRead, updateInbox } = await import('./store')
 

@@ -1,5 +1,5 @@
 
-import type { HostConfig } from '../extension/hosts'
+import type { HostConfig } from '../core/hosts'
 import { platform } from '../platform/platform'
 import { emptyHostInbox } from './pollHost'
 import {

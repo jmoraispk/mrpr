@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill'
 
 import { buildReviewHash } from '../hub/route'
 import { parseMergeRequestUrl } from '../hub/mrUrl'
-import { listHosts, type HostConfig } from './hosts'
+import { listHosts, type HostConfig } from '../core/hosts'
 
 const HUB_TAB_KEY = 'hubTabId'
 

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { HostConfig } from '../extension/hosts'
+import type { HostConfig } from '../core/hosts'
 import type {
   MergeRequestPage,
   MergeRequestSummary,
@@ -21,7 +21,7 @@ import { mergeRequestKey } from './useInbox'
  * throwaway view state, so it reads and writes the platform store itself
  * instead of paying a message round trip to the worker. It touches this key
  * and nothing else: `hosts` and `tokens` belong to the worker (see
- * `extension/hosts.ts`), and a personal access token must never be reachable
+ * `core/hosts.ts`), and a personal access token must never be reachable
  * from a page context. `storage.local.set` merges by key, so writing here
  * cannot disturb either of those.
  */

@@ -7,7 +7,7 @@ import {
   removeHost,
   saveHost,
   type HostConfig,
-} from '../extension/hosts'
+} from '../core/hosts'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
 import { getCurrentUser } from '../gitlab/user'

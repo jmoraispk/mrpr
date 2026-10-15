@@ -5,7 +5,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 
-import type { HostConfig } from '../extension/hosts'
+import type { HostConfig } from '../core/hosts'
 import type { InboxItem, InboxKind, InboxView } from '../inbox/types'
 import { platform } from '../platform/platform'
 import { hubRequest } from './api'

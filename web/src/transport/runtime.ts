@@ -8,7 +8,7 @@ import type {
   MergeRequest,
   PostingResult,
 } from '../api/types'
-import type { DeltaResponse, ReviewOp } from '../extension/messages'
+import type { DeltaResponse, ReviewOp } from '../core/messages'
 import { platform } from '../platform/platform'
 import type { MrOverview } from '../gitlab/mrOverview'
 import { lookKeyFor } from '../queue/model'

@@ -3,7 +3,7 @@ import { expect, test, vi } from 'vitest'
 import { createFakeBrowser } from '../test/fakeBrowser'
 import { buildReviewHash, parseRoute } from './route'
 
-// `mrUrl` reuses `hostIdFor` from `../extension/hosts`, which imports
+// `mrUrl` reuses `hostIdFor` from `../core/hosts`, which imports
 // `webextension-polyfill` at module scope. See src/test/fakeBrowser.ts for why
 // the mock must be literal here and the import dynamic.
 const fake = createFakeBrowser()
