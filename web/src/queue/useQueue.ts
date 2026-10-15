@@ -69,6 +69,7 @@ export function useQueue() {
       buildQueue({
         hosts,
         items: inbox.data?.items ?? [],
+        closed: inbox.data?.closed ?? [],
         snoozed,
         commitsSince: JSON.parse(commitsKey) as Record<string, number>,
         now: new Date(),

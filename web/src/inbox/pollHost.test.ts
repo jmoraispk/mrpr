@@ -121,6 +121,7 @@ test('a merged merge request yields one item and then goes quiet', async () => {
   const mr = gitlab.add(fakeMergeRequest(3))
   gitlab.lists.authored.push(3)
   const first = await poll(null)
+  expect(first.mrs['3'].state).toBe('opened')
 
   gitlab.lists.authored.length = 0
   mr.state = 'merged'
@@ -133,6 +134,7 @@ test('a merged merge request yields one item and then goes quiet', async () => {
   const second = await poll(first, after(2))
 
   expect(kinds(second)).toEqual([['merged', null]])
+  expect(second.mrs['3'].state).toBe('merged')
   expect(second.mrs['3'].trackedUntil).toBe(
     new Date(after(2).getTime() + 14 * 86_400_000).toISOString(),
   )
