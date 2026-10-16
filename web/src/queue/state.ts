@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { platform } from '../platform/platform'
-import { normalizeProjects, type Project } from './projects'
 
 /** A value in this browser's store, kept in sync across hook instances and tabs. */
 export function useStored<T>(
@@ -38,10 +37,6 @@ export function useStored<T>(
     [key],
   )
   return [value, update]
-}
-
-export function useProjects(): [Project[], (next: Project[]) => void] {
-  return useStored<Project[]>('projects', [], normalizeProjects)
 }
 
 /** Row key → the MR's updatedAt when snoozed; null unsnoozes. */

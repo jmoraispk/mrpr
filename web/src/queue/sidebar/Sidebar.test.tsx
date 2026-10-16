@@ -10,7 +10,6 @@ import { buildQueue, type QueueRow } from '../model'
 import type { RowGroup } from '../order'
 import { useMutedGroups } from '../groups'
 import type { SidebarView } from '../order'
-import { useProjects } from '../state'
 import { Sidebar } from './Sidebar'
 import { useSidebarList } from './useSidebarList'
 
@@ -75,9 +74,8 @@ function Harness({
   activityKey: string | null
   view: SidebarView
 }) {
-  const [projects] = useProjects()
   const [muted] = useMutedGroups()
-  const list = useSidebarList(rows, projects, isMine, view, muted)
+  const list = useSidebarList(rows, isMine, view, muted)
   const [selected, setSelected] = useState<string | null>(null)
   return (
     <Sidebar
@@ -318,26 +316,6 @@ test('Rename… gives a repository a display name; Enter saves once; empty bring
   await waitFor(async () => expect(await fake.store.get('groupNames')).toEqual({}))
 })
 
-test('Escape cancels a rename; a project cannot be given an empty name', async () => {
-  const user = userEvent.setup()
-  await fake.store.set({
-    projects: [{ id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: ['g/docs'], labels: [] }, pinned: [] }],
-  })
-  show()
-  await user.click(await screen.findByRole('button', { name: 'Options for Payments' }))
-  await user.click(screen.getByRole('menuitem', { name: 'Rename…' }))
-  await user.keyboard('{Escape}')
-  expect(screen.getByRole('button', { name: /^Payments\s*\d/ })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: 'Options for Payments' }))
-  await user.click(screen.getByRole('menuitem', { name: 'Rename…' }))
-  const field = screen.getByRole('textbox', { name: 'Rename Payments' })
-  await user.clear(field)
-  await user.keyboard('{Enter}')
-  expect(screen.getByRole('textbox', { name: 'Rename Payments' })).toBeInTheDocument()
-  await user.type(screen.getByRole('textbox', { name: 'Rename Payments' }), 'Billing{Enter}')
-  await waitFor(async () => expect(await fake.store.get('projects')).toMatchObject([{ name: 'Billing' }]))
-})
-
 test('Move up and Move down reorder groups, and the order is saved', async () => {
   const user = userEvent.setup()
   show()
@@ -386,20 +364,17 @@ test('the footer counts snoozed MRs and muted repositories together', async () =
   expect(await screen.findByRole('button', { name: 'Snoozed (1)' })).toBeInTheDocument()
 })
 
-test('a project header refuses a link dragged from another page, and a dropped file never leaves the app', async () => {
-  await fake.store.set({
-    projects: [{ id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: ['g/docs'], labels: [] }, pinned: [] }],
-  })
+test('a group header refuses a link dragged from another page, and a dropped file never leaves the app', async () => {
   show()
-  const projectHead = (await screen.findByRole('button', { name: /^Payments\s*\d/ })).closest('h2')!
+  const docsHead = (await screen.findByRole('button', { name: /^g\/docs\s*\d/ })).closest('h2')!
   const link = { getData: () => 'https://example.com', types: ['text/uri-list', 'text/plain'] }
   // Not cancelled: the browser shows the drop as not allowed here.
-  expect(fireEvent.dragOver(projectHead, { dataTransfer: link })).toBe(true)
+  expect(fireEvent.dragOver(docsHead, { dataTransfer: link })).toBe(true)
   const repoHead = screen.getByRole('button', { name: /^g\/sdk\s*\d/ }).closest('h2')!
   const files = { getData: () => '', types: ['Files'] }
   // Cancelled: the browser does not open the file in place of Mr. PR.
   expect(fireEvent.drop(repoHead, { dataTransfer: files })).toBe(false)
-  expect(groupNames()).toEqual(['Payments', 'g/sdk'])
+  expect(groupNames()).toEqual(['g/sdk', 'g/docs'])
 })
 
 test('the refresh button sits in the header, and Sort sits above the tabs', () => {
@@ -438,4 +413,9 @@ test('the Show boxes: All MRs greys out the other two as ticked', async () => {
   expect(authored).toBeDisabled()
   expect(reviewing).toBeDisabled()
   await waitFor(async () => expect(await fake.store.get('listFilters')).toMatchObject({ allMrs: true }))
+})
+
+test('the footer has no + Project', () => {
+  show()
+  expect(screen.queryByRole('button', { name: '+ Project' })).toBeNull()
 })

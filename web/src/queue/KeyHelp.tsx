@@ -6,7 +6,6 @@ const KEYS: [string, string][] = [
   ['x', 'request changes'],
   ['n', 'nudge'],
   ['s', 'snooze until it changes'],
-  ['m', 'move to project'],
   ['d', 'since last review'],
   ['/', 'search'],
   ['b or Ctrl+B', 'hide or show the sidebar'],

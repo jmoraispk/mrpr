@@ -1,5 +1,4 @@
 import type { QueueRow } from './model'
-import { projectOf, type Project } from './projects'
 
 export type SortBy = 'changed' | 'age' | 'size'
 export const SORTS: SortBy[] = ['changed', 'age', 'size']
@@ -36,15 +35,12 @@ export type SidebarTab = 'mine' | 'others'
 export const TABS: SidebarTab[] = ['mine', 'others']
 export const TAB_LABELS: Record<SidebarTab, string> = { mine: 'From me', others: 'From others' }
 
-/** One project, or one repository no project claims, with its rows in list order. */
+/** One repository, with its rows in list order. */
 export interface RowGroup {
   id: string
-  /** The project these rows belong to; null for a repository's group. */
-  projectId: string | null
-  /** The repository's path for a repository's group; null for a project. */
-  repo: string | null
+  /** The repository's path. */
+  repo: string
   name: string
-  color: string | null
   rows: QueueRow[]
   needsYou: number
   /** A muted repository's group, in the snoozed view. */
@@ -117,40 +113,18 @@ export function filterRows(
 
 export const repoGroupId = (row: QueueRow) => `repo:${row.hostId}:${row.project}`
 
-/**
- * Your projects in your order, then one group per repository no project
- * claims, ordered by their first row. Rows keep the order they come in.
- */
-export function groupRows(rows: QueueRow[], projects: Project[]): RowGroup[] {
-  const byProject = new Map<string, QueueRow[]>()
+/** One group per repository, ordered by their first row. Rows keep the order they come in. */
+export function groupRows(rows: QueueRow[]): RowGroup[] {
   const byRepo = new Map<string, QueueRow[]>()
   for (const row of rows) {
-    const project = projectOf(row, projects)
-    const map = project ? byProject : byRepo
-    const id = project ? project.id : repoGroupId(row)
-    map.set(id, [...(map.get(id) ?? []), row])
+    const id = repoGroupId(row)
+    byRepo.set(id, [...(byRepo.get(id) ?? []), row])
   }
-  const group = (
-    id: string,
-    projectId: string | null,
-    repo: string | null,
-    name: string,
-    color: string | null,
-    list: QueueRow[],
-  ): RowGroup => ({
+  return [...byRepo].map(([id, list]) => ({
     id,
-    projectId,
-    repo,
-    name,
-    color,
+    repo: list[0].project,
+    name: list[0].project,
     rows: list,
     needsYou: list.filter((row) => row.attention === 'needs-you').length,
-  })
-  const groups: RowGroup[] = []
-  for (const project of projects) {
-    const list = byProject.get(project.id)
-    if (list?.length) groups.push(group(project.id, project.id, null, project.name, project.color, list))
-  }
-  for (const [id, list] of byRepo) groups.push(group(id, null, list[0].project, list[0].project, null, list))
-  return groups
+  }))
 }

@@ -189,8 +189,7 @@ test('no nudge outside Waiting on others', () => {
   expect(screen.queryByRole('button', { name: 'Nudge' })).toBeNull()
 })
 
-test('reply hands the newest waiting thread to the Overview', async () => {
-  const user = userEvent.setup()
+test('r hands the newest waiting thread to the Overview', async () => {
   const older = {
     ...waitingReply,
     id: 'h:6',
@@ -199,26 +198,15 @@ test('reply hands the newest waiting thread to the Overview', async () => {
     createdAt: '2026-10-11T08:00:00Z',
   }
   const newer = { ...waitingReply, createdAt: '2026-10-11T09:00:00Z' }
-  show(row({ items: [newer, older] }))
-  await user.click(screen.getByRole('button', { name: 'Reply' }))
-  expect(onReply).toHaveBeenCalledWith('disc-7')
+  render(header(row({ items: [newer, older] }), OVERVIEW, 'reply'))
+  await waitFor(() => expect(onReply).toHaveBeenCalledWith('disc-7'))
 })
 
-test('nothing waiting on you, nothing to reply to', () => {
-  show(row())
-  expect(screen.getByRole('button', { name: 'Reply' })).toBeDisabled()
-})
-
-test('move to a new project pins the MR there', async () => {
-  const user = userEvent.setup()
-  show(row())
-  await user.click(screen.getByRole('button', { name: 'Move to project' }))
-  await user.type(screen.getByLabelText('New project'), 'Payments{Enter}')
-  await waitFor(async () =>
-    expect(await fake.store.get('projects')).toMatchObject([
-      { name: 'Payments', pinned: ['h:1'] },
-    ]),
-  )
+test('nothing waiting on you, nothing to reply to', async () => {
+  const handled = vi.fn()
+  render(header(row(), OVERVIEW, 'reply', handled))
+  await waitFor(() => expect(handled).toHaveBeenCalledOnce())
+  expect(onReply).not.toHaveBeenCalled()
 })
 
 test('approve and snooze are handed to the queue, which can undo them', async () => {
@@ -249,8 +237,7 @@ test('with neither facts nor an overview, there is nobody to request changes fro
   expect(screen.getByRole('button', { name: 'Request changes' })).toBeDisabled()
 })
 
-test('reply finds the thread waiting on you from the MR itself, even once the inbox is read', async () => {
-  const user = userEvent.setup()
+test('r finds the thread waiting on you from the MR itself, even once the inbox is read', async () => {
   const withThread = {
     ...OVERVIEW,
     discussions: [
@@ -273,9 +260,8 @@ test('reply finds the thread waiting on you from the MR itself, even once the in
     ],
   } as MrOverview
   // The row's inbox items were marked read when the MR opened.
-  show(row({ items: [{ ...waitingReply, read: true }] }), withThread)
-  await user.click(screen.getByRole('button', { name: 'Reply' }))
-  expect(onReply).toHaveBeenCalledWith('d9')
+  render(header(row({ items: [{ ...waitingReply, read: true }] }), withThread, 'reply'))
+  await waitFor(() => expect(onReply).toHaveBeenCalledWith('d9'))
 })
 
 test('the header shows the row’s tags', () => {
@@ -295,4 +281,10 @@ test('the header says when the MR opened and changed in short form, with the ful
     expect(time.getAttribute('title')).toBeTruthy()
     expect(time.textContent).toMatch(/^(now|\d+(m|h|d|w|mo|y))$/)
   }
+})
+
+test('the header has no Move to project and no Reply', () => {
+  show(row())
+  expect(screen.queryByRole('button', { name: 'Move to project' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reply' })).toBeNull()
 })

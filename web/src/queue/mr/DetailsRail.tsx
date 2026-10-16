@@ -21,20 +21,16 @@ const PIPELINE_WORDS: Record<string, string> = {
   MANUAL: 'manual',
 }
 
-/** Who reviews, what is approved, the pipeline, labels, project and commits. */
+/** Who reviews, what is approved, the pipeline, labels and commits. */
 export function DetailsRail({
   overview,
   host,
   me,
-  projectName,
-  projectColor,
   rebase,
 }: {
   overview: MrOverview
   host: string
   me: string
-  projectName: string | null
-  projectColor: string | null
   rebase?: ReactNode
 }) {
   const pipeline = overview.pipeline
@@ -95,13 +91,6 @@ export function DetailsRail({
           ))}
         </section>
       ) : null}
-      <section>
-        <h3>Project</h3>
-        <p>
-          <span className="q-dot" style={{ background: projectColor ?? 'var(--line)' }} />
-          {projectName ?? 'Unsorted'}
-        </p>
-      </section>
       <section>
         <h3>Commits</h3>
         <p>{overview.commitCount}</p>

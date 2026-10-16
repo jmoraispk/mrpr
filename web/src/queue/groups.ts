@@ -1,6 +1,5 @@
 import type { QueueRow } from './model'
 import { repoGroupId, type RowGroup } from './order'
-import { projectOf, type Project } from './projects'
 import { useStored } from './state'
 
 const NO_IDS: string[] = []
@@ -35,9 +34,7 @@ export function arrangeGroups(
   return groups
     .map((group, index) => ({ group, index }))
     .sort((a, b) => place(a.group.id) - place(b.group.id) || a.index - b.index)
-    .map(({ group }) =>
-      group.projectId === null && names[group.id] ? { ...group, name: names[group.id] } : group,
-    )
+    .map(({ group }) => (names[group.id] ? { ...group, name: names[group.id] } : group))
 }
 
 /**
@@ -67,14 +64,10 @@ export function shiftGroup(listed: string[], stored: string[], id: string, delta
   return moveGroup(listed, stored, id, listed[to], delta < 0 ? 'before' : 'after')
 }
 
-/** Rows without the muted repositories' own; a row you put in a project stays there. */
-export function withoutMuted(
-  rows: QueueRow[],
-  muted: Record<string, string>,
-  projects: Project[],
-): QueueRow[] {
+/** Rows without the muted repositories' own. */
+export function withoutMuted(rows: QueueRow[], muted: Record<string, string>): QueueRow[] {
   if (Object.keys(muted).length === 0) return rows
-  return rows.filter((row) => !muted[repoGroupId(row)] || Boolean(projectOf(row, projects)))
+  return rows.filter((row) => !muted[repoGroupId(row)])
 }
 
 export const useGroupOrder = () => useStored('groupOrder', NO_IDS, normalizeIds)
@@ -83,16 +76,8 @@ export const useGroupNames = () => useStored('groupNames', NO_NAMES, normalizeNa
 export const useMutedGroups = () => useStored('mutedGroups', NO_NAMES, normalizeNames)
 
 /** The snoozed view's rows: snoozed MRs and the muted repositories' own, never bot MRs. */
-export function snoozedRows(
-  rows: QueueRow[],
-  muted: Record<string, string>,
-  projects: Project[],
-): QueueRow[] {
-  return rows.filter(
-    (row) =>
-      !row.folded &&
-      (row.snoozed || (Boolean(muted[repoGroupId(row)]) && !projectOf(row, projects))),
-  )
+export function snoozedRows(rows: QueueRow[], muted: Record<string, string>): QueueRow[] {
+  return rows.filter((row) => !row.folded && (row.snoozed || Boolean(muted[repoGroupId(row)])))
 }
 
 /** Marks muted repositories' groups, and adds an empty group for each muted one without rows. */
@@ -104,10 +89,8 @@ export function withMutedGroups(groups: RowGroup[], muted: Record<string, string
     .map(
       ([id, repo]): RowGroup => ({
         id,
-        projectId: null,
         repo,
         name: repo,
-        color: null,
         rows: [],
         needsYou: 0,
         muted: true,

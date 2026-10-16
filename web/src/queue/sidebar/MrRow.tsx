@@ -36,8 +36,6 @@ export function MrRow({
       }`}
       aria-current={current ? 'true' : undefined}
       data-key={row.key}
-      draggable
-      onDragStart={(event) => event.dataTransfer.setData('text/mrpr-row', row.key)}
       onClick={onOpen}
     >
       <div className="sb-title-line">

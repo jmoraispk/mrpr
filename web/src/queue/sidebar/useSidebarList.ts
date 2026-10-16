@@ -20,7 +20,6 @@ import {
   type SidebarTab,
   type SidebarView,
 } from '../order'
-import type { Project } from '../projects'
 
 /** What the sidebar lists, in what order, and the settings that decide it. */
 export interface SidebarList {
@@ -56,7 +55,6 @@ const NO_MUTED: Record<string, string> = {}
 
 export function useSidebarList(
   rows: QueueRow[],
-  projects: Project[],
   /** Whether you opened this MR; keep it stable (useCallback), it is a memo input. */
   isMine: (row: QueueRow) => boolean,
   /** The snoozed view lists snoozed rows and adds the muted repositories' groups. */
@@ -80,9 +78,9 @@ export function useSidebarList(
     [listed, isMine, tab],
   )
   const groups = useMemo(() => {
-    const grouped = groupRows(sortRows(inTab, order), projects)
+    const grouped = groupRows(sortRows(inTab, order))
     return arrangeGroups(view === 'snoozed' ? withMutedGroups(grouped, muted) : grouped, groupOrder, names)
-  }, [inTab, order, projects, groupOrder, names, view, muted])
+  }, [inTab, order, groupOrder, names, view, muted])
   const listedIds = groups.map((group) => group.id)
   const flat = useMemo(
     () => groups.filter((group) => !collapsed.includes(group.id)).flatMap((group) => group.rows),

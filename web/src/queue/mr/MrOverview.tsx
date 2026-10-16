@@ -21,8 +21,6 @@ export function MrOverviewView({
   previous,
   replyTo,
   onReplied,
-  projectName,
-  projectColor,
   rebase,
   focusNoteId = null,
 }: {
@@ -32,8 +30,6 @@ export function MrOverviewView({
   previous: { headSha: string; at: string } | null
   replyTo: string | null
   onReplied: () => void
-  projectName: string | null
-  projectColor: string | null
   rebase?: ReactNode
   /** Open at this note's thread, as a link to a comment does. */
   focusNoteId?: number | null
@@ -112,8 +108,6 @@ export function MrOverviewView({
         overview={overview}
         host={target.hostId}
         me={me}
-        projectName={projectName}
-        projectColor={projectColor}
         rebase={rebase}
       />
     </div>

@@ -5,7 +5,6 @@ import { GroupMenu } from './GroupMenu'
 
 type Place = 'before' | 'after'
 const GROUP = 'text/mrpr-group'
-const ROW = 'text/mrpr-row'
 const carries = (event: DragEvent, type: string) => [...(event.dataTransfer.types ?? [])].includes(type)
 // Above the header's middle drops before it; at or below, after.
 const placeOf = (event: DragEvent<HTMLElement>): Place => {
@@ -13,12 +12,11 @@ const placeOf = (event: DragEvent<HTMLElement>): Place => {
   return event.clientY < box.top + box.height / 2 ? 'before' : 'after'
 }
 
-/** A project or a repository: a header that folds it, with its ⋮ menu, then its rows. */
+/** A repository: a header that folds it, with its ⋮ menu, then its rows. */
 export function MrGroup({
   group,
   collapsed,
   onToggle,
-  onDropRow,
   onDropGroup,
   onRename,
   onMute,
@@ -30,18 +28,16 @@ export function MrGroup({
   group: RowGroup
   collapsed: boolean
   onToggle: () => void
-  onDropRow: (rowKey: string) => void
   onDropGroup: (id: string, place: Place) => void
-  /** Save a name; false keeps the field open (a project's name cannot be empty). */
+  /** Save a name; false keeps the field open. */
   onRename: (name: string) => boolean
-  /** Only a repository's group can be muted; on a muted one (group.muted) this unmutes. */
-  onMute?: () => void
+  /** Mute the repository; on a muted one (group.muted) this unmutes. */
+  onMute: () => void
   onMove: (delta: -1 | 1) => void
   canUp: boolean
   canDown: boolean
   children: ReactNode
 }) {
-  const takesRows = group.projectId !== null
   const [renaming, setRenaming] = useState(false)
   const [dropAt, setDropAt] = useState<Place | null>(null)
   // Enter saves, and the field's blur as it goes must not save again.
@@ -55,8 +51,8 @@ export function MrGroup({
     }
   }
 
-  // Only our own drags: a group anywhere, a row onto a project. Anything else is refused.
-  const accepts = (event: DragEvent) => carries(event, GROUP) || (takesRows && carries(event, ROW))
+  // Only our own drags: a group. Anything else is refused.
+  const accepts = (event: DragEvent) => carries(event, GROUP)
   // A file dropped here must not open in place of the app.
   const isFile = (event: DragEvent) => carries(event, 'Files')
   return (
@@ -67,7 +63,7 @@ export function MrGroup({
           if (isFile(event)) event.preventDefault()
           if (!accepts(event)) return
           event.preventDefault()
-          setDropAt(carries(event, GROUP) ? placeOf(event) : null)
+          setDropAt(placeOf(event))
         }}
         onDragLeave={() => setDropAt(null)}
         onDrop={(event) => {
@@ -80,12 +76,6 @@ export function MrGroup({
           if (id) {
             event.preventDefault()
             onDropGroup(id, placeOf(event))
-            return
-          }
-          const key = takesRows ? event.dataTransfer.getData(ROW) : ''
-          if (key) {
-            event.preventDefault()
-            onDropRow(key)
           }
         }}
       >
@@ -120,7 +110,6 @@ export function MrGroup({
             <span className="sb-chevron" aria-hidden="true">
               {collapsed ? '▸' : '▾'}
             </span>
-            {group.color ? <span className="q-dot" style={{ background: group.color }} /> : null}
             <span className="sb-group-name">{group.name}</span>
             {group.muted ? <span className="sb-muted-label">muted</span> : null}
             <span className="sb-count">
@@ -130,7 +119,7 @@ export function MrGroup({
         )}
         <GroupMenu
           name={group.name}
-          canMute={Boolean(onMute)}
+          canMute
           muted={Boolean(group.muted)}
           canUp={canUp}
           canDown={canDown}
@@ -138,7 +127,7 @@ export function MrGroup({
             saved.current = false
             setRenaming(true)
           }}
-          onMute={() => onMute?.()}
+          onMute={onMute}
           onUp={() => onMove(-1)}
           onDown={() => onMove(1)}
         />

@@ -3,7 +3,6 @@ import { expect, test } from 'vitest'
 import type { QueueMr } from '../gitlab/queueFacts'
 import type { QueueRow } from './model'
 import { directionLabel, filterRows, groupRows, repoGroupId, sortRows, type ListFilters, type ListOrder } from './order'
-import type { Project } from './projects'
 
 function facts(over: Partial<QueueMr> = {}): QueueMr {
   return {
@@ -128,28 +127,17 @@ test('search matches title, !iid, author and repository, in any case', () => {
   expect(iids(filterRows(rows, NONE, '  '))).toEqual([1, 22, 3])
 })
 
-const PROJECTS: Project[] = [
-  { id: 'web', name: 'Web', color: '#1E4FD8', rules: { repositories: ['g/web'], labels: [] }, pinned: [] },
-  { id: 'empty', name: 'Empty', color: '#C2410C', rules: { repositories: ['g/none'], labels: [] }, pinned: [] },
-]
-
-test('your projects first, in your order; then one group per repository, by its first row', () => {
+test('rows group by repository, in the order their first row comes', () => {
   const rows = [
     row(1, { project: 'g/zeta', attention: 'needs-you' }),
     row(2, { project: 'g/web', attention: 'needs-you' }),
-    row(3, { project: 'g/alpha' }),
-    row(4, { project: 'g/zeta' }),
-    row(5, { project: 'g/web' }),
+    row(3, { project: 'g/zeta' }),
   ]
-  const groups = groupRows(rows, PROJECTS)
-  expect(groups.map((g) => [g.id, g.name, iids(g.rows), g.needsYou])).toEqual([
-    ['web', 'Web', [2, 5], 1],
-    ['repo:h:g/zeta', 'g/zeta', [1, 4], 1],
-    ['repo:h:g/alpha', 'g/alpha', [3], 0],
+  const groups = groupRows(rows)
+  expect(groups.map((g) => [g.id, g.repo, g.name, iids(g.rows), g.needsYou])).toEqual([
+    ['repo:h:g/zeta', 'g/zeta', 'g/zeta', [1, 3], 1],
+    ['repo:h:g/web', 'g/web', 'g/web', [2], 1],
   ])
-  expect(groups[0]).toMatchObject({ projectId: 'web', color: '#1E4FD8' })
-  expect(groups[1]).toMatchObject({ projectId: null, color: null, repo: 'g/zeta' })
-  expect(groups[0]).toMatchObject({ repo: null })
   expect(repoGroupId(rows[0])).toBe('repo:h:g/zeta')
 })
 

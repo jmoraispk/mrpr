@@ -8,15 +8,14 @@ import { TagList } from '../TagList'
 import { nudgeText, requestChangesText } from '../commentText'
 import { Composer } from '../Composer'
 import type { QueueRow } from '../model'
-import { ProjectPicker } from '../ProjectPicker'
 import { waitingOnYou } from '../activity'
 import { latestWaiting } from '../readState'
 import { QUEUE_QUERY_KEY } from '../useQueue'
 import { When } from './When'
 
 /** An action asked for from the keyboard, run once by the header. */
-export type HeaderRequest = 'reply' | 'changes' | 'nudge' | 'move'
-type Mode = null | 'changes' | 'nudge' | 'move'
+export type HeaderRequest = 'reply' | 'changes' | 'nudge'
+type Mode = null | 'changes' | 'nudge'
 
 const WAITING = new Set(['UNREVIEWED', 'REVIEW_STARTED'])
 
@@ -89,7 +88,7 @@ export function MrHeader({
       if (author) setMode('changes')
     } else if (request === 'nudge') {
       if (canNudge) setMode('nudge')
-    } else setMode('move')
+    }
     // Runs once per request; the handlers read this render's MR.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request])
@@ -120,13 +119,6 @@ export function MrHeader({
         <button type="button" className="q-primary" onClick={onApprove}>
           Approve
         </button>
-        <button
-          type="button"
-          onClick={() => waitingId && onReply(waitingId)}
-          disabled={!waitingId}
-        >
-          Reply
-        </button>
         <button type="button" onClick={() => setMode('changes')} disabled={!author}>
           Request changes
         </button>
@@ -140,9 +132,6 @@ export function MrHeader({
             {row.snoozed ? 'Unsnooze' : 'Snooze'}
           </button>
         ) : null}
-        <button type="button" onClick={() => setMode('move')}>
-          Move to project
-        </button>
         {extraActions}
         {overview?.webUrl || row?.webUrl ? (
           <a href={overview?.webUrl || row?.webUrl} target="_blank" rel="noreferrer">
@@ -165,12 +154,6 @@ export function MrHeader({
             initial={nudgeText(waitingReviewers)}
             onCancel={() => setMode(null)}
             onSend={comment}
-          />
-        ) : null}
-        {mode === 'move' ? (
-          <ProjectPicker
-            rowKey={row?.key ?? `${target.hostId}:${target.project}!${target.iid}`}
-            onDone={() => setMode(null)}
           />
         ) : null}
       </div>

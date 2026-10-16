@@ -18,13 +18,10 @@ import { MrOverviewView } from './mr/MrOverview'
 import { MrPanel } from './mr/MrPanel'
 import { RebaseControl } from './mr/RebaseControl'
 import { NoticeBar } from './NoticeBar'
-import { projectOf } from './projects'
-import { ProjectsSettings } from './ProjectsSettings'
 import { focusNoteOf, markRowRead } from './readState'
 import { parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
 import { Sidebar } from './sidebar/Sidebar'
 import { useSidebarList } from './sidebar/useSidebarList'
-import { useProjects } from './state'
 import { useQueue } from './useQueue'
 import { useQueueKeys } from './useQueueKeys'
 import { useRowActions } from './useRowActions'
@@ -48,10 +45,9 @@ const sameMr = (row: QueueRow, target: ReviewTarget) =>
 export function QueueApp() {
   const route = useSiteRoute()
   const queue = useQueue()
-  const [projects] = useProjects()
   const [muted] = useMutedGroups()
   // A muted repository is gone from the list and every count; its MRs still open from a link.
-  const rows = useMemo(() => withoutMuted(queue.rows, muted, projects), [queue.rows, muted, projects])
+  const rows = useMemo(() => withoutMuted(queue.rows, muted), [queue.rows, muted])
   // Who you are on each host: your MRs go under From me.
   const users = queue.hosts.map((host) => `${host.hostId}=${host.username}`).join('\n')
   const isMine = useCallback(
@@ -63,10 +59,10 @@ export function QueueApp() {
   // The sidebar shows the active list or what you snoozed and muted; old #/snoozed links open the latter.
   const [view, setView] = useState<SidebarView>('active')
   const listRows = useMemo(
-    () => (view === 'snoozed' ? snoozedRows(queue.rows, muted, projects) : rows),
-    [view, queue.rows, muted, projects, rows],
+    () => (view === 'snoozed' ? snoozedRows(queue.rows, muted) : rows),
+    [view, queue.rows, muted, rows],
   )
-  const list = useSidebarList(listRows, projects, isMine, view, muted)
+  const list = useSidebarList(listRows, isMine, view, muted)
   // Only the list and the MR scroll. Should anything scroll the page itself
   // (a scrollIntoView reaching past its panel), put it back.
   useEffect(() => {
@@ -151,7 +147,7 @@ export function QueueApp() {
       },
     )
   }
-  // r, x, n and m start their action in the MR header, opening the selected MR first.
+  // r, x and n start their action in the MR header, opening the selected MR first.
   const ask = (request: HeaderRequest) => {
     if (current && current.key !== openRowKey) open(current)
     else if (!openTarget) return
@@ -220,7 +216,6 @@ export function QueueApp() {
       reply: () => ask('reply'),
       changes: () => ask('changes'),
       nudge: () => ask('nudge'),
-      moveProject: () => ask('move'),
     },
     route.name !== 'settings',
   )
@@ -303,10 +298,7 @@ export function QueueApp() {
           </p>
         ))}
         {route.name === 'settings' ? (
-          <>
-            <Settings />
-            <ProjectsSettings />
-          </>
+          <Settings />
         ) : route.name === 'review' ? (
           <MrPanel
             key={openKey}
@@ -346,23 +338,18 @@ export function QueueApp() {
                 />
               )
             }}
-            overview={(overview, previous) => {
-              const project = openRow ? projectOf(openRow, projects) : null
-              return (
-                <MrOverviewView
-                  overview={overview}
-                  target={route.target}
-                  me={me}
-                  previous={previous}
-                  replyTo={replyTo}
-                  onReplied={() => setReplyTo(null)}
-                  projectName={project?.name ?? null}
-                  projectColor={project?.color ?? null}
-                  rebase={<RebaseControl overview={overview} target={route.target} />}
-                  focusNoteId={route.noteId}
-                />
-              )
-            }}
+            overview={(overview, previous) => (
+              <MrOverviewView
+                overview={overview}
+                target={route.target}
+                me={me}
+                previous={previous}
+                replyTo={replyTo}
+                onReplied={() => setReplyTo(null)}
+                rebase={<RebaseControl overview={overview} target={route.target} />}
+                focusNoteId={route.noteId}
+              />
+            )}
           />
         ) : (
           <div className="q-welcome">

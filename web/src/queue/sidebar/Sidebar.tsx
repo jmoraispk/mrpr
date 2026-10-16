@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { useMutedGroups } from '../groups'
 import { useFiltersOpen } from '../listSettings'
@@ -15,9 +15,6 @@ import {
   type SidebarView,
   type SortBy,
 } from '../order'
-import { ProjectDialog } from '../ProjectDialog'
-import { moveRow } from '../projects'
-import { useProjects } from '../state'
 import { useTheme } from '../theme'
 import { FiltersPanel } from './FiltersPanel'
 import { MrGroup } from './MrGroup'
@@ -59,7 +56,7 @@ export interface SidebarProps {
   onResizeEnd: (width: number) => void
 }
 
-/** Every MR, grouped by project, with the filters, sort and tag chips that order them. */
+/** Every MR, grouped by repository, with the filters, sort and tag chips that order them. */
 export function Sidebar({
   rows,
   list,
@@ -83,9 +80,7 @@ export function Sidebar({
   onResize,
   onResizeEnd,
 }: SidebarProps) {
-  const [projects, setProjects] = useProjects()
   const theme = useTheme()
-  const [newProjectOpen, setNewProjectOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useFiltersOpen()
   const [muted] = useMutedGroups()
   // The toggles that are on, plus one when Show is not the default (yours and your reviews).
@@ -109,14 +104,9 @@ export function Sidebar({
   // What the Active list would hold, both tabs, without a search.
   const activeCount = filterRows(rows, list.filters, '').length
 
-  // A project's rename is the project's own; a repository's is a display name in this browser.
+  // A repository's rename is a display name in this browser; empty restores its path.
   const renameGroup = (group: RowGroup, value: string): boolean => {
     const name = value.trim()
-    if (group.projectId) {
-      if (!name) return false
-      setProjects(projects.map((project) => (project.id === group.projectId ? { ...project, name } : project)))
-      return true
-    }
     const names = { ...list.names }
     if (!name || name === group.repo) delete names[group.id]
     else names[group.id] = name
@@ -133,12 +123,9 @@ export function Sidebar({
         group={group}
         collapsed={list.collapsed.includes(group.id)}
         onToggle={() => list.toggleGroup(group.id)}
-        onDropRow={(key) => setProjects(moveRow(projects, key, group.projectId))}
         onDropGroup={(id, place) => list.moveGroup(id, group.id, place)}
         onRename={(value) => renameGroup(group, value)}
-        onMute={
-          group.repo ? () => (group.muted ? onUnmuteGroup(group.id) : onMuteGroup(group)) : undefined
-        }
+        onMute={() => (group.muted ? onUnmuteGroup(group.id) : onMuteGroup(group))}
         onMove={(delta) => list.shiftGroup(group.id, delta)}
         canUp={index > 0}
         canDown={index < list.groups.length - 1}
@@ -307,11 +294,7 @@ export function Sidebar({
           >
             {theme.theme === 'dark' ? 'Light mode' : 'Dark mode'}
           </button>
-          <button type="button" onClick={() => setNewProjectOpen((open) => !open)}>
-            + Project
-          </button>
         </nav>
-        {newProjectOpen ? <ProjectDialog onClose={() => setNewProjectOpen(false)} /> : null}
       </footer>
       <SidebarResizer width={width} onResize={onResize} onResizeEnd={onResizeEnd} />
     </aside>

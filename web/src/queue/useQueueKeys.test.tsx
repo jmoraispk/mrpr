@@ -12,7 +12,6 @@ function handlers() {
     changes: vi.fn(),
     nudge: vi.fn(),
     snooze: vi.fn(),
-    moveProject: vi.fn(),
     diffSince: vi.fn(),
     search: vi.fn(),
     sidebar: vi.fn(),
@@ -25,7 +24,7 @@ function handlers() {
 test('single keys map to actions', () => {
   const h = handlers()
   renderHook(() => useQueueKeys(h))
-  for (const key of ['j', 'k', 'Enter', 'o', 'a', 'r', 'x', 'n', 's', 'm', 'd', '/', 'b', '?']) {
+  for (const key of ['j', 'k', 'Enter', 'o', 'a', 'r', 'x', 'n', 's', 'd', '/', 'b', '?']) {
     fireEvent.keyDown(window, { key })
   }
   expect(h.move.mock.calls).toEqual([[1], [-1]])
@@ -36,7 +35,6 @@ test('single keys map to actions', () => {
     'changes',
     'nudge',
     'snooze',
-    'moveProject',
     'diffSince',
     'search',
     'sidebar',
@@ -129,4 +127,11 @@ test('keys typed in a rich (contenteditable) box never act on the queue', () => 
   expect(h.sidebar).not.toHaveBeenCalled()
   expect(h.close).not.toHaveBeenCalled()
   editable.remove()
+})
+
+test('m is no longer a key', () => {
+  const h = handlers()
+  renderHook(() => useQueueKeys(h))
+  fireEvent.keyDown(window, { key: 'm' })
+  expect(Object.values(h).every((fn) => fn.mock.calls.length === 0)).toBe(true)
 })

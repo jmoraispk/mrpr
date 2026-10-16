@@ -12,14 +12,11 @@ import {
 } from './groups'
 import type { QueueRow } from './model'
 import type { RowGroup } from './order'
-import type { Project } from './projects'
 
 const group = (id: string, over: Partial<RowGroup> = {}): RowGroup => ({
   id,
-  projectId: null,
   repo: id.replace('repo:h:', ''),
   name: id.replace('repo:h:', ''),
-  color: null,
   rows: [],
   needsYou: 0,
   ...over,
@@ -38,10 +35,9 @@ test('stored order first; unlisted groups after, in their own order; stale ids t
   expect(ids(arrangeGroups([A, B, C], [], {}))).toEqual(['repo:h:g/a', 'repo:h:g/b', 'repo:h:g/c'])
 })
 
-test('a repository shows its display name; a project keeps its own', () => {
-  const project = group('web', { projectId: 'web', repo: null, name: 'Web' })
-  const named = arrangeGroups([A, project], [], { 'repo:h:g/a': 'Alpha', web: 'Ignored' })
-  expect(named.map((g) => g.name)).toEqual(['Alpha', 'Web'])
+test('a repository shows its display name, and keeps its path', () => {
+  const named = arrangeGroups([A, B], [], { 'repo:h:g/a': 'Alpha' })
+  expect(named.map((g) => g.name)).toEqual(['Alpha', 'g/b'])
   expect(named[0].repo).toBe('g/a')
 })
 
@@ -63,15 +59,12 @@ test('damaged stored values read as empty', () => {
   expect(normalizeNames({ a: ' Alpha ', b: '', c: 3 })).toEqual({ a: 'Alpha' })
 })
 
-test('a muted repository’s rows go, except those you put in a project', () => {
+test('a muted repository’s rows go', () => {
   const row = (iid: number, project: string) =>
     ({ key: `h:${iid}`, hostId: 'h', project, iid, tags: [] }) as unknown as QueueRow
-  const projects: Project[] = [
-    { id: 'p', name: 'P', color: '#000', rules: { repositories: [], labels: [] }, pinned: ['h:2'] },
-  ]
   const rows = [row(1, 'g/a'), row(2, 'g/a'), row(3, 'g/b')]
-  expect(withoutMuted(rows, { 'repo:h:g/a': 'g/a' }, projects).map((r) => r.iid)).toEqual([2, 3])
-  expect(withoutMuted(rows, {}, projects)).toBe(rows)
+  expect(withoutMuted(rows, { 'repo:h:g/a': 'g/a' }).map((r) => r.iid)).toEqual([3])
+  expect(withoutMuted(rows, {})).toBe(rows)
 })
 
 test('a move in one tab, or in a narrowed list, leaves the groups you cannot see in their order', () => {
@@ -94,7 +87,7 @@ test('the snoozed view: snoozed rows and muted repositories’ rows, once each, 
     row(4, 'g/m', { snoozed: true }),
     row(5, 'g/a', { snoozed: true, folded: true }),
   ]
-  expect(snoozedRows(rows, { 'repo:h:g/m': 'g/m' }, []).map((r) => r.iid)).toEqual([1, 3, 4])
+  expect(snoozedRows(rows, { 'repo:h:g/m': 'g/m' }).map((r) => r.iid)).toEqual([1, 3, 4])
 })
 
 test('muted repositories show as groups in the snoozed view, empty ones too', () => {
@@ -104,5 +97,5 @@ test('muted repositories show as groups in the snoozed view, empty ones too', ()
     ['repo:h:g/m', true, 0],
     ['repo:h:g/z', true, 0],
   ])
-  expect(groups[2]).toMatchObject({ repo: 'g/z', name: 'g/z', projectId: null })
+  expect(groups[2]).toMatchObject({ repo: 'g/z', name: 'g/z' })
 })

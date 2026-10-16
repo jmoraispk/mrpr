@@ -249,34 +249,6 @@ test('opening a review lands on the waiting thread and reads what was folded int
   expect(window.location.hash).toBe('#/mr/gitlab.example.com/g%2Fsdk/1/note/55')
 })
 
-test('dropping a row on a project’s header moves it there', async () => {
-  await fake.store.set({
-    projects: [
-      { id: 'pay', name: 'Payments', color: '#1E4FD8', rules: { repositories: [], labels: [] }, pinned: [`${H}:2`] },
-    ],
-  })
-  renderApp()
-  const target = await screen.findByRole('button', { name: /^Payments/ })
-  const data = new Map<string, string>()
-  const dataTransfer = {
-    setData: (type: string, value: string) => data.set(type, value),
-    getData: (type: string) => data.get(type) ?? '',
-  }
-  fireEvent.dragStart(rowNamed('Retry budget'), { dataTransfer })
-  fireEvent.dragOver(target, { dataTransfer })
-  fireEvent.drop(target, { dataTransfer })
-  await waitFor(async () =>
-    expect(await fake.store.get('projects')).toMatchObject([{ pinned: [`${H}:2`, `${H}:1`] }]),
-  )
-})
-
-test('+ Project opens the project form', async () => {
-  const user = userEvent.setup()
-  renderApp()
-  await user.click(await screen.findByRole('button', { name: '+ Project' }))
-  expect(screen.getByRole('form', { name: 'New project' })).toBeInTheDocument()
-})
-
 test('opening the queue catches up a stale poll', async () => {
   renderApp()
   await screen.findAllByRole('article')
@@ -448,7 +420,7 @@ test('two quick Escapes leave full screen and then close, even before the screen
   await waitFor(() => expect(window.location.hash).toBe('#/'))
 })
 
-test('after opening an MR, Reply still reaches the thread waiting on you', async () => {
+test('after opening an MR, r still reaches the thread waiting on you', async () => {
   const user = userEvent.setup()
   items = [mention('d1')]
   transport.getOverview.mockImplementation(async () => ({
@@ -470,8 +442,8 @@ test('after opening an MR, Reply still reaches the thread waiting on you', async
   const panel = await screen.findByRole('region', { name: 'Retry budget for webhooks' })
   // Opening read the mention in the inbox.
   await waitFor(() => expect(items[0].read).toBe(true))
-  const actions = await waitFor(() => panel.querySelector('.mr-actions') as HTMLElement)
-  await user.click(within(actions).getByRole('button', { name: 'Reply' }))
+  await waitFor(() => expect(panel.querySelector('.mr-actions')).not.toBeNull())
+  await user.keyboard('r')
   await waitFor(() =>
     expect(document.querySelector('[data-discussion-id="d1"] .rich-reply-input')).toHaveFocus(),
   )

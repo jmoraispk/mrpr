@@ -8,7 +8,6 @@ export interface QueueKeyHandlers {
   changes(): void
   nudge(): void
   snooze(): void
-  moveProject(): void
   diffSince(): void
   /** /: the search box. */
   search(): void
@@ -76,7 +75,6 @@ export function useQueueKeys(handlers: QueueKeyHandlers, enabled = true): void {
         x: () => h.changes(),
         n: () => h.nudge(),
         s: () => h.snooze(),
-        m: () => h.moveProject(),
         d: () => h.diffSince(),
         '/': () => h.search(),
         b: () => h.sidebar(),

@@ -154,8 +154,6 @@ function show(props: Partial<Parameters<typeof MrOverviewView>[0]> = {}) {
           previous={{ headSha: 'head-1', at: '2026-10-11T07:00:00Z' }}
           replyTo={null}
           onReplied={() => {}}
-          projectName="Payments"
-          projectColor="#1E4FD8"
           {...props}
         />
       </TransportProvider>
@@ -220,7 +218,6 @@ test('the details column: reviewers, approvals, pipeline, labels, project, commi
     'https://gitlab.example.com/g/p/-/pipelines/1',
   )
   expect(within(rail).getByText('agents')).toBeInTheDocument()
-  expect(within(rail).getByText('Payments')).toBeInTheDocument()
   expect(within(rail).getByText('7')).toBeInTheDocument()
 })
 
@@ -230,7 +227,8 @@ test('reply reveals a thread hidden by the Filters and focuses its reply box', a
     const box = document.querySelector<HTMLElement>('[data-discussion-id="done"] .rich-reply-input')
     expect(box).not.toBeNull()
     expect(box).toHaveFocus()
-  })
+    // The editor loads lazily; a full parallel run can take a few seconds.
+  }, { timeout: 5000 })
 })
 
 test('an inline thread links to its line in Changes; a shown resolved thread is one line until opened', async () => {
@@ -296,8 +294,6 @@ function StatefulReply({ start }: { start: string }) {
       previous={null}
       replyTo={replyTo}
       onReplied={() => setReplyTo(null)}
-      projectName={null}
-      projectColor={null}
     />
   )
 }
@@ -333,7 +329,7 @@ test('a reply posted in Overview survives the page re-rendering', async () => {
     <QueryClientProvider client={new QueryClient()}>
       <TransportProvider transport={transport}>
         <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
-          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+          replyTo={null} onReplied={() => {}} />
       </TransportProvider>
     </QueryClientProvider>,
   )
@@ -396,7 +392,7 @@ test('a reply reads the list again at once, and does not read the whole MR again
     <QueryClientProvider client={client}>
       <TransportProvider transport={transport}>
         <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
-          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+          replyTo={null} onReplied={() => {}} />
       </TransportProvider>
     </QueryClientProvider>,
   )
@@ -462,7 +458,7 @@ test('coming back to Overview re-reads the MR if a reply marked it stale', () =>
     <QueryClientProvider client={client}>
       <TransportProvider transport={transport}>
         <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
-          replyTo={null} onReplied={() => {}} projectName={null} projectColor={null} />
+          replyTo={null} onReplied={() => {}} />
       </TransportProvider>
     </QueryClientProvider>,
   )
@@ -500,7 +496,7 @@ test('asking to reply again focuses a reply box that is already open', async () 
           ask
         </button>
         <MrOverviewView overview={OVERVIEW_ONCE} target={T} me="joao" previous={null}
-          replyTo={replyTo} onReplied={() => setReplyTo(null)} projectName={null} projectColor={null} />
+          replyTo={replyTo} onReplied={() => setReplyTo(null)} />
       </>
     )
   }
