@@ -5,10 +5,7 @@ import { expect, test } from 'vitest'
 import { buildLegacyPosition, buildPosition } from './positions'
 
 const fixture = JSON.parse(
-  readFileSync(
-    join(__dirname, '../../../tests/fixtures/positions.json'),
-    'utf-8',
-  ),
+  readFileSync(join(__dirname, 'fixtures/positions.json'), 'utf-8'),
 ) as {
   version: { base_sha: string; start_sha: string; head_sha: string }
   cases: {

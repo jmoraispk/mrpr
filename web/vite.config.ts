@@ -1,13 +1,9 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
+// The site is built by vite.site.config.ts. This config exists for vitest.
 export default defineConfig(() => ({
   plugins: [react()],
-  build: {
-    outDir: '../src/delta_review/static',
-    emptyOutDir: true,
-    chunkSizeWarningLimit: 1100,
-  },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs', 'api/**/*.test.ts'],

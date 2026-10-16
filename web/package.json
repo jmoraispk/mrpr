@@ -4,18 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
     "benchmark:diff": "node scripts/benchmark-diff.mjs",
-    "benchmark:browser": "playwright test e2e/diff-performance.spec.ts",
     "dev:site": "vite --config vite.site.config.ts",
     "build:site": "tsc -b && vite build --config vite.site.config.ts",
     "preview:site": "vite preview --config vite.site.config.ts",
     "test:site": "playwright test --config playwright.site.config.ts",
     "lint": "oxlint",
     "feedback": "node scripts/feedback.mjs",
-    "test": "vitest",
-    "preview": "vite preview"
+    "test": "vitest"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

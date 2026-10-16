@@ -120,7 +120,6 @@ const FILE: DiffFile = {
 
 beforeEach(() => {
   localStorage.clear()
-  window.location.hash = '#session=test-session'
 })
 
 test('toggles and persists split view', async () => {

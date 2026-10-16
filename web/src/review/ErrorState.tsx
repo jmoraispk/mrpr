@@ -1,29 +1,12 @@
 import { ApiError } from '../api/client'
 import { currentPlatform } from '../platform/platform'
-import { useTransport } from '../transport/context'
 
 interface ErrorStateProps {
   error: Error
   onRetry: () => void
 }
 
-/**
- * The same screen serves two products that hold GitLab credentials in
- * different places. Under `uvx delta-review` (`targetKey === 'proxy'`) Mr. PR
- * stores no token of its own, so telling that user to renew Mr. PR's
- * credentials points them at something their install does not have. It has
- * two sources instead, and `resolve_token` in `security.py` returns
- * `GITLAB_TOKEN` from the launch environment before it consults `glab` — so
- * naming only `glab` sends anyone who launched with the variable set to
- * re-authenticate something that provably cannot change the outcome. The
- * server does not report which source won, so name both in precedence order
- * and let the reader recognise their own case. In the extension neither
- * applies: it holds its own token and `glab` need not be installed at all.
- */
-function errorCopy(
-  error: Error,
-  isProxy: boolean,
-): {
+function errorCopy(error: Error): {
   heading: string
   guidance: string
   mark: string
@@ -33,14 +16,9 @@ function errorCopy(
   if (code === 'gitlab_authentication_failed') {
     return {
       heading: 'GitLab authentication failed',
-      guidance: isProxy
-        ? 'GitLab rejected the credentials the CLI sent for this host. It ' +
-          'uses GITLAB_TOKEN when that is set in the environment you ' +
-          'launched it from, and the token glab holds otherwise. Replace ' +
-          'whichever applies — a fresh GITLAB_TOKEN, or glab auth login — ' +
-          'then relaunch and retry.'
-        : 'GitLab rejected the credentials Mr. PR holds for this host. Renew ' +
-          'them in Mr. PR settings, then retry.',
+      guidance:
+        'GitLab rejected the credentials Mr. PR holds for this host. Renew ' +
+        'them in Mr. PR settings, then retry.',
       mark: '401',
     }
   }
@@ -81,20 +59,16 @@ function errorCopy(
   if (status === 401) {
     return {
       heading: 'Session expired',
-      guidance: 'Relaunch Mr. PR from the CLI to create a new local session.',
+      guidance: 'Sign in to GitLab again, then retry.',
       mark: '401',
     }
   }
   if (status === 403) {
     return {
       heading: 'Access denied',
-      guidance: isProxy
-        ? 'This GitLab account cannot see this merge request. Check your ' +
-          'project access, and which account the CLI signed in as — ' +
-          'GITLAB_TOKEN when that is set in the environment you launched it ' +
-          'from, otherwise glab — then retry.'
-        : 'This GitLab account cannot see this merge request. Check your ' +
-          'project access, then retry.',
+      guidance:
+        'This GitLab account cannot see this merge request. Check your ' +
+        'project access, then retry.',
       mark: '403',
     }
   }
@@ -126,7 +100,7 @@ function errorCopy(
   }
 }
 
-/** On the site, an ended sign-in is fixed by signing in again, not by a CLI. */
+/** An ended sign-in is fixed by signing in again. */
 function siteSignInEnded(error: Error): (() => Promise<void>) | null {
   const reauthenticate = currentPlatform()?.reauthenticate
   const code = error instanceof ApiError ? error.code : null
@@ -137,7 +111,6 @@ function siteSignInEnded(error: Error): (() => Promise<void>) | null {
 }
 
 export function ErrorState({ error, onRetry }: ErrorStateProps) {
-  const transport = useTransport()
   const signInAgain = siteSignInEnded(error)
   if (signInAgain) {
     return (
@@ -157,7 +130,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
       </main>
     )
   }
-  const copy = errorCopy(error, transport.targetKey === 'proxy')
+  const copy = errorCopy(error)
   return (
     <main className="state-screen error-state" role="alert">
       <div className="state-mark error-code" aria-hidden="true">

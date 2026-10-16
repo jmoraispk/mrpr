@@ -1,5 +1,0 @@
-# Vite copies web/index.html into src/delta_review/static verbatim, so a CRLF
-# checkout on Windows produces a CRLF file in the packaged assets and every
-# refresh shows up as a whole-file diff. Pin the source to LF so the generated
-# copy is already LF and nobody has to remember to convert it by hand.
-web/index.html text eol=lf

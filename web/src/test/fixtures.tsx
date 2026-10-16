@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TransportProvider } from '../transport/context'
-import { createHttpTransport } from '../transport/http'
+import { createHttpTransport } from './httpTransport'
 
 const transport = createHttpTransport()
 

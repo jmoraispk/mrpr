@@ -8,13 +8,12 @@ import App from '../App'
 import type { ReactNode } from 'react'
 
 import { TransportProvider } from '../transport/context'
-import { createHttpTransport } from '../transport/http'
+import { createHttpTransport } from './httpTransport'
 import type { DeltaTransport } from '../transport/types'
 import { TestProviders } from './fixtures'
 import { server } from './server'
 
 beforeEach(() => {
-  window.location.hash = '#session=test-session'
 })
 
 test('renders merge request identity and files', async () => {
