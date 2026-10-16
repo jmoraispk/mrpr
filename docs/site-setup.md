@@ -124,38 +124,41 @@ mentions and comments on it are folded into that row.
 - **Tabs:** **From me** lists the MRs you opened; **From others** everything
   else (reviews, mentions, replies). Each shows how many it holds with the
   current search and filters.
+- **To do | Done | All** (above Sort): To do is what you have not ticked.
+  The ✓ on a row (hover it, or select it with j/k), or `e`, moves an MR to
+  Done until it changes: a new commit, comment, approval or merge brings it
+  back to To do. All shows both, ticked ones dimmed. Nothing is ticked for
+  you; approving or replying leaves an MR where it is.
 - **Rows** show the title, then `!number · author · +added −removed · 2d`
   (when it last changed: `now`, `5m`, `1h`, `1d`, `1w`, `3mo`, `1y`). An MR
   that needs you (your review, a reply, blocking, changes addressed,
   returned to you) has an accent bar on its left edge; an unread dot marks new
-  comments. The open MR is a tinted row, and the j/k cursor a thin outline.
-  Every row has a faint snooze button. The labels behind that (Blocking N, Waiting on you, Changes
-  addressed, Returned to you, Waiting on others, Quick win, Needs rebase)
-  show in the MR's header.
+  comments; a merged one says **Merged**. The open MR is a tinted row, and the
+  j/k cursor a thin outline. The labels behind that (Blocking N, Waiting on
+  you, Changes addressed, Returned to you, Waiting on others, Quick win, Needs
+  rebase) show in the MR's header.
 - **Sort:** Last changed (newest first), Age (oldest first) or Size
   (smallest first); the ↑/↓ button beside it flips the direction. Sort and
   Filters sit above the tabs and apply to both. Times are short: `now`, `5m`,
   `2d`, `1w`; hover one for the full date.
-- **Filters** (beside Sort) opens one panel. **Show** picks which MRs:
-  **Authored by me** and **I'm the reviewer** (both on by default), or **All
-  MRs**: every open MR in the repositories already in your list (up to 20),
-  read only while it is on. MRs you only heard about through a notification
-  always show. Then Needs me only, Hide drafts and Show done for the list, then what an MR's Activity shows (unresolved and
-  resolved threads, new commits, bot comments, other activity). With an MR
-  open, Activity choices apply to that MR; **Apply to all MRs** makes them
-  the default. Done MRs are hidden unless Show done is on. Search (`/`)
-  matches title, `!number`, author and repository.
-- **Groups:** your projects and repositories, in an order you choose: drag a
-  group's header above or below another, or use its **⋮** menu (Move up,
-  Move down). **Rename…** gives a repository a display name in this browser
-  (clear it to get the real name back) or renames a project. **Mute
-  repository** hides a repository's MRs until you unmute it from the Snoozed
-  page; MRs of it you put in a project stay there. Click a header to fold the
-  group; folded groups stay folded.
-- **Snoozed (N)** at the bottom flips the sidebar to what you snoozed and the
-  repositories you muted (marked "muted", with Unmute in their ⋮ menu); it
-  then reads **Active (N)** to flip back. The grey snooze button on a row
-  snoozes it (or, in the snoozed view, unsnoozes it). Bot MRs are only counted.
+- **Filters** (beside Sort) are about which MRs are listed: **All MRs**
+  (every open MR in the repositories already in your list, up to 20, read
+  only while it is on), **Needs me only**, **Hide drafts**, and **Show
+  merged** (on by default: MRs you wrote or reviewed that merged in the last
+  two weeks stay, marked Merged, until you tick them). MRs you only heard
+  about through a notification always show. Search (`/`) matches title,
+  `!number`, author and repository.
+- **Groups:** one per repository, in an order you choose: drag a group's
+  header above or below another, or use its **⋮** menu (Move up, Move down).
+  **Rename…** gives a repository a display name in this browser (clear it to
+  get the real name back). **Mute repository** hides a repository's MRs
+  until you unmute it from the Snoozed view. Click a header to fold the group;
+  folded groups stay folded.
+- **Snooze** (in an MR's header, or `s`) hides an MR until you unsnooze it,
+  whatever changes. **Snoozed (N)** at the bottom flips the sidebar to what
+  you snoozed and the repositories you muted (marked "muted", with Unmute in
+  their ⋮ menu), each snoozed row with **Unsnooze**; it then reads
+  **Active (N)** to flip back. Bot MRs are only counted.
 - **Freshness:** the list is read again every minute, when you come back to
   the tab, and right after anything you do; **↻ 1m** in the header says how
   long ago, and a click reads it now. A reply or resolve updates only its own
@@ -165,19 +168,17 @@ mentions and comments on it are folded into that row.
 - **Since last review:** opening or approving an MR remembers its head commit
   in this browser. Next time, `d` (or the "Since last review" tab) shows only
   what changed since.
-- **Projects:** group MRs by repository, by label, or by hand (`m`, or drag a
-  row onto a project's header). Projects live in this browser; Settings
-  exports and imports them as JSON.
 - **Keys:**
   - moving and opening: `j`/`k` move, `Enter` or `o` open;
-  - actions: `a` approve, `r` reply, `x` request changes, `n` nudge, `s` snooze
-    until the MR changes, `m` move to a project, `d` since last review;
+  - actions: `a` approve (not on your own MRs), `r` reply, `x` request
+    changes, `n` nudge, `e` done (back when it changes), `s` snooze (until
+    you unsnooze), `d` since last review;
   - the screen: `/` search, `b` or `Ctrl+B` hide or show the sidebar, `f` full
     screen, `Esc` leave full screen or close the MR;
   - `?` shows all keys.
 
-  Keys act on the selected row; opening an MR selects it. `r`, `x`, `n` and
-  `m` open the selected MR and start the action in its header.
+  Keys act on the selected row; opening an MR selects it. `r`, `x` and `n`
+  open the selected MR and start the action in its header.
 - **Writing:** reply boxes format as you type. Ctrl+B bold, Ctrl+I italic,
   Ctrl+Shift+X strikethrough, Ctrl+E code, Ctrl+K link (Cmd on a Mac), or the
   buttons above the box; `- ` or `1. ` starts a list. There is no underline,
@@ -192,18 +193,28 @@ mentions and comments on it are folded into that row.
 The MR opens on the right, beside the sidebar. `f` makes it full screen
 (hiding the sidebar) and `Esc` steps back.
 
+- **Under the title:** reviewers (with where each stands), approvals,
+  pipeline, commits and labels, and **Rebase** when GitLab says the branch
+  needs it and you can push to it. Then the actions: Approve (only on others'
+  MRs, as in GitLab), Request changes, Nudge, Snooze, Open in GitLab. Replies
+  go in each thread's own box.
 - **Overview** (first): the description as GitLab would show it, and the
   Activity: threads and events in time order, with a "New since last review"
   divider, threads involving you outlined, and a reply box on each thread.
   Threads read like a chat: whoever started the thread on the left, replies
   on the right. An inline comment shows the lines it was made on, as they
-  were when it was written. What Activity shows is set under **Filters** in the sidebar;
-  anything hidden is counted, with "Show them". On the right: reviewers, approvals,
-  pipeline, labels, project and commits, and **Rebase** when GitLab says the
-  branch needs it and you can push to it.
+  were when it was written.
+- **The Activity panel** on the right: how many comments, unresolved threads
+  and people, and when the last note came; the **People** who commented,
+  with their counts (click one to see only the threads they wrote in, again
+  to see everyone); and **Show**, which threads and events Activity lists
+  (unresolved and resolved threads, new commits, bot comments, other
+  activity). Show choices apply to this MR; **Apply to all MRs** makes them
+  the default. Anything hidden is counted, with "Show them".
 - **Changes:** the code, with inline comments shown, in the app's light or
-  dark colours. Its file count reads `19 files · +806 −29 · 15 MOD 4 NEW 0 DEL`
-  (`N MOV` when files were renamed).
+  dark colours. The tab and the file count show `+` and `−` in green and
+  red: `19 files · +806 −29 · 15 MOD 4 NEW 0 DEL` (`N MOV` when files were
+  renamed).
 - **Since last review:** only what changed since you last looked.
 
 ## Feedback, waitlist and first visits

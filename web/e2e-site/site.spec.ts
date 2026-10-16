@@ -28,7 +28,7 @@ const REVIEW = {
   project: { fullPath: 'g/q' },
 }
 
-/** An MR in another repository you already approved: listed only with Show done. */
+/** An MR in another repository you already approved: it needs nobody, and lists until ticked. */
 const TIDY = {
   id: 'gid://gitlab/MergeRequest/300',
   iid: '3',
@@ -64,6 +64,8 @@ function facts(
     labels: { nodes: [] },
     diffHeadSha: 'head-1',
     shouldBeRebased: false,
+    state: 'opened',
+    mergedAt: null as string | null,
   }
 }
 
@@ -83,7 +85,7 @@ async function fakeGitLab(
   const tokenRequests: Record<string, string>[] = []
   const authorizeRequests: Record<string, string>[] = []
   /** What the review MR's head is now; tests move it to make new commits. */
-  const state = { reviewHead: 'head-1' }
+  const state = { reviewHead: 'head-1', reviewUpdatedAt: NOW }
   const posted: { path: string; body: string }[] = []
   const approvals: string[] = []
   const compares: Record<string, string>[] = []
@@ -211,7 +213,7 @@ async function fakeGitLab(
               authored: { nodes: [facts(MR, 'joao', [['john', 'UNREVIEWED']], [40, 8])] },
               reviewing: {
                 nodes: [
-                  facts(REVIEW, 'ana', [['joao', 'UNREVIEWED']], [120, 10]),
+                  facts({ ...REVIEW, updatedAt: state.reviewUpdatedAt }, 'ana', [['joao', 'UNREVIEWED']], [120, 10]),
                   facts(TIDY, 'ana', [['joao', 'APPROVED']], [5, 1]),
                   ...(options.many
                     ? Array.from({ length: 30 }, (_, n) =>
@@ -235,6 +237,20 @@ async function fakeGitLab(
             },
           },
         })
+      }
+      if (query.startsWith('query MergedFacts')) {
+        // One MR of yours merged lately: it stays until you tick it.
+        const shipped = {
+          ...facts(
+            { ...MR, id: 'gid://gitlab/MergeRequest/500', iid: '5', title: 'Ship the parser', webUrl: `${GITLAB}/g/p/-/merge_requests/5` },
+            'joao',
+            [['john', 'APPROVED']],
+            [12, 3],
+          ),
+          state: 'merged',
+          mergedAt: NOW,
+        }
+        return json({ data: { currentUser: { authored: { nodes: [shipped] }, reviewing: { nodes: [] } } } })
       }
       if (query.startsWith('query Involved')) {
         return json({
@@ -482,7 +498,7 @@ test('rebase when GitLab says it is needed', async ({ page }) => {
   const gitlab = await fakeGitLab(page, { scope: 'api' })
   await signIn(page)
   await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
-  const details = page.getByRole('complementary', { name: 'Details' })
+  const details = page.getByRole('list', { name: 'Details' })
   await details.getByRole('button', { name: 'Rebase' }).click()
   await expect.poll(() => gitlab.rebases.length).toBe(1)
   await expect(details.getByText('Rebased')).toBeVisible({ timeout: 10_000 })
@@ -491,7 +507,7 @@ test('rebase when GitLab says it is needed', async ({ page }) => {
 test('tabs, sort and filters stay as you left them after a reload', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
-  await page.getByRole('tab', { name: /^From me \(1\)/ }).click()
+  await page.getByRole('tab', { name: /^From me \(2\)/ }).click()
   await page.getByRole('combobox', { name: /^Sort/ }).selectOption('size')
   await page.getByRole('button', { name: 'Smallest first' }).click()
   await page.getByRole('button', { name: /^Filters/ }).click()
@@ -505,9 +521,7 @@ test('tabs, sort and filters stay as you left them after a reload', async ({ pag
 test('drag a repository above another, mute it, and unmute it from the snoozed view', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
-  // The approved MR in g/r shows with Show done: two repositories under From others.
-  await page.getByRole('button', { name: /^Filters/ }).click()
-  await page.getByRole('checkbox', { name: 'Show done' }).check()
+  // The approved MR in g/r lists too: two repositories under From others.
   const heads = page.locator('.sb-group-head .sb-group-name')
   await expect(heads).toHaveCount(2)
   const before = await heads.allTextContents()
@@ -758,8 +772,10 @@ test('an open MR fills the window: the page never scrolls, and Feedback floats i
   await fakeGitLab(page)
   await signIn(page)
   // A notice sits above the panel: it used to push the page past the window.
-  await page.getByRole('button', { name: 'Snooze Retry budget for webhooks' }).click()
-  await expect(page.getByRole('status')).toContainText('Snoozed')
+  const review = page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
+  await review.hover()
+  await review.getByRole('button', { name: 'Mark done Retry budget for webhooks' }).click()
+  await expect(page.getByRole('status')).toContainText('Marked done')
   await page.getByRole('tab', { name: /^From me/ }).click()
   // Opens at a comment, which scrolls its thread into view.
   await page.getByRole('article').filter({ hasText: 'Improve parser errors' }).click()
@@ -837,22 +853,18 @@ test('an inline comment shows the code it was made on', async ({ page }) => {
   expect(gitlab.compares).toContainEqual({ from: 'base-0', to: 'head-1', straight: 'false' })
 })
 
-test('snooze from the row, find it under Snoozed, and bring it back', async ({ page }) => {
-  await fakeGitLab(page)
-  await signIn(page)
-  await page.getByRole('button', { name: 'Snooze Retry budget for webhooks' }).click()
-  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Snoozed (1)' }).click()
-  await page.getByRole('button', { name: 'Unsnooze Retry budget for webhooks' }).click()
-  await page.getByRole('button', { name: /^Active/ }).click()
-  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toHaveCount(1)
-})
-
-test('row marks: the open MR is a tint with no border, the bar means needs you, snooze shows on every row', async ({ page }) => {
+test('row marks: the open MR is a tint with no border, the bar means needs you, the ✓ shows on hover', async ({ page }) => {
   await fakeGitLab(page)
   await signIn(page)
   const row = page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
-  await expect(row.getByRole('button', { name: 'Snooze Retry budget for webhooks' })).toHaveCSS('opacity', /^0\.[4-6]/)
+  // The j/k row shows its ✓; any other row only on hover.
+  await expect(row.getByRole('button', { name: 'Mark done Retry budget for webhooks' })).toHaveCSS('opacity', '1')
+  const other = page.getByRole('article').filter({ hasText: 'Tidy logging' })
+  const tick = other.getByRole('button', { name: 'Mark done Tidy logging' })
+  await page.mouse.move(0, 0)
+  await expect(tick).toHaveCSS('opacity', '0')
+  await other.hover()
+  await expect(tick).toHaveCSS('opacity', '1')
   await row.click()
   await expect(row).toHaveAttribute('aria-current', 'true')
   await expect(row).toHaveCSS('border-left-color', 'rgba(0, 0, 0, 0)')
@@ -930,4 +942,65 @@ test('the landing page and the app use the Mr. PR mark as their icon', async ({ 
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg')
   const icon = await page.request.get('/favicon.svg')
   expect(await icon.text()).toContain('#C2410C')
+})
+
+test('✓ on hover marks an MR done: it waits in Done and returns when the MR changes', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  const row = page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
+  await row.hover()
+  await row.getByRole('button', { name: 'Mark done Retry budget for webhooks' }).click()
+  await expect(row).toHaveCount(0)
+  await page.getByRole('radio', { name: /^Done/ }).click()
+  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toBeVisible()
+  await page.getByRole('radio', { name: /^To do/ }).click()
+  gitlab.state.reviewUpdatedAt = new Date(Date.now() + 60_000).toISOString()
+  await page.getByRole('button', { name: /^Refresh/ }).click()
+  await expect(page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' })).toBeVisible()
+})
+
+test('Snooze in the header keeps an MR in Snoozed even after it changes, until unsnoozed', async ({ page }) => {
+  const gitlab = await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  await page.locator('.mr-actions').getByRole('button', { name: 'Snooze' }).click()
+  const listed = page.getByRole('complementary', { name: 'Merge requests' }).getByRole('article').filter({ hasText: 'Retry budget for webhooks' })
+  await expect(listed).toHaveCount(0)
+  gitlab.state.reviewUpdatedAt = new Date(Date.now() + 60_000).toISOString()
+  await page.getByRole('button', { name: /^Refresh/ }).click()
+  await page.waitForTimeout(500)
+  await expect(listed).toHaveCount(0)
+  await page.getByRole('button', { name: /^Snoozed/ }).click()
+  await page.getByRole('button', { name: 'Unsnooze Retry budget for webhooks' }).click()
+  await page.getByRole('button', { name: /^Active/ }).click()
+  await expect(listed).toHaveCount(1)
+})
+
+test('a merged MR stays listed with its chip until ticked; Show merged off hides it', async ({ page }) => {
+  await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('tab', { name: /^From me/ }).click()
+  const merged = page.getByRole('article').filter({ hasText: 'Ship the parser' })
+  await expect(merged.getByText('Merged', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: /^Filters/ }).click()
+  await page.getByRole('checkbox', { name: 'Show merged' }).uncheck()
+  await expect(merged).toHaveCount(0)
+})
+
+test('the Changes tab counts are green and red, and People narrows the threads', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  await fakeGitLab(page)
+  await signIn(page)
+  await page.getByRole('article').filter({ hasText: 'Retry budget for webhooks' }).click()
+  const changes = page.getByRole('link', { name: /^Changes/ })
+  // --plus and --minus in the light tokens, not the tab's grey.
+  const tabColor = await changes.evaluate((el) => getComputedStyle(el).color)
+  await expect(changes.locator('.q-plus')).not.toHaveCSS('color', tabColor)
+  await expect(changes.locator('.q-minus')).not.toHaveCSS('color', tabColor)
+  const panel = page.getByRole('complementary', { name: 'Activity panel' })
+  await panel.getByRole('button', { name: /from ANA$/ }).click()
+  await expect(page.getByText(/^Showing threads with ANA/)).toBeVisible()
+  await expect(page.locator('[data-discussion-id="d5"]')).toBeVisible()
+  await panel.getByRole('button', { name: /from ANA$/ }).click()
+  await expect(page.getByText(/^Showing threads with/)).toHaveCount(0)
 })
