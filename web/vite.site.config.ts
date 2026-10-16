@@ -61,7 +61,10 @@ export default defineConfig(() => {
   return {
     root: `${webDir}site`,
     envDir: webDir,
-    base: process.env.MRPR_SITE_BASE ?? '/',
+    // Fixed at the root: the app keeps OAuth tokens in `localStorage`, which
+    // belongs to the whole origin, so Mr. PR must own its origin rather than
+    // sit under a path on a shared one. See docs/site-setup.md.
+    base: '/',
     plugins: [react(), contentSecurityPolicy()],
     build: {
       outDir: `${webDir}dist-site`,

@@ -55,8 +55,7 @@ runs only its own script file (`landing.js`), never inline code, and connects on
 
 On vercel.com: Add New → Project → import `jmoraispk/mrpr`.
 
-- Choose **Import single project** next to **web** (Vite). Not the FastAPI
-  `app`, and not "Services".
+- Choose **Import single project** next to **web** (Vite), not "Services".
 - **Root Directory:** `web`. Build settings come from `web/vercel.json`
   (`npm run build:site`, output `dist-site`).
 - Deploy. Until step 3 the app says it is "not set up to sign in"; the landing
