@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="./assets/banner.svg" alt="Delta — GitLab MR reviews, minus the wait." width="1280">
+  <img src="./assets/banner.svg" alt="Mr. PR — GitLab MR reviews, minus the wait." width="1280">
 </p>
 
-# DeltaReview
+# Mr. PR
 
-DeltaReview is a fast interface for reviewing GitLab merge requests. It runs
+Mr. PR is a fast interface for reviewing GitLab merge requests. It runs
 entirely in the browser and keeps GitLab as the source of truth.
 
 > **Status:** Alpha.
@@ -15,7 +15,7 @@ entirely in the browser and keeps GitLab as the source of truth.
 
 ## Private by design
 
-![Delta privacy model](./assets/private.png)
+![Mr. PR privacy model](./assets/private.png)
 
 ## Quick start
 
@@ -26,9 +26,9 @@ yourself.
 
 ## Current scope
 
-DeltaReview reads text diffs and lets you create, reply to, resolve, and
+Mr. PR reads text diffs and lets you create, reply to, resolve, and
 unresolve GitLab discussions. If GitLab rejects a multiline position,
-DeltaReview tries the last selected line and then posts a clearly labeled
+Mr. PR tries the last selected line and then posts a clearly labeled
 general discussion. It does not submit approvals, batch reviews, or render
 oversized/binary files.
 
@@ -46,5 +46,5 @@ Run it locally with `npm run dev:site --prefix web`.
 ---
 
 Contributions are welcome through
-[issues](https://github.com/jmoraispk/delta-review/issues) and pull requests.
-DeltaReview is released under the [MIT License](./LICENSE).
+[issues](https://github.com/jmoraispk/mrpr/issues) and pull requests.
+Mr. PR is released under the [MIT License](./LICENSE).

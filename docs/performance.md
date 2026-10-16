@@ -1,6 +1,6 @@
 # Diff performance
 
-Delta lazy-loads the diff renderer, parses and builds split/unified line data
+Mr. PR lazy-loads the diff renderer, parses and builds split/unified line data
 in a Web Worker, defers syntax highlighting until after the plain diff is
 visible, caches processed files, and virtualizes the changed-file list.
 

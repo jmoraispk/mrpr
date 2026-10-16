@@ -2,10 +2,10 @@ import { expect, test } from 'vitest'
 
 import { installPlatform } from '../platform/platform'
 import { createFakePlatform } from './fakePlatform'
-import type { DeltaResponse } from '../core/messages'
+import type { MrprResponse } from '../core/messages'
 
 const sent: unknown[] = []
-let reply: () => Promise<DeltaResponse>
+let reply: () => Promise<MrprResponse>
 installPlatform(
   createFakePlatform({
     send: async (message) => {
@@ -33,7 +33,7 @@ test('a successful response is unwrapped', async () => {
     createRuntimeTransport(TARGET).getMergeRequest(),
   ).resolves.toEqual({ iid: 42 })
   expect(sent[0]).toMatchObject({
-    kind: 'delta/review',
+    kind: 'mrpr/review',
     op: 'getMergeRequest',
     target: TARGET,
   })

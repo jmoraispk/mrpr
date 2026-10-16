@@ -10,9 +10,9 @@ import { publishToDirectory } from './servers'
 /** Per-host OAuth tokens, in the platform store (localStorage on the site). */
 export const AUTH_KEY = 'auth'
 /** The in-flight sign-in, in sessionStorage: it must not outlive the tab. */
-export const PENDING_KEY = 'delta:pendingSignIn'
+export const PENDING_KEY = 'mrpr:pendingSignIn'
 /** A sign-in for posting, in its own window: localStorage, since a new window may not share sessionStorage. */
-export const POPUP_PENDING_KEY = 'delta:popupSignIn'
+export const POPUP_PENDING_KEY = 'mrpr:popupSignIn'
 /** Servers whose sign-in application only allows `api`: they refused `read_api` once. */
 export const FULL_SCOPE_KEY = 'fullScopeHosts'
 /** Refresh this long before expiry, so no request goes out with a dying token. */
@@ -308,7 +308,7 @@ export async function completeSignIn(
   }
   // The refresh writes under this lock too: whichever finishes last must not
   // undo fresh posting rights.
-  await withLock(`delta-auth-${site.host}`, () => write(site.host, auth))
+  await withLock(`mrpr-auth-${site.host}`, () => write(site.host, auth))
   await saveHost({
     id: hostIdFor(site.host),
     host: hostIdFor(site.host),
@@ -336,7 +336,7 @@ export async function accessToken(
 
   // GitLab rotates the refresh token on every use, so exactly one caller may
   // spend it. The rest wait here, then find the rotated pair already stored.
-  const token = await withLock(`delta-auth-${site.host}`, async () => {
+  const token = await withLock(`mrpr-auth-${site.host}`, async () => {
     const fresh = (await readAll())[site.host]
     if (!fresh) throw signedOut(site.host)
     if (fresh.expiresAt - now() > REFRESH_MARGIN_MS) return fresh.accessToken

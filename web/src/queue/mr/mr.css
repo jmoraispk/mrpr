@@ -81,8 +81,8 @@
   --panel-soft: var(--surface-2);
   --hairline: var(--line-2);
   --hairline-bright: var(--line);
-  --delta: var(--accent-ink);
-  --delta-soft: var(--hl);
+  --mrpr: var(--accent-ink);
+  --mrpr-soft: var(--hl);
   --faint: var(--muted);
   --mono: var(--font-mono);
   --sans: var(--font-body);
@@ -94,8 +94,8 @@
 .q-shell .app-shell.is-embedded {
   --canvas: var(--surface); --panel: var(--surface-2); --panel-raised: var(--surface);
   --panel-soft: var(--soft); --hairline: var(--line-2); --hairline-bright: var(--line);
-  --faint: var(--muted); --delta: var(--accent);
-  --delta-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --faint: var(--muted); --mrpr: var(--accent);
+  --mrpr-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --accent-bg: color-mix(in srgb, var(--accent) 12%, transparent);
   --accent-border: color-mix(in srgb, var(--accent) 50%, transparent);
   --success: var(--plus); --danger: var(--minus); --warning: #8a5a00;

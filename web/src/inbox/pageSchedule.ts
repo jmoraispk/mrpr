@@ -6,7 +6,7 @@ const POLL_INTERVAL_MS = 60_000
 
 /** Only one tab polls at a time; the others pick the result up from storage. */
 export function lockedPoll(options: { maxAgeMs?: number }): Promise<unknown> {
-  return withLock('delta-inbox-poll', () => pollAll(options), { ifAvailable: true })
+  return withLock('mrpr-inbox-poll', () => pollAll(options), { ifAvailable: true })
 }
 
 /**

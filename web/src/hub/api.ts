@@ -15,7 +15,7 @@ export async function hubRequest<T>(
   op: HubOp,
   payload?: unknown,
 ): Promise<T> {
-  const response = await platform().send({ kind: 'delta/hub', op, payload })
+  const response = await platform().send({ kind: 'mrpr/hub', op, payload })
   if (!response.ok) {
     throw new ApiError(
       response.error.status,

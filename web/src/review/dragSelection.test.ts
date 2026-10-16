@@ -77,13 +77,13 @@ test('previews the context lines GitLab shows above a comment', () => {
 
   highlightContextPreview(root, { lineNumber: 14, side: 'new' }, 2)
 
-  const previewed = [...root.querySelectorAll('.delta-context-preview')].map(
+  const previewed = [...root.querySelectorAll('.mrpr-context-preview')].map(
     (row) => row.querySelector('[data-line-new-num]')?.textContent,
   )
   expect(previewed).toEqual(['13', '14'])
 
   clearContextPreview(root)
-  expect(root.querySelectorAll('.delta-context-preview')).toHaveLength(0)
+  expect(root.querySelectorAll('.mrpr-context-preview')).toHaveLength(0)
 })
 
 test('clamps the context preview at the first line of the file', () => {
@@ -94,7 +94,7 @@ test('clamps the context preview at the first line of the file', () => {
 
   // Lines 12 and 13 exist above the anchor; the window clamps rather than
   // reaching past the top of the file.
-  expect(root.querySelectorAll('.delta-context-preview')).toHaveLength(2)
+  expect(root.querySelectorAll('.mrpr-context-preview')).toHaveLength(2)
 })
 
 test('starts a drag from a comment button without allowing other controls', () => {
@@ -130,14 +130,14 @@ test('highlights reverse ranges and locates the endpoint comment button', () => 
     { lineNumber: 12, side: 'new' },
   )
 
-  expect(root.querySelectorAll('.delta-drag-selected')).toHaveLength(3)
+  expect(root.querySelectorAll('.mrpr-drag-selected')).toHaveLength(3)
   expect(
     findCommentButton(root, { lineNumber: 14, side: 'new' }),
   ).toBe(root.querySelector('[data-line-new-num="14"]')?.parentElement
     ?.querySelector('button'))
 
   clearDragHighlight(root)
-  expect(root.querySelectorAll('.delta-drag-selected')).toHaveLength(0)
+  expect(root.querySelectorAll('.mrpr-drag-selected')).toHaveLength(0)
 })
 
 test('selects line-number ranges on one side of a split diff', () => {
@@ -183,7 +183,7 @@ test('selects line-number ranges on one side of a split diff', () => {
     { lineNumber: 1, side: 'old' },
   )
 
-  expect(root.querySelectorAll('.delta-drag-selected')).toHaveLength(3)
+  expect(root.querySelectorAll('.mrpr-drag-selected')).toHaveLength(3)
   expect(
     findCommentButton(root, { lineNumber: 3, side: 'old' }),
   ).not.toBeNull()

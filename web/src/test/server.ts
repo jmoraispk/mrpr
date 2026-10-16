@@ -5,7 +5,7 @@ export const server = setupServer(
   http.get('/api/config', () =>
     HttpResponse.json({
       host: 'gitlab.example.com',
-      project: 'platform/delta-review',
+      project: 'platform/mrpr',
       mr_iid: 42,
     }),
   ),
@@ -14,7 +14,7 @@ export const server = setupServer(
       iid: 42,
       title: 'Improve parser errors',
       web_url:
-        'https://gitlab.example.com/platform/delta-review/-/merge_requests/42',
+        'https://gitlab.example.com/platform/mrpr/-/merge_requests/42',
       state: 'opened',
       source_branch: 'parser-errors',
       target_branch: 'main',

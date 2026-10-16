@@ -50,9 +50,9 @@ beforeEach(() => {
   fake = createFakePlatform({
     send: async (message) => {
       fake.sent.push(message)
-      if (message.kind === 'delta/hub' && message.op === 'listHosts') return { ok: true, data: hosts }
-      if (message.kind === 'delta/hub' && message.op === 'listInbox') return { ok: true, data: inbox }
-      if (message.kind === 'delta/hub' && message.op === 'listQueue') return { ok: true, data: [] }
+      if (message.kind === 'mrpr/hub' && message.op === 'listHosts') return { ok: true, data: hosts }
+      if (message.kind === 'mrpr/hub' && message.op === 'listInbox') return { ok: true, data: inbox }
+      if (message.kind === 'mrpr/hub' && message.op === 'listQueue') return { ok: true, data: [] }
       return { ok: true, data: null }
     },
   })

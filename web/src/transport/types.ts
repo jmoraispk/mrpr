@@ -1,6 +1,6 @@
 import type { MrOverview } from '../gitlab/mrOverview'
 import type {
-  DeltaConfig,
+  MrprConfig,
   DiffFile,
   Discussion,
   DiscussionNote,
@@ -19,10 +19,10 @@ export interface InlineCommentInput extends BackendSelection {
   body: string
 }
 
-export interface DeltaTransport {
+export interface MrprTransport {
   /** Stable identity of the merge request this transport is bound to. */
   readonly targetKey: string
-  getConfig(): Promise<DeltaConfig>
+  getConfig(): Promise<MrprConfig>
   getMergeRequest(signal?: AbortSignal): Promise<MergeRequest>
   getDiffs(signal?: AbortSignal): Promise<DiffFile[]>
   getDiscussions(signal?: AbortSignal): Promise<Discussion[]>

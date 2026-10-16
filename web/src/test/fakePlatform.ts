@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-import type { DeltaMessage, DeltaResponse } from '../core/messages'
+import type { MrprMessage, MrprResponse } from '../core/messages'
 import { GitLabClient } from '../gitlab/client'
 import { GitLabError } from '../gitlab/errors'
 import { installPlatform } from '../platform/platform'
@@ -30,8 +30,8 @@ export function createMemoryStore(): KeyValueStore {
 /** A site-like platform: no tokens, no host permissions, no reload. */
 export function createFakePlatform(
   overrides: Partial<Platform> = {},
-): Platform & { sent: DeltaMessage[] } {
-  const sent: DeltaMessage[] = []
+): Platform & { sent: MrprMessage[] } {
+  const sent: MrprMessage[] = []
   return {
     sent,
     store: createMemoryStore(),
@@ -40,7 +40,7 @@ export function createFakePlatform(
     connectHost: vi.fn(async () => 'redirecting' as const),
     disconnectHost: vi.fn(async () => {}),
     showUnread: vi.fn(async () => {}),
-    send: async (message): Promise<DeltaResponse> => {
+    send: async (message): Promise<MrprResponse> => {
       sent.push(message)
       return { ok: true, data: null }
     },
@@ -53,7 +53,7 @@ export function createFakePlatform(
  * token stored with each host: what the shared core (router, poller, store)
  * needs to run against the fake GitLab. Its showUnread is a mock to assert on.
  */
-export function installTestPlatform(): Platform & { sent: DeltaMessage[] } {
+export function installTestPlatform(): Platform & { sent: MrprMessage[] } {
   const fake = createFakePlatform({
     clientFor: async (host) => {
       const { getToken } = await import('../core/hosts')

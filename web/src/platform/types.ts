@@ -1,4 +1,4 @@
-import type { DeltaMessage, DeltaResponse } from '../core/messages'
+import type { MrprMessage, MrprResponse } from '../core/messages'
 import type { HostConfig } from '../core/hosts'
 import type { GitLabClient } from '../gitlab/client'
 
@@ -27,7 +27,7 @@ export interface Platform {
   /** Toolbar badge in the extension; tab icon dot on the site. */
   showUnread(count: number): Promise<void>
   /** Deliver a hub or review op to wherever the router runs. */
-  send(message: DeltaMessage): Promise<DeltaResponse>
+  send(message: MrprMessage): Promise<MrprResponse>
   /** Extension only: per-host browser permission. */
   hasHostAccess?(host: string): Promise<boolean>
   requestHostAccess?(host: string): Promise<boolean>

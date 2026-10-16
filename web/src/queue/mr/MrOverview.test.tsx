@@ -8,7 +8,7 @@ import type { MrOverview, OverviewNote } from '../../gitlab/mrOverview'
 import { installPlatform, platform } from '../../platform/platform'
 import { createFakePlatform } from '../../test/fakePlatform'
 import { TransportProvider } from '../../transport/context'
-import type { DeltaTransport } from '../../transport/types'
+import type { MrprTransport } from '../../transport/types'
 import { liveBox, typeRich } from '../../test/richReply'
 import { QUEUE_QUERY_KEY } from '../useQueue'
 import { MrOverviewView } from './MrOverview'
@@ -46,7 +46,7 @@ const transport = {
     body,
     author: { name: 'Joao', username: 'joao' },
   })),
-} as unknown as DeltaTransport
+} as unknown as MrprTransport
 
 const T = { hostId: 'gitlab.example.com', project: 'g/p', iid: 1 }
 const person = (username: string, bot = false) => ({
