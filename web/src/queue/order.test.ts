@@ -87,21 +87,27 @@ test('the direction button says which way the list runs', () => {
 const NONE: ListFilters = {
   needsMeOnly: false,
   hideDrafts: false,
-  showDone: false,
-  authored: true,
-  reviewing: true,
+  showMerged: true,
   allMrs: false,
 }
 
-test('done rows hide unless Show done; snoozed and folded rows never list', () => {
+test('To do lists rows not ticked, Done the ticked ones, All both; snoozed and folded rows in none', () => {
   const rows = [
     row(1, { attention: 'needs-you' }),
-    row(2, { attention: 'done' }),
+    row(2, { attention: 'needs-you', done: true }),
     row(3, { attention: 'needs-you', snoozed: true }),
     row(4, { attention: 'needs-you', folded: true }),
   ]
   expect(iids(filterRows(rows, NONE, ''))).toEqual([1])
-  expect(iids(filterRows(rows, { ...NONE, showDone: true }, ''))).toEqual([1, 2])
+  expect(iids(filterRows(rows, NONE, '', 'active', 'todo'))).toEqual([1])
+  expect(iids(filterRows(rows, NONE, '', 'active', 'done'))).toEqual([2])
+  expect(iids(filterRows(rows, NONE, '', 'active', 'all'))).toEqual([1, 2])
+})
+
+test('Show merged off hides merged MRs; open MRs that need nobody always list', () => {
+  const rows = [row(1, { mr: facts({ state: 'merged' }) }), row(2, { attention: 'done' })]
+  expect(iids(filterRows(rows, NONE, ''))).toEqual([1, 2])
+  expect(iids(filterRows(rows, { ...NONE, showMerged: false }, ''))).toEqual([2])
 })
 
 test('Needs me only keeps what needs you and what came back; Hide drafts hides drafts', () => {
@@ -152,16 +158,12 @@ test('the snoozed view keeps snoozed and done rows, still never folded ones', ()
   expect(iids(filterRows(rows, NONE, ''))).toEqual([])
 })
 
-test('Show: authored and reviewing pick rows by role; notification-only rows always show; All MRs shows the rest', () => {
-  const mine = row(1, { attention: 'needs-you', mr: facts({ roles: ['author'] }), involved: true })
-  const review = row(2, { attention: 'needs-you', mr: facts({ roles: ['reviewer'] }), involved: true })
-  const note = row(3, { attention: 'needs-you', mr: null, involved: true })
-  const other = row(4, { attention: 'done', mr: facts({ roles: [] }), involved: false })
+test('without All MRs, MRs nobody involved you in are hidden; notification-only rows always show', () => {
+  const mine = row(1, { mr: facts({ roles: ['author'] }), involved: true })
+  const review = row(2, { mr: facts({ roles: ['reviewer'] }), involved: true })
+  const note = row(3, { mr: null, involved: true })
+  const other = row(4, { mr: facts({ roles: [] }), involved: false })
   const rows = [mine, review, note, other]
   expect(iids(filterRows(rows, NONE, ''))).toEqual([1, 2, 3])
-  expect(iids(filterRows(rows, { ...NONE, authored: false }, ''))).toEqual([2, 3])
-  expect(iids(filterRows(rows, { ...NONE, reviewing: false }, ''))).toEqual([1, 3])
-  expect(iids(filterRows(rows, { ...NONE, authored: false, reviewing: false }, ''))).toEqual([3])
-  // All MRs: everything, the role-less row even though it reads as done.
-  expect(iids(filterRows(rows, { ...NONE, authored: false, reviewing: false, allMrs: true }, ''))).toEqual([1, 2, 3, 4])
+  expect(iids(filterRows(rows, { ...NONE, allMrs: true }, ''))).toEqual([1, 2, 3, 4])
 })

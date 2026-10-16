@@ -78,3 +78,9 @@
 .sb-foot .sb-view-toggle { padding: 0; border: 0; background: none; color: var(--ink-2); text-decoration: underline; }
 
 .sb-chip { padding: 0 6px; border-radius: 99px; background: var(--ok-bg); color: var(--ok-ink); font-size: 11px; }
+
+/* To do | Done | All, above Sort. */
+.sb-views { display: inline-flex; align-self: flex-start; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.sb-view { padding: 3px 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.sb-view + .sb-view { border-left: 1px solid var(--line); }
+.sb-view[aria-checked='true'] { background: var(--hl); color: var(--ink); font-weight: 600; }

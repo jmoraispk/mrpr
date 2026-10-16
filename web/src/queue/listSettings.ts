@@ -1,12 +1,10 @@
-import { SORTS, type ListFilters, type ListOrder, type SidebarTab, type SortBy } from './order'
+import { SORTS, type ListFilters, type ListOrder, type ListView, type SidebarTab, type SortBy } from './order'
 import { useStored } from './state'
 
 export const DEFAULT_LIST_FILTERS: ListFilters = {
   needsMeOnly: false,
   hideDrafts: false,
-  showDone: false,
-  authored: true,
-  reviewing: true,
+  showMerged: true,
   allMrs: false,
 }
 export const DEFAULT_LIST_ORDER: ListOrder = { sortBy: 'changed', descending: true }
@@ -22,9 +20,7 @@ export function normalizeListFilters(stored: unknown): ListFilters {
   return {
     needsMeOnly: flag('needsMeOnly'),
     hideDrafts: flag('hideDrafts'),
-    showDone: flag('showDone'),
-    authored: flag('authored'),
-    reviewing: flag('reviewing'),
+    showMerged: flag('showMerged'),
     allMrs: flag('allMrs'),
   }
 }
@@ -77,3 +73,6 @@ export const useCollapsedGroups = () => useStored('collapsedGroups', NONE, norma
 export const normalizeTab = (stored: unknown): SidebarTab => (stored === 'mine' ? 'mine' : 'others')
 export const useSidebarTab = () => useStored<SidebarTab>('sidebarTab', 'others', normalizeTab)
 export const useFiltersOpen = () => useStored<boolean>('filtersOpen', false, (stored) => stored === true)
+export const normalizeListView = (stored: unknown): ListView =>
+  stored === 'done' || stored === 'all' ? stored : 'todo'
+export const useListView = () => useStored<ListView>('listView', 'todo', normalizeListView)

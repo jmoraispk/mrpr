@@ -20,12 +20,16 @@ export interface ListOrder {
 export interface ListFilters {
   needsMeOnly: boolean
   hideDrafts: boolean
-  showDone: boolean
-  /** Which MRs: yours, your reviews, or every open MR in your repositories. */
-  authored: boolean
-  reviewing: boolean
+  /** Merged MRs stay listed (until ticked) unless this is off. */
+  showMerged: boolean
+  /** Every open MR in your repositories, not only yours and your reviews. */
   allMrs: boolean
 }
+
+/** Which MRs by your ✓: not ticked yet, ticked, or both. */
+export type ListView = 'todo' | 'done' | 'all'
+export const LIST_VIEWS: ListView[] = ['todo', 'done', 'all']
+export const LIST_VIEW_LABELS: Record<ListView, string> = { todo: 'To do', done: 'Done', all: 'All' }
 
 /** The sidebar's list: what is active, or what you snoozed or muted. */
 export type SidebarView = 'active' | 'snoozed'
@@ -86,25 +90,24 @@ function haystack(row: QueueRow): string {
     .toLowerCase()
 }
 
-/** What the sidebar lists. Snoozed and bot-authored rows never are. */
+/** What the sidebar lists. Bot-authored rows never are; snoozed ones only in the snoozed view. */
 export function filterRows(
   rows: QueueRow[],
   filters: ListFilters,
   search: string,
   view: SidebarView = 'active',
+  listView: ListView = 'todo',
 ): QueueRow[] {
   const query = search.trim().toLowerCase()
   return rows.filter(
     (row) =>
       !row.folded &&
-      // The snoozed view lists snoozed MRs whatever their state.
+      // The snoozed view's rows were chosen by snoozedRows (snoozed MRs, muted repositories).
       (view === 'snoozed' ||
-        (!row.snoozed && (filters.showDone || row.attention !== 'done' || !row.involved))) &&
-      // Which MRs: notification-only rows (no facts) always; with All MRs, every row.
-      (filters.allMrs ||
-        !row.mr ||
-        (filters.authored && row.mr.roles.includes('author')) ||
-        (filters.reviewing && row.mr.roles.includes('reviewer'))) &&
+        (!row.snoozed && (listView === 'all' || row.done === (listView === 'done')))) &&
+      (filters.showMerged || row.mr?.state !== 'merged') &&
+      // Notification-only rows (no facts) always; with All MRs, every row.
+      (filters.allMrs || !row.mr || row.involved) &&
       (!filters.needsMeOnly || row.attention === 'needs-you' || row.attention === 'returned') &&
       (!filters.hideDrafts || !row.mr?.draft) &&
       (!query || haystack(row).includes(query)),

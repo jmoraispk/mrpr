@@ -11,7 +11,7 @@ import type { ReviewTarget } from '../transport/types'
 import { snoozedRows, useMutedGroups, withoutMuted } from './groups'
 import { KeyHelp } from './KeyHelp'
 import { useSidebar } from './listSettings'
-import { lookKeyFor, type QueueRow } from './model'
+import type { QueueRow } from './model'
 import type { SidebarView } from './order'
 import { MrHeader, type HeaderRequest } from './mr/MrHeader'
 import { MrOverviewView } from './mr/MrOverview'
@@ -95,7 +95,8 @@ export function QueueApp() {
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const actions = useRowActions()
   useUnreadTitle(
-    rows.filter((row) => !row.snoozed && !row.folded && row.attention === 'needs-you').length,
+    rows.filter((row) => !row.snoozed && !row.done && !row.folded && row.attention === 'needs-you')
+      .length,
   )
   // Opening the queue is a sign the user is looking; catch up if the last
   // poll is stale rather than waiting up to two minutes for the next.
@@ -253,7 +254,6 @@ export function QueueApp() {
           loading={queue.isLoading}
           selectedKey={current?.key ?? null}
           openKey={openRowKey}
-          activityKey={openTarget ? lookKeyFor(openTarget.hostId, openTarget.project, openTarget.iid) : null}
           onOpenRow={(row) => open(row)}
           onSnoozeRow={actions.snooze}
           onMuteGroup={(group) => actions.mute({ id: group.id, name: group.repo ?? group.name })}

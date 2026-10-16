@@ -261,9 +261,9 @@ test('opening the queue catches up a stale poll', async () => {
   })
 })
 
-test('an approval outlives its row leaving the list, and a failed undo says so', async () => {
+test('an approval leaves the MR in To do (nothing is ticked for you), and a failed undo says so', async () => {
   const user = userEvent.setup()
-  // GitLab now reports the approval, so the next fetch makes the row done.
+  // GitLab now reports the approval.
   transport.approve.mockImplementationOnce(async () => {
     hosts[0].mrs[0] = { ...hosts[0].mrs[0], reviewers: [{ username: 'joao', name: 'Joao', state: 'APPROVED' }] }
   })
@@ -273,11 +273,8 @@ test('an approval outlives its row leaving the list, and a failed undo says so',
   fireEvent.keyDown(window, { key: 'a' })
   const toast = await screen.findByRole('status')
   expect(toast).toHaveTextContent('Approved Retry budget for webhooks')
-  await waitFor(() =>
-    expect(screen.getAllByRole('article').map((row) => row.textContent).join()).not.toContain(
-      'Retry budget',
-    ),
-  )
+  await waitFor(() => expect(transport.approve).toHaveBeenCalled())
+  expect(screen.getAllByRole('article').map((row) => row.textContent).join()).toContain('Retry budget')
   await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't undo the approval")
 })
@@ -459,16 +456,11 @@ test('after the selected row leaves the list, j goes on to the next one, not bac
     author: { username: 'ana', name: 'Ana', avatarUrl: null, bot: false },
     reviewers: [{ username: 'joao', name: 'Joao', state: 'UNREVIEWED' }],
   }
-  transport.approve.mockImplementationOnce(async () => {
-    hosts[0].mrs[1] = {
-      ...hosts[0].mrs[1],
-      reviewers: [{ username: 'joao', name: 'Joao', state: 'APPROVED' }],
-    }
-  })
   renderApp()
   await screen.findAllByRole('article')
   fireEvent.keyDown(window, { key: 'j' })
-  fireEvent.keyDown(window, { key: 'a' })
+  // Snoozing takes it off the list.
+  fireEvent.keyDown(window, { key: 's' })
   await waitFor(() =>
     expect(screen.getAllByRole('article').map((row) => row.textContent).join()).not.toContain(
       'Fix flaky test',

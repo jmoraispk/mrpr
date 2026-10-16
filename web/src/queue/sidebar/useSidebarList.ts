@@ -8,7 +8,7 @@ import {
   useGroupNames,
   useGroupOrder,
 } from '../groups'
-import { useCollapsedGroups, useListFilters, useListOrder, useSidebarTab } from '../listSettings'
+import { useCollapsedGroups, useListFilters, useListOrder, useListView, useSidebarTab } from '../listSettings'
 import type { QueueRow } from '../model'
 import {
   filterRows,
@@ -16,6 +16,7 @@ import {
   sortRows,
   type ListFilters,
   type ListOrder,
+  type ListView,
   type RowGroup,
   type SidebarTab,
   type SidebarView,
@@ -36,6 +37,10 @@ export interface SidebarList {
   tab: SidebarTab
   setTab: (next: SidebarTab) => void
   counts: Record<SidebarTab, number>
+  /** To do, Done or All, and how many To do and Done hold with the current search and filters. */
+  listView: ListView
+  setListView: (next: ListView) => void
+  viewCounts: Record<'todo' | 'done', number>
   /** Put a group above or below another; the order is kept in this browser. */
   moveGroup: (id: string, target: string, place: 'before' | 'after') => void
   /** Move a group up (-1) or down (1) one place. */
@@ -47,7 +52,7 @@ export interface SidebarList {
   setSearch: (next: string) => void
   /** Whether a search or a filter narrows the list. */
   narrowed: boolean
-  /** Clear the search, Needs me only and Hide drafts. Show done is left as you set it. */
+  /** Clear the search, Needs me only and Hide drafts. Show merged is left as you set it. */
   clear: () => void
 }
 
@@ -65,10 +70,21 @@ export function useSidebarList(
   const [order, setOrder] = useListOrder()
   const [collapsed, setCollapsed] = useCollapsedGroups()
   const [tab, setTab] = useSidebarTab()
+  const [listView, setListView] = useListView()
   const [search, setSearch] = useState('')
   const [groupOrder, setGroupOrder] = useGroupOrder()
   const [names, setNames] = useGroupNames()
-  const listed = useMemo(() => filterRows(rows, filters, search, view), [rows, filters, search, view])
+  const listed = useMemo(
+    () => filterRows(rows, filters, search, view, listView),
+    [rows, filters, search, view, listView],
+  )
+  const viewCounts = useMemo(
+    () => ({
+      todo: filterRows(rows, filters, search, view, 'todo').length,
+      done: filterRows(rows, filters, search, view, 'done').length,
+    }),
+    [rows, filters, search, view],
+  )
   const counts = useMemo(() => {
     const mine = listed.filter(isMine).length
     return { mine, others: listed.length - mine }
@@ -103,6 +119,9 @@ export function useSidebarList(
     tab,
     setTab,
     counts,
+    listView,
+    setListView,
+    viewCounts,
     search,
     setSearch,
     narrowed: search.trim() !== '' || filters.needsMeOnly || filters.hideDrafts,

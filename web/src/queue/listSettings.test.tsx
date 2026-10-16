@@ -9,6 +9,7 @@ import {
   normalizeCollapsed,
   normalizeListFilters,
   normalizeListOrder,
+  normalizeListView,
   normalizeSidebar,
   normalizeTab,
   SIDEBAR_WIDTH,
@@ -28,15 +29,19 @@ test('stored filters keep what is valid and default the rest', () => {
     ...DEFAULT_LIST_FILTERS,
     needsMeOnly: true,
   })
-  expect(normalizeListFilters({ allMrs: true, authored: 'x' })).toEqual({ ...DEFAULT_LIST_FILTERS, allMrs: true })
-  expect(DEFAULT_LIST_FILTERS).toEqual({
-    needsMeOnly: false,
-    hideDrafts: false,
-    showDone: false,
-    authored: true,
-    reviewing: true,
-    allMrs: false,
+  expect(normalizeListFilters({ allMrs: true, authored: false, showDone: true })).toEqual({
+    ...DEFAULT_LIST_FILTERS,
+    allMrs: true,
   })
+  // Show merged starts on.
+  expect(DEFAULT_LIST_FILTERS).toEqual({ needsMeOnly: false, hideDrafts: false, showMerged: true, allMrs: false })
+})
+
+test('the list view is To do unless Done or All was chosen', () => {
+  expect(normalizeListView('done')).toBe('done')
+  expect(normalizeListView('all')).toBe('all')
+  expect(normalizeListView('x')).toBe('todo')
+  expect(normalizeListView(undefined)).toBe('todo')
 })
 
 test('the sidebar is open unless stored closed; collapsed groups are distinct strings', () => {

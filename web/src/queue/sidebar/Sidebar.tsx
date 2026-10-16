@@ -6,6 +6,8 @@ import type { QueueRow } from '../model'
 import {
   directionLabel,
   FIRST_DESCENDING,
+  LIST_VIEW_LABELS,
+  LIST_VIEWS,
   SORTS,
   SORT_LABELS,
   TAB_LABELS,
@@ -31,8 +33,6 @@ export interface SidebarProps {
   selectedKey: string | null
   /** The row of the MR open on the right. */
   openKey: string | null
-  /** The open MR's look key, for the Activity filters; null with no MR open. */
-  activityKey: string | null
   onOpenRow: (row: QueueRow) => void
   onSnoozeRow: (row: QueueRow) => void
   /** ⋮ → Mute repository on a repository's group. */
@@ -63,7 +63,6 @@ export function Sidebar({
   loading,
   selectedKey,
   openKey,
-  activityKey,
   onOpenRow,
   onSnoozeRow,
   onMuteGroup,
@@ -83,10 +82,13 @@ export function Sidebar({
   const theme = useTheme()
   const [filtersOpen, setFiltersOpen] = useFiltersOpen()
   const [muted] = useMutedGroups()
-  // The toggles that are on, plus one when Show is not the default (yours and your reviews).
-  const activeFilters =
-    [list.filters.needsMeOnly, list.filters.hideDrafts, list.filters.showDone].filter(Boolean).length +
-    (list.filters.allMrs || !list.filters.authored || !list.filters.reviewing ? 1 : 0)
+  // The filters away from their defaults.
+  const activeFilters = [
+    list.filters.allMrs,
+    list.filters.needsMeOnly,
+    list.filters.hideDrafts,
+    !list.filters.showMerged,
+  ].filter(Boolean).length
   const search = useRef<HTMLInputElement>(null)
   // Focus once per ask: the sidebar mounting again (after full screen, or b) must not take it.
   useEffect(() => {
@@ -97,8 +99,7 @@ export function Sidebar({
   }, [searchFocus])
 
   const live = rows.filter((row) => !row.folded && !row.snoozed)
-  const needsYou = live.filter((row) => row.attention === 'needs-you').length
-  const hiddenDone = live.filter((row) => row.attention === 'done').length
+  const needsYou = live.filter((row) => !row.done && row.attention === 'needs-you').length
   const folded = rows.filter((row) => row.folded).length
   const snoozed = rows.filter((row) => row.snoozed && !row.folded).length
   // What the Active list would hold, both tabs, without a search.
@@ -157,15 +158,11 @@ export function Sidebar({
   } else {
     body = (
       <p className="sb-empty">
-        {list.tab === 'mine' ? 'No open MRs from you.' : 'Nothing waiting on you.'}
-        {!list.filters.showDone && hiddenDone ? (
-          <>
-            {' '}
-            <button type="button" onClick={() => list.setFilters({ ...list.filters, showDone: true })}>
-              Show {hiddenDone} done
-            </button>
-          </>
-        ) : null}
+        {list.listView === 'done'
+          ? 'Nothing done yet.'
+          : list.tab === 'mine'
+            ? 'No open MRs from you.'
+            : 'Nothing waiting on you.'}
       </p>
     )
   }
@@ -202,6 +199,23 @@ export function Sidebar({
             }
           }}
         />
+        {view === 'active' ? (
+          <div className="sb-views" role="radiogroup" aria-label="Which MRs">
+            {LIST_VIEWS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={list.listView === id}
+                className="sb-view"
+                onClick={() => list.setListView(id)}
+              >
+                {LIST_VIEW_LABELS[id]}
+                {id === 'all' ? '' : ` ${list.viewCounts[id]}`}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="sb-sort-row">
           <label className="sb-sort">
             Sort
@@ -239,7 +253,7 @@ export function Sidebar({
           </button>
         </div>
         {filtersOpen ? (
-          <FiltersPanel filters={list.filters} onFilters={list.setFilters} activityKey={activityKey} />
+          <FiltersPanel filters={list.filters} onFilters={list.setFilters} />
         ) : null}
         <div className="sb-tabs" role="tablist" aria-label="Whose MRs">
           {TABS.map((id) => (

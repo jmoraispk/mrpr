@@ -63,7 +63,6 @@ function Harness({
   onSnooze,
   onMute,
   onRefresh,
-  activityKey,
   view,
 }: {
   rows: QueueRow[]
@@ -71,7 +70,6 @@ function Harness({
   onSnooze: (row: QueueRow) => void
   onMute: (group: RowGroup) => void
   onRefresh: () => void
-  activityKey: string | null
   view: SidebarView
 }) {
   const [muted] = useMutedGroups()
@@ -84,7 +82,6 @@ function Harness({
       loading={false}
       selectedKey={selected}
       openKey={null}
-      activityKey={activityKey}
       updatedAt={Date.now()}
       refreshing={false}
       onRefresh={onRefresh}
@@ -107,13 +104,13 @@ function Harness({
   )
 }
 
-function show(rows: QueueRow[] = rowsOf(MRS), activityKey: string | null = null, sidebarView: SidebarView = 'active') {
+function show(rows: QueueRow[] = rowsOf(MRS), sidebarView: SidebarView = 'active') {
   const onOpen = vi.fn()
   const onSnooze = vi.fn()
   const onMute = vi.fn()
   const onRefresh = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} onRefresh={onRefresh} activityKey={activityKey} view={sidebarView} />,
+    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} onRefresh={onRefresh} view={sidebarView} />,
   )
   return { onOpen, onSnooze, onMute, onRefresh, ...view }
 }
@@ -134,11 +131,11 @@ test('the header counts what needs you; the footer, the rest', () => {
   expect(within(sidebar).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '#/settings')
 })
 
-test('one group per repository, needs-you first, and done hidden', () => {
+test('one group per repository; an MR that needs nobody is listed too', () => {
   show()
-  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 2/ })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /g\/sdk\s*2 \/ 3/ })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /g\/docs\s*1 \/ 1/ })).toBeInTheDocument()
-  expect(titles()).toEqual(['Retry budget for webhooks', 'Fix flaky test', 'Docs for the CLI'])
+  expect(titles()).toEqual(['Retry budget for webhooks', 'Fix flaky test', 'Already approved', 'Docs for the CLI'])
 })
 
 test('a row: its title, then number, author, size and a short time; no labels', () => {
@@ -192,11 +189,11 @@ test('no tag chips above the list', () => {
   expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull()
 })
 
-test('filters: needs me only, hide drafts, show done, search, and clearing them', async () => {
+test('filters: needs me only, hide drafts, search, and clearing them', async () => {
   const user = userEvent.setup()
   show()
   await user.click(filtersButton())
-  await user.click(screen.getByRole('checkbox', { name: 'Show done' }))
+  // An MR that needs nobody is listed until you tick it.
   expect(titles()).toContain('Already approved')
   await user.click(screen.getByRole('checkbox', { name: 'Needs me only' }))
   expect(titles()).not.toContain('Port billing')
@@ -205,7 +202,6 @@ test('filters: needs me only, hide drafts, show done, search, and clearing them'
   expect(titles()).not.toContain('Docs for the CLI')
   await user.type(screen.getByRole('searchbox', { name: 'Search MRs' }), 'zzz')
   expect(screen.getByText(/No MRs match/)).toBeInTheDocument()
-  // Clearing keeps Show done: it is a preference, not a narrowing.
   await user.click(screen.getByRole('button', { name: 'Clear filters' }))
   expect(titles()).toEqual(
     expect.arrayContaining(['Docs for the CLI', 'Already approved']),
@@ -223,14 +219,27 @@ test('a group folds and stays folded', async () => {
   )
 })
 
-test('nothing at all, and nothing but done', async () => {
+test('nothing at all; nothing done yet', async () => {
   const user = userEvent.setup()
-  const { unmount } = show([])
+  show([])
   expect(screen.getByText('Nothing waiting on you.')).toBeInTheDocument()
-  unmount()
-  show(rowsOf([MRS[4]]))
-  await user.click(screen.getByRole('button', { name: 'Show 1 done' }))
-  expect(titles()).toEqual(['Already approved'])
+  await user.click(screen.getByRole('radio', { name: /^Done/ }))
+  expect(screen.getByText('Nothing done yet.')).toBeInTheDocument()
+})
+
+test('the view switch sits by Sort: To do by default, Done and All one click away, and it is remembered', async () => {
+  const user = userEvent.setup()
+  const rows = rowsOf(MRS).map((row) => (row.iid === 2 ? { ...row, done: true } : row))
+  show(rows)
+  const views = screen.getByRole('radiogroup', { name: 'Which MRs' })
+  expect(within(views).getByRole('radio', { name: /^To do/ })).toHaveAttribute('aria-checked', 'true')
+  expect(titles()).not.toContain('Fix flaky test')
+  await user.click(within(views).getByRole('radio', { name: /^Done/ }))
+  expect(titles()).toEqual(['Fix flaky test'])
+  await user.click(within(views).getByRole('radio', { name: /^All/ }))
+  expect(titles()).toContain('Fix flaky test')
+  expect(titles()).toContain('Retry budget for webhooks')
+  await waitFor(async () => expect(await fake.store.get('listView')).toBe('all'))
 })
 
 
@@ -248,7 +257,7 @@ test('the snooze button snoozes and never opens the row', () => {
 test('two tabs: From others first, From me for your own MRs, with counts, and the choice is saved', async () => {
   const user = userEvent.setup()
   show()
-  const others = screen.getByRole('tab', { name: 'From others (3)' })
+  const others = screen.getByRole('tab', { name: 'From others (4)' })
   expect(others).toHaveAttribute('aria-selected', 'true')
   expect(titles()).not.toContain('Port billing')
   await user.click(screen.getByRole('tab', { name: 'From me (1)' }))
@@ -266,24 +275,15 @@ test('Filters opens under the Sort row, one box per line, and stays open', async
   expect(screen.queryByRole('checkbox', { name: 'Needs me only' })).toBeNull()
   await user.click(filtersButton())
   expect(filtersButton()).toHaveAttribute('aria-expanded', 'true')
-  for (const name of ['Needs me only', 'Hide drafts', 'Show done', 'Unresolved threads', 'Resolved threads',
-    'New commits', 'Bot comments', 'Other activity (labels, assignees, edits)']) {
+  for (const name of ['All MRs', 'Needs me only', 'Hide drafts', 'Show merged']) {
     expect(screen.getByRole('checkbox', { name })).toBeInTheDocument()
   }
+  expect(screen.getByRole('checkbox', { name: 'Show merged' })).toBeChecked()
+  // Who and what an MR shows lives in its own panel now.
+  for (const name of ['Authored by me', "I'm the reviewer", 'Show done', 'Unresolved threads']) {
+    expect(screen.queryByRole('checkbox', { name })).toBeNull()
+  }
   await waitFor(async () => expect(await fake.store.get('filtersOpen')).toBe(true))
-})
-
-test('with an MR open, Activity boxes change that MR, and Apply to all MRs makes them the default', async () => {
-  const user = userEvent.setup()
-  show(undefined, 'h:g/p!1')
-  await user.click(filtersButton())
-  expect(screen.getByText('For the open MR')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Apply to all MRs' })).toBeNull()
-  await user.click(screen.getByRole('checkbox', { name: 'Bot comments' }))
-  await user.click(await screen.findByRole('button', { name: 'Apply to all MRs' }))
-  await waitFor(async () =>
-    expect(await fake.store.get('activityFilters')).toMatchObject({ defaults: { bots: true }, perMr: {} }),
-  )
 })
 
 const groupNames = () => screen.getAllByRole('region').map((section) => section.getAttribute('aria-label'))
@@ -389,30 +389,15 @@ test('the refresh button sits in the header, and Sort sits above the tabs', () =
 
 test('in the snoozed view, a snoozed row offers Unsnooze and nothing snoozed says so', () => {
   const snoozed = rowsOf(MRS).map((row) => (row.iid === 2 ? { ...row, snoozed: true } : row))
-  const { onSnooze } = show(snoozed.filter((row) => row.snoozed), null, 'snoozed')
+  const { onSnooze } = show(snoozed.filter((row) => row.snoozed), 'snoozed')
   fireEvent.click(screen.getByRole('button', { name: 'Unsnooze Fix flaky test' }))
   expect(onSnooze).toHaveBeenCalledOnce()
   expect(screen.getByRole('button', { name: /^Active \(\d+\)$/ })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('an empty snoozed view says Nothing snoozed.', () => {
-  show([], null, 'snoozed')
+  show([], 'snoozed')
   expect(screen.getByText('Nothing snoozed.')).toBeInTheDocument()
-})
-
-test('the Show boxes: All MRs greys out the other two as ticked', async () => {
-  const user = userEvent.setup()
-  show()
-  await user.click(screen.getByRole('button', { name: /^Filters/ }))
-  const authored = screen.getByRole('checkbox', { name: 'Authored by me' })
-  const reviewing = screen.getByRole('checkbox', { name: "I'm the reviewer" })
-  expect(authored).toBeChecked()
-  expect(reviewing).toBeChecked()
-  await user.click(screen.getByRole('checkbox', { name: 'All MRs' }))
-  expect(authored).toBeChecked()
-  expect(authored).toBeDisabled()
-  expect(reviewing).toBeDisabled()
-  await waitFor(async () => expect(await fake.store.get('listFilters')).toMatchObject({ allMrs: true }))
 })
 
 test('the footer has no + Project', () => {
@@ -421,7 +406,6 @@ test('the footer has no + Project', () => {
 })
 
 test('a merged MR says so in its row', async () => {
-  await fake.store.set({ listFilters: { showDone: true } })
   show(rowsOf([mr(1, { title: 'Shipped it', state: 'merged', mergedAt: '2026-10-11T09:00:00Z' })]))
   await screen.findByText('Shipped it')
   expect(within(rowNamed('Shipped it')).getByText('Merged')).toHaveClass('sb-chip')
