@@ -22,6 +22,7 @@ import { focusNoteOf, markRowRead } from './readState'
 import { parseSiteRoute, reviewHash, type ReviewTab, type SiteRoute } from './route'
 import { Sidebar } from './sidebar/Sidebar'
 import { useSidebarList } from './sidebar/useSidebarList'
+import { migrateSnoozed } from './state'
 import { useQueue } from './useQueue'
 import { useQueueKeys } from './useQueueKeys'
 import { useRowActions } from './useRowActions'
@@ -44,6 +45,10 @@ const sameMr = (row: QueueRow, target: ReviewTarget) =>
 /** The signed-in site: every MR on the left, the open one (or settings, or snoozed) on the right. */
 export function QueueApp() {
   const route = useSiteRoute()
+  // Old snoozes become Done, once per browser.
+  useEffect(() => {
+    void migrateSnoozed()
+  }, [])
   const queue = useQueue()
   const [muted] = useMutedGroups()
   // A muted repository is gone from the list and every count; its MRs still open from a link.
@@ -385,6 +390,7 @@ function rowFromOverview(overview: MrOverview, target: ReviewTarget): QueueRow {
     newCommits: 0,
     items: [],
     snoozed: false,
+    done: false,
     involved: true,
   }
 }

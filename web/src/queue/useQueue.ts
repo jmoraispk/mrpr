@@ -11,7 +11,7 @@ import { reposToList } from './allMrs'
 import { useMutedGroups } from './groups'
 import { useListFilters } from './listSettings'
 import { buildQueue, lookKeyFor, rowKey } from './model'
-import { useLastLook, useSnoozed } from './state'
+import { useDone, useLastLook, useSnoozedMrs } from './state'
 
 export const QUEUE_QUERY_KEY = ['queue'] as const
 const NO_HOSTS: QueueHost[] = []
@@ -20,7 +20,8 @@ const NO_HOSTS: QueueHost[] = []
 export function useQueue() {
   const queryClient = useQueryClient()
   const inbox = useInbox()
-  const [snoozed] = useSnoozed()
+  const [snoozed] = useSnoozedMrs()
+  const [done] = useDone()
   const lastLook = useLastLook()
   const [filters] = useListFilters()
   const [muted] = useMutedGroups()
@@ -75,11 +76,12 @@ export function useQueue() {
       items: inbox.data?.items ?? [],
       closed: inbox.data?.closed ?? [],
       snoozed,
+      done,
       commitsSince: JSON.parse(commitsKey) as Record<string, number>,
       now: new Date(),
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const base = useMemo(() => build(hosts), [hosts, inbox.data, snoozed, commitsKey])
+  const base = useMemo(() => build(hosts), [hosts, inbox.data, snoozed, done, commitsKey])
 
   // All MRs: every open MR of the repositories already listed, fetched only while it is on.
   const repos = useMemo(

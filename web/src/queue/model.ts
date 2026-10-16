@@ -25,7 +25,10 @@ export interface QueueRow {
   newCommits: number
   score: number
   items: InboxItem[]
+  /** Snoozed until you unsnooze it, whatever changes. */
   snoozed: boolean
+  /** Ticked ✓ and unchanged since. */
+  done: boolean
   /** You wrote it, review it, or were told about it; false for MRs listed only by All MRs. */
   involved: boolean
 }
@@ -33,8 +36,10 @@ export interface QueueRow {
 export interface QueueInput {
   hosts: QueueHost[]
   items: InboxItem[]
-  /** Row key → the MR's updatedAt when it was snoozed. */
+  /** Row key → when it was snoozed. */
   snoozed: Record<string, string>
+  /** Row key → the MR's updatedAt when it was ticked done. */
+  done: Record<string, string>
   /** Row key → commits since your last look, for MRs whose head moved. */
   commitsSince: Record<string, number>
   /** Row keys of merge requests merged or closed, from the inbox: their notification-only rows go. */
@@ -139,7 +144,8 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         newCommits,
         score: blocking * 10 + ageHours / 6 + (quickWin ? 5 : 0) - (mr.draft ? 20 : 0),
         items,
-        snoozed: input.snoozed[key] === mr.updatedAt,
+        snoozed: key in input.snoozed,
+        done: input.done[key] === mr.updatedAt,
         involved: mr.roles.length > 0 || items.length > 0,
       })
     }
@@ -171,7 +177,8 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         newCommits: 0,
         score: 0,
         items,
-        snoozed: input.snoozed[key] === first.createdAt,
+        snoozed: key in input.snoozed,
+        done: input.done[key] === first.createdAt,
         involved: true,
       })
     }

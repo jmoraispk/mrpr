@@ -45,7 +45,7 @@ const MRS = [
 const rowsOf = (mrs: QueueMr[]): QueueRow[] =>
   buildQueue({
     hosts: [{ hostId: H, host: H, username: 'joao', mrs, error: null }],
-    items: [], snoozed: {}, commitsSince: {}, now: new Date('2026-10-11T12:00:00Z'),
+    items: [], snoozed: {}, done: {}, commitsSince: {}, now: new Date('2026-10-11T12:00:00Z'),
   })
 
 let fake: ReturnType<typeof createFakePlatform>

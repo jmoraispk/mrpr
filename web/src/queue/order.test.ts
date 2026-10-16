@@ -35,6 +35,7 @@ function row(n: number, over: Partial<QueueRow> = {}): QueueRow {
     score: 0,
     items: [],
     snoozed: false,
+    done: false,
     involved: true,
     ...over,
   } as QueueRow

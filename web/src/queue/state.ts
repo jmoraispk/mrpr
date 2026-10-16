@@ -39,22 +39,58 @@ export function useStored<T>(
   return [value, update]
 }
 
-/** Row key → the MR's updatedAt when snoozed; null unsnoozes. */
-export function useSnoozed(): [
-  Record<string, string>,
-  (key: string, updatedAt: string | null) => void,
-] {
-  const [snoozed, setSnoozed] = useStored<Record<string, string>>('snoozed', {})
+const NO_MARKS: Record<string, string> = {}
+
+/** Row key → a string; anything else stored is dropped. */
+function asMarks(stored: unknown): Record<string, string> {
+  if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) return NO_MARKS
+  return Object.fromEntries(
+    Object.entries(stored).filter(([, value]) => typeof value === 'string'),
+  ) as Record<string, string>
+}
+
+/** Row key → the MR's updatedAt when ticked done; null moves it back to To do. */
+export function useDone(): [Record<string, string>, (key: string, updatedAt: string | null) => void] {
+  const [done, setDone] = useStored('done', NO_MARKS, asMarks)
   const update = useCallback(
     (key: string, updatedAt: string | null) => {
-      const next = { ...snoozed }
+      const next = { ...done }
       if (updatedAt) next[key] = updatedAt
+      else delete next[key]
+      setDone(next)
+    },
+    [done, setDone],
+  )
+  return [done, update]
+}
+
+/** Row key → when it was snoozed. A snoozed MR stays hidden until unsnoozed, whatever changes. */
+export function useSnoozedMrs(): [Record<string, string>, (key: string, on: boolean) => void] {
+  const [snoozed, setSnoozed] = useStored('snoozedMrs', NO_MARKS, asMarks)
+  const update = useCallback(
+    (key: string, on: boolean) => {
+      const next = { ...snoozed }
+      if (on) next[key] = new Date().toISOString()
       else delete next[key]
       setSnoozed(next)
     },
     [snoozed, setSnoozed],
   )
   return [snoozed, update]
+}
+
+/**
+ * Once per browser: the old snoozes meant "until it changes", which is Done
+ * now. They move into `done` (what is already there wins) and `snoozed` goes.
+ */
+export async function migrateSnoozed(): Promise<void> {
+  const store = platform().store
+  const old = asMarks(await store.get('snoozed'))
+  if (Object.keys(old).length > 0) {
+    const done = asMarks(await store.get('done'))
+    await store.set({ done: { ...old, ...done } })
+  }
+  await store.remove('snoozed')
 }
 
 /** `lookKeyFor(...)` → the head you last reviewed. */

@@ -5,7 +5,7 @@ import { INBOX_QUERY_KEY } from '../hub/useInbox'
 import { createRuntimeTransport } from '../transport/runtime'
 import { useMutedGroups } from './groups'
 import type { QueueRow } from './model'
-import { useSnoozed } from './state'
+import { useSnoozedMrs } from './state'
 import { QUEUE_QUERY_KEY } from './useQueue'
 
 /** What the queue last did, shown until replaced or dismissed, even after the row moves. */
@@ -21,7 +21,7 @@ const targetOf = (row: QueueRow) => ({ hostId: row.hostId, project: row.project,
 /** Approve, snooze and mute, each with an Undo that survives the row leaving the list. */
 export function useRowActions() {
   const queryClient = useQueryClient()
-  const [, setSnooze] = useSnoozed()
+  const [, setSnooze] = useSnoozedMrs()
   const [muted, setMuted] = useMutedGroups()
   const [notice, setNotice] = useState<Notice | null>(null)
   // One request per MR at a time: a double `a` must not approve twice.
@@ -64,11 +64,11 @@ export function useRowActions() {
 
   function snooze(row: QueueRow) {
     if (row.snoozed) {
-      setSnooze(row.key, null)
+      setSnooze(row.key, false)
       setNotice(null)
       return
     }
-    setSnooze(row.key, row.updatedAt)
+    setSnooze(row.key, true)
     setNotice({ kind: 'snoozed', row })
   }
 
@@ -90,7 +90,7 @@ export function useRowActions() {
       return
     }
     if (notice?.kind === 'snoozed') {
-      setSnooze(notice.row.key, null)
+      setSnooze(notice.row.key, false)
       setNotice(null)
       return
     }

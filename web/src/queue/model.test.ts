@@ -59,6 +59,7 @@ function run(mrs: QueueMr[], over: Partial<QueueInput> = {}) {
     hosts: [{ hostId: H, host: H, username: 'joao', mrs, error: null }],
     items: [],
     snoozed: {},
+    done: {},
     commitsSince: {},
     now: NOW,
     ...over,
@@ -93,13 +94,17 @@ test('rows carry no buckets or badges any more', () => {
   expect(row).not.toHaveProperty('badges')
 })
 
-test('a snoozed row stays hidden until the MR changes', () => {
-  const key = rowKey(H, 1)
-  const snoozed = { [key]: '2026-10-11T10:00:00.000Z' }
-  expect(run([mr(1)], { snoozed })[0].snoozed).toBe(true)
-  expect(run([mr(1, { updatedAt: '2026-10-11T11:00:00.000Z' })], { snoozed })[0].snoozed).toBe(
-    false,
-  )
+test('a ticked row is done until the MR changes', () => {
+  const done = { [rowKey(H, 1)]: '2026-10-11T10:00:00.000Z' }
+  expect(run([mr(1)], { done })[0].done).toBe(true)
+  expect(run([mr(1, { updatedAt: '2026-10-11T11:00:00.000Z' })], { done })[0].done).toBe(false)
+  expect(run([mr(1)])[0].done).toBe(false)
+})
+
+test('a snoozed row stays snoozed when the MR changes', () => {
+  const snoozed = { [rowKey(H, 1)]: '2026-10-01T00:00:00.000Z' }
+  expect(run([mr(1, { updatedAt: '2026-10-11T11:00:00.000Z' })], { snoozed })[0].snoozed).toBe(true)
+  expect(run([mr(1)])[0].snoozed).toBe(false)
 })
 
 test('unread items for an MR without facts still make a row', () => {
