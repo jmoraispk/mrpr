@@ -601,19 +601,6 @@ test('the sidebar is as wide as it was left', async () => {
   await waitFor(async () => expect(await fake.store.get('sidebar')).toEqual({ open: true, width: 464 }))
 })
 
-test('the 💤 on a row snoozes it without opening it, and Undo brings it back', async () => {
-  const user = userEvent.setup()
-  renderApp()
-  await screen.findAllByRole('article')
-  await user.click(screen.getByRole('button', { name: 'Snooze Fix flaky test' }))
-  await waitFor(() =>
-    expect(screen.getAllByRole('article').map((row) => row.textContent).join()).not.toContain('Fix flaky test'),
-  )
-  expect(window.location.hash).toBe('')
-  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
-  await waitFor(() => expect(rowNamed('Fix flaky test')).toBeInTheDocument())
-})
-
 test('hiding the sidebar mid-drag drops the drag, and the saved width shows', async () => {
   await fake.store.set({ sidebar: { open: true, width: 400 } })
   renderApp()
@@ -817,4 +804,47 @@ test('All MRs rows stay put while the list is read again, even when the reposito
   )
   expect(screen.getByText('Someone else’s change')).toBeInTheDocument()
   open()
+})
+
+test('✓ marks an MR done: it leaves To do, waits in Done, and comes back when the MR changes', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await user.click(await screen.findByRole('button', { name: 'Mark done Fix flaky test' }))
+  await waitFor(() => expect(within(sidebar()!).queryByText('Fix flaky test')).toBeNull())
+  expect(window.location.hash).toBe('')
+  expect(screen.getByRole('status')).toHaveTextContent('Marked done Fix flaky test')
+  await user.click(screen.getByRole('radio', { name: /^Done/ }))
+  expect(await screen.findByRole('button', { name: 'Move back to To do Fix flaky test' })).toBeInTheDocument()
+  await user.click(screen.getByRole('radio', { name: /^To do/ }))
+  hosts[0].mrs[1] = { ...hosts[0].mrs[1], updatedAt: '2026-10-13T00:00:00Z' }
+  await user.click(screen.getByRole('button', { name: /^Refresh/ }))
+  expect(await within(sidebar()!).findByText('Fix flaky test')).toBeInTheDocument()
+})
+
+test('e marks the selected MR done; Undo brings it back', async () => {
+  const user = userEvent.setup()
+  renderApp()
+  await screen.findAllByRole('article')
+  await user.keyboard('e')
+  await waitFor(() => expect(within(sidebar()!).queryByText('Retry budget for webhooks')).toBeNull())
+  await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+  expect(await within(sidebar()!).findByText('Retry budget for webhooks')).toBeInTheDocument()
+})
+
+test('Snooze in the header hides the MR until unsnoozed, even after it changes', async () => {
+  const user = userEvent.setup()
+  window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/2'
+  renderApp()
+  const panel = await screen.findByRole('region', { name: 'Fix flaky test' })
+  await waitFor(() => expect(panel.querySelector('.mr-actions')).not.toBeNull())
+  await user.click(within(panel.querySelector('.mr-actions') as HTMLElement).getByRole('button', { name: 'Snooze' }))
+  await waitFor(() => expect(within(sidebar()!).queryByText('Fix flaky test')).toBeNull())
+  hosts[0].mrs[1] = { ...hosts[0].mrs[1], updatedAt: '2026-10-13T00:00:00Z' }
+  await user.click(screen.getByRole('button', { name: /^Refresh/ }))
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  expect(within(sidebar()!).queryByText('Fix flaky test')).toBeNull()
+  await user.click(screen.getByRole('button', { name: /^Snoozed/ }))
+  await user.click(await screen.findByRole('button', { name: 'Unsnooze Fix flaky test' }))
+  await user.click(screen.getByRole('button', { name: /^Active/ }))
+  expect(await within(sidebar()!).findByText('Fix flaky test')).toBeInTheDocument()
 })

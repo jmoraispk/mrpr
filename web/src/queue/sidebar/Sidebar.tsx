@@ -34,7 +34,10 @@ export interface SidebarProps {
   /** The row of the MR open on the right. */
   openKey: string | null
   onOpenRow: (row: QueueRow) => void
-  onSnoozeRow: (row: QueueRow) => void
+  /** A row's ✓: done until it changes, or back to To do. */
+  onDoneRow: (row: QueueRow) => void
+  /** A row's Unsnooze, in the snoozed view. */
+  onUnsnoozeRow: (row: QueueRow) => void
   /** ⋮ → Mute repository on a repository's group. */
   onMuteGroup: (group: RowGroup) => void
   /** ⋮ → Unmute on a muted repository's group (snoozed view). */
@@ -64,7 +67,8 @@ export function Sidebar({
   selectedKey,
   openKey,
   onOpenRow,
-  onSnoozeRow,
+  onDoneRow,
+  onUnsnoozeRow,
   onMuteGroup,
   onUnmuteGroup,
   view,
@@ -138,8 +142,8 @@ export function Sidebar({
             selected={row.key === selectedKey}
             current={row.key === openKey}
             onOpen={() => onOpenRow(row)}
-            onSnooze={() => onSnoozeRow(row)}
-            action={view === 'snoozed' ? (row.snoozed ? 'unsnooze' : null) : 'snooze'}
+            onAction={() => (view === 'snoozed' ? onUnsnoozeRow(row) : onDoneRow(row))}
+            action={view === 'snoozed' ? (row.snoozed ? 'unsnooze' : null) : row.done ? 'undone' : 'done'}
           />
         ))}
       </MrGroup>

@@ -131,7 +131,7 @@ export function MrHeader({
           </button>
         ) : null}
         {row ? (
-          <button type="button" onClick={onSnooze}>
+          <button type="button" onClick={onSnooze} title="Hide it until you unsnooze it">
             {row.snoozed ? 'Unsnooze' : 'Snooze'}
           </button>
         ) : null}

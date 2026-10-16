@@ -3,23 +3,25 @@ import { useEffect, useRef } from 'react'
 import { shortTime } from '../../hub/relativeTime'
 import type { QueueRow } from '../model'
 
+const ACTION_LABEL = { done: 'Mark done', undone: 'Move back to To do', unsnooze: 'Unsnooze' } as const
+
 /** One MR: title, then number, author, size and when it last changed. A click opens it. */
 export function MrRow({
   row,
   selected,
   current,
   onOpen,
-  onSnooze,
-  action = 'snooze',
+  onAction,
+  action = 'done',
 }: {
   row: QueueRow
   selected: boolean
   /** The MR open on the right. */
   current: boolean
   onOpen: () => void
-  onSnooze: () => void
-  /** The row's button: snooze it, unsnooze it (snoozed view), or none. */
-  action?: 'snooze' | 'unsnooze' | null
+  onAction: () => void
+  /** The row's button: ✓ (mark done, or back to To do when done), Unsnooze (snoozed view), or none. */
+  action?: 'done' | 'undone' | 'unsnooze' | null
 }) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -33,7 +35,7 @@ export function MrRow({
       ref={ref}
       className={`sb-row${selected ? ' is-selected' : ''}${current ? ' is-current' : ''}${
         needsYou ? ' is-needs-you' : ''
-      }`}
+      }${row.done ? ' is-done' : ''}`}
       aria-current={current ? 'true' : undefined}
       data-key={row.key}
       onClick={onOpen}
@@ -46,30 +48,32 @@ export function MrRow({
         {action ? (
           <button
             type="button"
-            className="sb-snooze"
-            aria-label={`${action === 'unsnooze' ? 'Unsnooze' : 'Snooze'} ${row.title}`}
-            title={action === 'unsnooze' ? 'Unsnooze' : 'Snooze until it changes'}
+            className={action === 'unsnooze' ? 'sb-unsnooze' : `sb-done${action === 'undone' ? ' is-done' : ''}`}
+            aria-label={`${ACTION_LABEL[action]} ${row.title}`}
+            title={ACTION_LABEL[action]}
             onClick={(event) => {
               // The row opens on click; this button never does.
               event.stopPropagation()
-              onSnooze()
+              onAction()
             }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              aria-hidden="true"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M2 7h5l-5 6h5" />
-              <path d="M9 2h5l-5 6h5" />
-              {action === 'unsnooze' ? <path d="M1.5 14.5 14.5 1.5" /> : null}
-            </svg>
+            {action === 'unsnooze' ? (
+              'Unsnooze'
+            ) : (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 8.5 6.5 12 13 4.5" />
+              </svg>
+            )}
           </button>
         ) : null}
       </div>

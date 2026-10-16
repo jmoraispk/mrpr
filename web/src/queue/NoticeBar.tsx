@@ -48,7 +48,9 @@ export function NoticeBar({
   return (
     <div className="q-notice" role="status">
       <span>
-        <strong>{notice.kind === 'approved' ? 'Approved' : 'Snoozed'}</strong> {notice.row.title}
+        <strong>
+          {notice.kind === 'approved' ? 'Approved' : notice.kind === 'done' ? 'Marked done' : 'Snoozed'}
+        </strong> {notice.row.title}
       </span>
       <button type="button" onClick={onUndo}>
         Undo

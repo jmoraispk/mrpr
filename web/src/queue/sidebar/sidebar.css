@@ -41,8 +41,6 @@
 
 .sb-title-line { display: flex; gap: 6px; align-items: center; }
 .sb-title-line .sb-title { flex: 1; min-width: 0; }
-.sb-snooze { flex: none; padding: 3px; border: 0; border-radius: 6px; background: none; color: var(--muted); line-height: 0; cursor: pointer; opacity: 0.5; }
-.sb-snooze:hover { background: var(--soft); }
 
 .sb-filters-toggle { margin-left: auto; padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: 13px var(--font-body); cursor: pointer; }
 .sb-filters-toggle[aria-expanded='true'] { border-color: var(--ink-2); }
@@ -73,7 +71,6 @@
 .sb-refresh { padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: 12px var(--font-mono); cursor: pointer; }
 .sb-refresh:hover:not([aria-disabled='true']) { background: var(--soft); color: var(--ink); }
 .sb-refresh[aria-disabled='true'] { cursor: default; }
-.sb-snooze:hover, .sb-snooze:focus-visible { color: var(--ink); opacity: 1; }
 .sb-muted-label { margin-left: 4px; padding: 0 6px; border-radius: 99px; background: var(--soft); color: var(--muted); font: 500 11px var(--font-body); }
 .sb-foot .sb-view-toggle { padding: 0; border: 0; background: none; color: var(--ink-2); text-decoration: underline; }
 
@@ -84,3 +81,12 @@
 .sb-view { padding: 3px 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .sb-view + .sb-view { border-left: 1px solid var(--line); }
 .sb-view[aria-checked='true'] { background: var(--hl); color: var(--ink); font-weight: 600; }
+
+/* The ✓: shown on hover, on the j/k row, on focus, and always once done. */
+.sb-done, .sb-unsnooze { flex: none; display: inline-flex; align-items: center; padding: 2px 4px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.sb-done { opacity: 0; }
+.sb-row:hover .sb-done, .sb-row.is-selected .sb-done, .sb-done:focus-visible, .sb-done.is-done { opacity: 1; }
+.sb-done.is-done { color: var(--ok-ink); }
+.sb-done:hover, .sb-unsnooze:hover { background: var(--hl); color: var(--ink); }
+.sb-unsnooze { font-size: 12px; }
+.sb-row.is-done .sb-title-text, .sb-row.is-done .sb-meta { opacity: .65; }

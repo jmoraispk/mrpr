@@ -60,14 +60,16 @@ const isMine = (row: QueueRow) => row.mr?.author.username === 'joao'
 function Harness({
   rows,
   onOpen,
-  onSnooze,
+  onDone,
+  onUnsnooze,
   onMute,
   onRefresh,
   view,
 }: {
   rows: QueueRow[]
   onOpen: (row: QueueRow) => void
-  onSnooze: (row: QueueRow) => void
+  onDone: (row: QueueRow) => void
+  onUnsnooze: (row: QueueRow) => void
   onMute: (group: RowGroup) => void
   onRefresh: () => void
   view: SidebarView
@@ -85,7 +87,8 @@ function Harness({
       updatedAt={Date.now()}
       refreshing={false}
       onRefresh={onRefresh}
-      onSnoozeRow={onSnooze}
+      onDoneRow={onDone}
+      onUnsnoozeRow={onUnsnooze}
       onMuteGroup={onMute}
       view={view}
       onToggleView={() => {}}
@@ -106,13 +109,14 @@ function Harness({
 
 function show(rows: QueueRow[] = rowsOf(MRS), sidebarView: SidebarView = 'active') {
   const onOpen = vi.fn()
-  const onSnooze = vi.fn()
+  const onDone = vi.fn()
+  const onUnsnooze = vi.fn()
   const onMute = vi.fn()
   const onRefresh = vi.fn()
   const view = render(
-    <Harness rows={rows} onOpen={onOpen} onSnooze={onSnooze} onMute={onMute} onRefresh={onRefresh} view={sidebarView} />,
+    <Harness rows={rows} onOpen={onOpen} onDone={onDone} onUnsnooze={onUnsnooze} onMute={onMute} onRefresh={onRefresh} view={sidebarView} />,
   )
-  return { onOpen, onSnooze, onMute, onRefresh, ...view }
+  return { onOpen, onDone, onUnsnooze, onMute, onRefresh, ...view }
 }
 
 const filtersButton = () => screen.getByRole('button', { name: /^Filters/ })
@@ -243,14 +247,15 @@ test('the view switch sits by Sort: To do by default, Done and All one click awa
 })
 
 
-test('the snooze button snoozes and never opens the row', () => {
-  const { onOpen, onSnooze } = show()
-  const button = screen.getByRole('button', { name: 'Snooze Fix flaky test' })
+test('rows carry a ✓ that marks done and never opens the row; no snooze button', () => {
+  const { onOpen, onDone } = show()
+  const button = screen.getByRole('button', { name: 'Mark done Fix flaky test' })
+  expect(button).toHaveClass('sb-done')
   expect(button.querySelector('svg')).not.toBeNull()
-  expect(button.textContent).not.toContain('💤')
+  expect(screen.queryByRole('button', { name: /^Snooze / })).toBeNull()
   fireEvent.click(button)
-  expect(onSnooze).toHaveBeenCalledOnce()
-  expect(onSnooze.mock.calls[0][0]).toMatchObject({ iid: 2 })
+  expect(onDone).toHaveBeenCalledOnce()
+  expect(onDone.mock.calls[0][0]).toMatchObject({ iid: 2 })
   expect(onOpen).not.toHaveBeenCalled()
 })
 
@@ -389,9 +394,9 @@ test('the refresh button sits in the header, and Sort sits above the tabs', () =
 
 test('in the snoozed view, a snoozed row offers Unsnooze and nothing snoozed says so', () => {
   const snoozed = rowsOf(MRS).map((row) => (row.iid === 2 ? { ...row, snoozed: true } : row))
-  const { onSnooze } = show(snoozed.filter((row) => row.snoozed), 'snoozed')
+  const { onUnsnooze } = show(snoozed.filter((row) => row.snoozed), 'snoozed')
   fireEvent.click(screen.getByRole('button', { name: 'Unsnooze Fix flaky test' }))
-  expect(onSnooze).toHaveBeenCalledOnce()
+  expect(onUnsnooze).toHaveBeenCalledOnce()
   expect(screen.getByRole('button', { name: /^Active \(\d+\)$/ })).toHaveAttribute('aria-pressed', 'true')
 })
 

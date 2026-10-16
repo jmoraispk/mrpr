@@ -12,6 +12,7 @@ function handlers() {
     changes: vi.fn(),
     nudge: vi.fn(),
     snooze: vi.fn(),
+    done: vi.fn(),
     diffSince: vi.fn(),
     search: vi.fn(),
     sidebar: vi.fn(),
@@ -24,7 +25,7 @@ function handlers() {
 test('single keys map to actions', () => {
   const h = handlers()
   renderHook(() => useQueueKeys(h))
-  for (const key of ['j', 'k', 'Enter', 'o', 'a', 'r', 'x', 'n', 's', 'd', '/', 'b', '?']) {
+  for (const key of ['j', 'k', 'Enter', 'o', 'a', 'r', 'x', 'n', 's', 'e', 'd', '/', 'b', '?']) {
     fireEvent.keyDown(window, { key })
   }
   expect(h.move.mock.calls).toEqual([[1], [-1]])
@@ -35,6 +36,7 @@ test('single keys map to actions', () => {
     'changes',
     'nudge',
     'snooze',
+    'done',
     'diffSince',
     'search',
     'sidebar',

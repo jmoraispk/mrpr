@@ -8,6 +8,8 @@ export interface QueueKeyHandlers {
   changes(): void
   nudge(): void
   snooze(): void
+  /** e: mark done, or back to To do. */
+  done(): void
   diffSince(): void
   /** /: the search box. */
   search(): void
@@ -75,6 +77,7 @@ export function useQueueKeys(handlers: QueueKeyHandlers, enabled = true): void {
         x: () => h.changes(),
         n: () => h.nudge(),
         s: () => h.snooze(),
+        e: () => h.done(),
         d: () => h.diffSince(),
         '/': () => h.search(),
         b: () => h.sidebar(),

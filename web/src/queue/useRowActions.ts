@@ -5,23 +5,25 @@ import { INBOX_QUERY_KEY } from '../hub/useInbox'
 import { createRuntimeTransport } from '../transport/runtime'
 import { useMutedGroups } from './groups'
 import type { QueueRow } from './model'
-import { useSnoozedMrs } from './state'
+import { useDone, useSnoozedMrs } from './state'
 import { QUEUE_QUERY_KEY } from './useQueue'
 
 /** What the queue last did, shown until replaced or dismissed, even after the row moves. */
 export type Notice =
   | { kind: 'approved'; row: QueueRow }
   | { kind: 'snoozed'; row: QueueRow }
+  | { kind: 'done'; row: QueueRow }
   | { kind: 'muted'; group: { id: string; name: string } }
   | { kind: 'info'; message: string }
   | { kind: 'error'; message: string }
 
 const targetOf = (row: QueueRow) => ({ hostId: row.hostId, project: row.project, iid: row.iid })
 
-/** Approve, snooze and mute, each with an Undo that survives the row leaving the list. */
+/** Approve, mark done, snooze and mute, each with an Undo that survives the row leaving the list. */
 export function useRowActions() {
   const queryClient = useQueryClient()
   const [, setSnooze] = useSnoozedMrs()
+  const [, setDone] = useDone()
   const [muted, setMuted] = useMutedGroups()
   const [notice, setNotice] = useState<Notice | null>(null)
   // One request per MR at a time: a double `a` must not approve twice.
@@ -62,6 +64,18 @@ export function useRowActions() {
     })
   }
 
+  /** ✓: done until the MR changes; on a done row, back to To do. */
+  function markDone(row: QueueRow) {
+    if (row.done) {
+      setDone(row.key, null)
+      setNotice(null)
+      return
+    }
+    setDone(row.key, row.updatedAt)
+    setNotice({ kind: 'done', row })
+  }
+
+  /** Hidden until unsnoozed, whatever changes; on a snoozed row, unsnooze. */
   function snooze(row: QueueRow) {
     if (row.snoozed) {
       setSnooze(row.key, false)
@@ -89,6 +103,11 @@ export function useRowActions() {
       setNotice(null)
       return
     }
+    if (notice?.kind === 'done') {
+      setDone(notice.row.key, null)
+      setNotice(null)
+      return
+    }
     if (notice?.kind === 'snoozed') {
       setSnooze(notice.row.key, false)
       setNotice(null)
@@ -110,5 +129,5 @@ export function useRowActions() {
     })
   }
 
-  return { notice, approve, snooze, mute, unmute, muted, undo, dismiss: () => setNotice(null) }
+  return { notice, approve, markDone, snooze, mute, unmute, muted, undo, dismiss: () => setNotice(null) }
 }

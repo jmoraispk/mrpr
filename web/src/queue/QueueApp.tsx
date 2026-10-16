@@ -219,6 +219,7 @@ export function QueueApp() {
       help: () => setHelpOpen((value) => !value),
       approve: () => current && actions.approve(current),
       snooze: () => current && actions.snooze(current),
+      done: () => current && actions.markDone(current),
       reply: () => ask('reply'),
       changes: () => ask('changes'),
       nudge: () => ask('nudge'),
@@ -255,7 +256,8 @@ export function QueueApp() {
           selectedKey={current?.key ?? null}
           openKey={openRowKey}
           onOpenRow={(row) => open(row)}
-          onSnoozeRow={actions.snooze}
+          onDoneRow={actions.markDone}
+          onUnsnoozeRow={actions.snooze}
           onMuteGroup={(group) => actions.mute({ id: group.id, name: group.repo ?? group.name })}
           onUnmuteGroup={actions.unmute}
           view={view}
