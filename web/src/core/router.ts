@@ -1,4 +1,4 @@
-import type { DeltaConfig } from '../api/types'
+import type { MrprConfig } from '../api/types'
 import { getDiffs, getMergeRequest } from '../gitlab/diffs'
 import {
   createInline,
@@ -38,7 +38,7 @@ import {
 import { platform } from '../platform/platform'
 import type { InlineCommentInput, ReviewTarget } from '../transport/types'
 import { getHost, listHosts } from './hosts'
-import type { DeltaMessage, DeltaResponse } from './messages'
+import type { MrprMessage, MrprResponse } from './messages'
 import { scrubToken } from './scrub'
 
 /** How long the merged list may take before the queue goes on without it. */
@@ -71,7 +71,7 @@ async function clientFor(target: ReviewTarget) {
   if (!host) {
     throw new RouterError(
       400,
-      'That GitLab host is not configured in Delta',
+      'That GitLab host is not configured in Mr. PR',
       'host_not_configured',
     )
   }
@@ -87,7 +87,7 @@ async function runReview(
   const { project, iid } = target
   switch (op) {
     case 'getConfig':
-      return { host: host.host, project, mr_iid: iid } satisfies DeltaConfig
+      return { host: host.host, project, mr_iid: iid } satisfies MrprConfig
     case 'getMergeRequest':
       return getMergeRequest(client, project, iid)
     case 'getDiffs':
@@ -258,17 +258,17 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
 }
 
 export async function handleMessage(
-  message: DeltaMessage,
-): Promise<DeltaResponse> {
+  message: MrprMessage,
+): Promise<MrprResponse> {
   // GitLabClient scrubs its own credential. A token arriving in an addHost
   // payload is scrubbed here as well, since it may surface before any
   // client holds it.
   const token =
-    message.kind === 'delta/hub' && message.op === 'addHost'
+    message.kind === 'mrpr/hub' && message.op === 'addHost'
       ? ((message.payload as { token?: string }).token ?? null)
       : null
   try {
-    if (message.kind === 'delta/review') {
+    if (message.kind === 'mrpr/review') {
       return {
         ok: true,
         data: await runReview(message.op, message.target, message.payload),
@@ -289,7 +289,7 @@ export async function handleMessage(
     return {
       ok: false,
       error: {
-        code: 'delta_internal_error',
+        code: 'mrpr_internal_error',
         message: scrubToken(
           error instanceof Error ? error.message : String(error),
           token,

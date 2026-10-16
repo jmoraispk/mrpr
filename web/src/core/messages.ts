@@ -29,21 +29,21 @@ export type HubOp =
   | 'listQueue'
   | 'listRepoMrs'
 
-export type DeltaMessage =
+export type MrprMessage =
   | {
-      kind: 'delta/review'
+      kind: 'mrpr/review'
       op: ReviewOp
       target: ReviewTarget
       payload?: unknown
     }
-  | { kind: 'delta/hub'; op: HubOp; payload?: unknown }
+  | { kind: 'mrpr/hub'; op: HubOp; payload?: unknown }
 
-export interface DeltaErrorPayload {
+export interface MrprErrorPayload {
   code: string
   message: string
   status: number
 }
 
-export type DeltaResponse =
+export type MrprResponse =
   | { ok: true; data: unknown }
-  | { ok: false; error: DeltaErrorPayload }
+  | { ok: false; error: MrprErrorPayload }

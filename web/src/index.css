@@ -120,8 +120,8 @@ code {
   --ink: #e6edf3;
   --muted: #8b98a7;
   --faint: #596778;
-  --delta: #40d6b2;
-  --delta-soft: rgba(64, 214, 178, 0.12);
+  --mrpr: #40d6b2;
+  --mrpr-soft: rgba(64, 214, 178, 0.12);
   --success: #4ac26b;
   --danger: #ff7b72;
   --warning: #d4a84f;
@@ -175,7 +175,7 @@ button {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--delta);
+  outline: 2px solid var(--mrpr);
   outline-offset: 2px;
 }
 
@@ -216,7 +216,7 @@ a:focus-visible {
 .brand-mark {
   width: 17px;
   height: 17px;
-  background: var(--delta);
+  background: var(--mrpr);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   filter: drop-shadow(0 0 8px rgba(64, 214, 178, 0.25));
 }
@@ -276,7 +276,7 @@ a:focus-visible {
 }
 
 .topbar-meta a:hover {
-  color: var(--delta);
+  color: var(--mrpr);
 }
 
 /* That development-only button; see web/src/extension/devReload.tsx. */
@@ -292,7 +292,7 @@ a:focus-visible {
 }
 
 .dev-reload:hover {
-  border-color: var(--delta);
+  border-color: var(--mrpr);
   color: var(--ink);
 }
 
@@ -555,7 +555,7 @@ a:focus-visible {
 
 .file-row.is-active {
   border-color: rgba(64, 214, 178, 0.16);
-  background: var(--delta-soft);
+  background: var(--mrpr-soft);
   color: var(--ink);
 }
 
@@ -566,12 +566,12 @@ a:focus-visible {
   left: -9px;
   width: 2px;
   border-radius: 2px;
-  background: var(--delta);
+  background: var(--mrpr);
   content: "";
 }
 
 .file-glyph {
-  color: var(--delta);
+  color: var(--mrpr);
   font-size: 8px;
 }
 
@@ -706,8 +706,8 @@ a:focus-visible {
 
 .mr-discussions-toggle[aria-expanded="true"] {
   border-color: rgba(64, 214, 178, 0.3);
-  background: var(--delta-soft);
-  color: var(--delta);
+  background: var(--mrpr-soft);
+  color: var(--mrpr);
 }
 
 .mr-discussions-panel {
@@ -794,8 +794,8 @@ a:focus-visible {
 
 .comment-visibility-toggle[aria-pressed="true"] {
   border-color: rgba(64, 214, 178, 0.3);
-  background: var(--delta-soft);
-  color: var(--delta);
+  background: var(--mrpr-soft);
+  color: var(--mrpr);
 }
 
 .diff-stage,
@@ -978,16 +978,16 @@ a:focus-visible {
   font-family: var(--mono);
 }
 
-.delta-loader {
+.mrpr-loader {
   width: 32px;
   height: 32px;
   margin-bottom: 14px;
-  background: var(--delta);
+  background: var(--mrpr);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
-  animation: delta-pulse 1.15s ease-in-out infinite;
+  animation: mrpr-pulse 1.15s ease-in-out infinite;
 }
 
-@keyframes delta-pulse {
+@keyframes mrpr-pulse {
   50% {
     opacity: 0.35;
     transform: translateY(4px) scale(0.82);
@@ -1147,7 +1147,7 @@ a:focus-visible {
   border: 1px solid var(--hairline-bright);
   border-radius: 50%;
   background: var(--panel-soft);
-  color: var(--delta);
+  color: var(--mrpr);
   font-family: var(--mono);
   font-size: 9px;
 }
@@ -1221,7 +1221,7 @@ a:focus-visible {
 
 .note-markdown a,
 .hub-error a {
-  color: var(--delta);
+  color: var(--mrpr);
 }
 
 .note-markdown blockquote {
@@ -1354,8 +1354,8 @@ a:focus-visible {
 
 button.primary-action {
   border-color: rgba(64, 214, 178, 0.35);
-  background: var(--delta-soft);
-  color: var(--delta);
+  background: var(--mrpr-soft);
+  color: var(--mrpr);
 }
 
 .thread-actions button:disabled,
@@ -1450,7 +1450,7 @@ button.primary-action {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .delta-loader {
+  .mrpr-loader {
     animation: none;
   }
 }
@@ -1574,7 +1574,7 @@ button.primary-action {
 }
 
 .diff-library .diff-multi-select-active {
-  box-shadow: inset 3px 0 var(--delta);
+  box-shadow: inset 3px 0 var(--mrpr);
 }
 
 .diff-library .diff-line-num [data-line-old-num],
@@ -1585,31 +1585,31 @@ button.primary-action {
   user-select: none;
 }
 
-.diff-library .diff-line.delta-drag-selected .diff-line-num {
-  box-shadow: inset 3px 0 var(--delta);
+.diff-library .diff-line.mrpr-drag-selected .diff-line-num {
+  box-shadow: inset 3px 0 var(--mrpr);
 }
 
-.diff-library .diff-line.delta-drag-selected .diff-line-content {
+.diff-library .diff-line.mrpr-drag-selected .diff-line-content {
   filter: brightness(1.08);
 }
 
 /* The excerpt GitLab renders above a single-line comment. */
-.diff-library .diff-line.delta-context-preview .diff-line-num,
-.diff-library .diff-line.delta-context-preview .diff-line-old-num,
-.diff-library .diff-line.delta-context-preview .diff-line-new-num {
+.diff-library .diff-line.mrpr-context-preview .diff-line-num,
+.diff-library .diff-line.mrpr-context-preview .diff-line-old-num,
+.diff-library .diff-line.mrpr-context-preview .diff-line-new-num {
   box-shadow: inset 2px 0 rgba(64, 214, 178, 0.28);
 }
 
-.diff-library .diff-line.delta-context-preview .diff-line-content {
+.diff-library .diff-line.mrpr-context-preview .diff-line-content {
   background-image: linear-gradient(
     rgba(64, 214, 178, 0.05),
     rgba(64, 214, 178, 0.05)
   );
 }
 
-.diff-library .diff-line.delta-discussion-range .diff-line-num,
-.diff-library .diff-line.delta-discussion-range .diff-line-old-num,
-.diff-library .diff-line.delta-discussion-range .diff-line-new-num {
+.diff-library .diff-line.mrpr-discussion-range .diff-line-num,
+.diff-library .diff-line.mrpr-discussion-range .diff-line-old-num,
+.diff-library .diff-line.mrpr-discussion-range .diff-line-new-num {
   box-shadow: inset 2px 0 rgba(64, 214, 178, 0.45);
 }
 
@@ -1643,8 +1643,8 @@ button.primary-action {
   height: 23px;
   place-items: center;
   border-radius: 50%;
-  background: var(--delta-soft);
-  color: var(--delta);
+  background: var(--mrpr-soft);
+  color: var(--mrpr);
   font-family: var(--mono);
   font-weight: 700;
 }
@@ -1828,7 +1828,7 @@ button.primary-action {
 }
 
 .hub .hub-group-toggle:focus-visible {
-  outline: 1px solid var(--delta);
+  outline: 1px solid var(--mrpr);
   outline-offset: 2px;
 }
 
@@ -2284,7 +2284,7 @@ button.primary-action {
 }
 
 .rich-reply-idle:focus {
-  outline: 2px solid var(--delta);
+  outline: 2px solid var(--mrpr);
   outline-offset: 1px;
 }
 
@@ -2308,7 +2308,7 @@ button.primary-action {
 }
 
 .rich-reply:focus-within {
-  border-color: var(--delta);
+  border-color: var(--mrpr);
 }
 
 .rich-reply-tools {
@@ -2380,5 +2380,5 @@ button.primary-action {
 }
 
 .rich-reply-input a {
-  color: var(--delta);
+  color: var(--mrpr);
 }

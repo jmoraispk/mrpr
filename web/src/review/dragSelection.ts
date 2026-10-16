@@ -10,8 +10,8 @@ export interface DragStart {
   origin: 'gutter' | 'comment-button' | 'code'
 }
 
-const SELECTED_CLASS = 'delta-drag-selected'
-const CONTEXT_CLASS = 'delta-context-preview'
+const SELECTED_CLASS = 'mrpr-drag-selected'
+const CONTEXT_CLASS = 'mrpr-context-preview'
 
 /** Lines GitLab shows above an inline comment when it renders a thread. */
 export const CONTEXT_PREVIEW_LINES = 16

@@ -1,5 +1,6 @@
-// The browser-extension mark: a solid inverted triangle -- the nabla that gives
-// Delta its name -- in a deepened version of the project green.
+// The browser-extension mark: a solid inverted triangle -- the nabla carried
+// over from the project's first name -- in a deepened version of the project
+// green.
 //
 // Run `node assets/build_icon.js` to regenerate assets/icon.svg and the PNGs in
 // assets/icons/, which web/scripts/build-extension.mjs copies into both
@@ -22,7 +23,7 @@ const zlib = require('node:zlib')
 // 32, 48 and 128 pixels each vertex lands on a whole pixel and the flat top
 // edge stays crisp instead of smearing across two rows.
 const CANVAS = 128
-// NOT `--delta` (#40d6b2) from web/src/index.css, and please do not "fix" it
+// NOT `--mrpr` (#40d6b2) from web/src/index.css, and please do not "fix" it
 // back. That value is tuned to sit on `--canvas` (#0d1117) and it manages only
 // 1.83:1 against white -- but Chrome and Edge ship a light toolbar by default,
 // so a mark has to survive both. This is the same hue (165.4deg vs 165.6deg,
@@ -43,7 +44,7 @@ const SAMPLES = 8
 function svg() {
   const [[ax, ay], [bx], [cx, cy]] = POINTS
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}" role="img" aria-label="Delta Review">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}" role="img" aria-label="Mr. PR">
   <path d="M${ax} ${ay}H${bx}L${cx} ${cy}Z" fill="${FILL}"/>
 </svg>
 `

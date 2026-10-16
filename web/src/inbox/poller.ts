@@ -65,7 +65,7 @@ async function run({
       // Never thrown out of here: a timer has nowhere to report it, and the
       // inbox is where the user will look. The client has already scrubbed
       // its credential out of any message.
-      const code = error instanceof GitLabError ? error.code : 'delta_internal_error'
+      const code = error instanceof GitLabError ? error.code : 'mrpr_internal_error'
       const message = error instanceof Error ? error.message : String(error)
       await updateInbox((state) => recordHostError(state, host.id, { code, message }))
     }

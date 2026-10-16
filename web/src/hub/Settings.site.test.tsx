@@ -21,7 +21,7 @@ beforeEach(() => {
   fake = createFakePlatform({
     send: async (message) => {
       fake.sent.push(message)
-      if (message.kind === 'delta/hub' && message.op === 'listHosts') {
+      if (message.kind === 'mrpr/hub' && message.op === 'listHosts') {
         return { ok: true, data: [HOST] }
       }
       return { ok: true, data: null }
@@ -57,7 +57,7 @@ test('signing out asks the router to remove the host', async () => {
 
   await waitFor(() =>
     expect(fake.sent).toContainEqual({
-      kind: 'delta/hub',
+      kind: 'mrpr/hub',
       op: 'removeHost',
       payload: { id: 'gitlab.example.com' },
     }),

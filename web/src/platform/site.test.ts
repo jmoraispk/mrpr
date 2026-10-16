@@ -51,7 +51,7 @@ test('a host the build does not configure has no client', async () => {
 
 test('ops run in the page', async () => {
   await platform().store.set({ hosts: [HOST] })
-  await expect(platform().send({ kind: 'delta/hub', op: 'listHosts' })).resolves.toEqual({
+  await expect(platform().send({ kind: 'mrpr/hub', op: 'listHosts' })).resolves.toEqual({
     ok: true,
     data: [HOST],
   })

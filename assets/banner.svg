@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" role="img" aria-label="Delta — GitLab MR reviews, minus the wait.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" role="img" aria-label="Mr. PR — GitLab MR reviews, minus the wait.">
   <defs>
-    <linearGradient id="delta" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#2DD4BF"/>
       <stop offset="100%" stop-color="#3FB950"/>
     </linearGradient>
@@ -247,10 +247,10 @@
 
   <!-- ===== left: wordmark ===== -->
   <g class="mark">
-    <polygon points="96,92 128,156 64,156" fill="url(#delta)"/>
+    <polygon points="96,92 128,156 64,156" fill="url(#brand)"/>
     <polygon points="96,110 116,150 76,150" fill="#0D1117" opacity="0.35"/>
   </g>
-  <text x="150" y="151" font-size="74" font-weight="700" fill="#E6EDF3" letter-spacing="-1">delta</text>
+  <text x="150" y="151" font-size="74" font-weight="700" fill="#E6EDF3" letter-spacing="-1">Mr. PR</text>
   <text x="66" y="197" font-size="22" fill="#8B949E">GitLab MR reviews, minus the wait.</text>
 
   <!-- pill -->
@@ -299,7 +299,7 @@
   <g class="bubble">
     <polygon points="892,218 908,218 900,204" fill="#1C2431"/>
     <rect x="842" y="218" width="270" height="50" rx="10" fill="#1C2431" stroke="#2DD4BF" stroke-opacity="0.55"/>
-    <circle cx="864" cy="237" r="8" fill="url(#delta)"/>
+    <circle cx="864" cy="237" r="8" fill="url(#brand)"/>
     <text x="880" y="242" font-size="13" font-weight="700" fill="#E6EDF3">you<tspan fill="#6E7681" font-weight="400">  &#183;  now</tspan></text>
     <text x="854" y="261" class="mono" font-size="13" fill="#9DA7B3">type the return as string[]?</text>
   </g>

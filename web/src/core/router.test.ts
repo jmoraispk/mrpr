@@ -38,13 +38,13 @@ test('dispatches a review op', async () => {
     ),
   )
   await expect(
-    handleMessage({ kind: 'delta/review', op: 'getMergeRequest', target: TARGET }),
+    handleMessage({ kind: 'mrpr/review', op: 'getMergeRequest', target: TARGET }),
   ).resolves.toMatchObject({ ok: true, data: { iid: 1 } })
 })
 
 test('getConfig is answered from the stored host', async () => {
   await expect(
-    handleMessage({ kind: 'delta/review', op: 'getConfig', target: TARGET }),
+    handleMessage({ kind: 'mrpr/review', op: 'getConfig', target: TARGET }),
   ).resolves.toEqual({
     ok: true,
     data: { host: 'gitlab.example.com', project: 'p', mr_iid: 1 },
@@ -54,7 +54,7 @@ test('getConfig is answered from the stored host', async () => {
 test('an unknown host is a structured error, not a throw', async () => {
   await expect(
     handleMessage({
-      kind: 'delta/review',
+      kind: 'mrpr/review',
       op: 'getDiffs',
       target: { ...TARGET, hostId: 'nope' },
     }),
@@ -74,7 +74,7 @@ test('a GitLab error becomes the shared envelope', async () => {
     ),
   )
   await expect(
-    handleMessage({ kind: 'delta/review', op: 'getMergeRequest', target: TARGET }),
+    handleMessage({ kind: 'mrpr/review', op: 'getMergeRequest', target: TARGET }),
   ).resolves.toEqual({
     ok: false,
     error: {
@@ -95,7 +95,7 @@ test('the token is scrubbed out of error text', async () => {
     ),
   )
   const response = await handleMessage({
-    kind: 'delta/review',
+    kind: 'mrpr/review',
     op: 'getMergeRequest',
     target: TARGET,
   })
@@ -109,7 +109,7 @@ test('scrubToken is a no-op without a token', () => {
 })
 
 test('listHosts never returns a token', async () => {
-  const response = await handleMessage({ kind: 'delta/hub', op: 'listHosts' })
+  const response = await handleMessage({ kind: 'mrpr/hub', op: 'listHosts' })
   // Pinned to a real success: an error envelope would satisfy the absence
   // assertion below on its own.
   expect(response).toMatchObject({
@@ -122,7 +122,7 @@ test('listHosts never returns a token', async () => {
 test('a signed-in host is fetched', async () => {
   server.use(http.get(`${BASE}/merge_requests`, () => HttpResponse.json([])))
   await expect(
-    handleMessage({ kind: 'delta/hub', op: 'listMergeRequests' }),
+    handleMessage({ kind: 'mrpr/hub', op: 'listMergeRequests' }),
   ).resolves.toMatchObject({
     ok: true,
     data: [{ hostId: 'gitlab.example.com', reviewing: { items: [] } }],
@@ -132,7 +132,7 @@ test('a signed-in host is fetched', async () => {
 test('an unknown op is rejected', async () => {
   await expect(
     handleMessage({
-      kind: 'delta/review',
+      kind: 'mrpr/review',
       op: 'nope' as never,
       target: TARGET,
     }),
@@ -175,7 +175,7 @@ async function storeInbox(items: ReturnType<typeof inboxItem>[]) {
 test('listInbox answers from storage and never carries a token', async () => {
   await storeInbox([inboxItem(2), inboxItem(1, true)])
 
-  const response = await handleMessage({ kind: 'delta/hub', op: 'listInbox' })
+  const response = await handleMessage({ kind: 'mrpr/hub', op: 'listInbox' })
 
   expect(response).toMatchObject({
     ok: true,
@@ -189,7 +189,7 @@ test('markRead marks the named items and updates the badge', async () => {
 
   await expect(
     handleMessage({
-      kind: 'delta/hub',
+      kind: 'mrpr/hub',
       op: 'markRead',
       payload: { ids: ['gitlab.example.com:2'] },
     }),
@@ -201,7 +201,7 @@ test('markRead marks the named items and updates the badge', async () => {
 test('markAllRead clears the badge', async () => {
   await storeInbox([inboxItem(2), inboxItem(1)])
 
-  await handleMessage({ kind: 'delta/hub', op: 'markAllRead' })
+  await handleMessage({ kind: 'mrpr/hub', op: 'markAllRead' })
 
   expect(fake.showUnread).toHaveBeenLastCalledWith(0)
 })
@@ -220,7 +220,7 @@ test('pollNow polls and returns the fresh inbox', async () => {
   )
   gitlab.lists.authored.push(1)
 
-  const response = await handleMessage({ kind: 'delta/hub', op: 'pollNow' })
+  const response = await handleMessage({ kind: 'mrpr/hub', op: 'pollNow' })
 
   expect(response).toMatchObject({
     ok: true,
@@ -233,7 +233,7 @@ test('listQueue returns each host’s MRs with facts, or its error', async () =>
   gitlab.add(fakeMergeRequest(1))
   gitlab.lists.authored.push(1)
 
-  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+  const response = await handleMessage({ kind: 'mrpr/hub', op: 'listQueue' })
 
   expect(response).toMatchObject({
     ok: true,
@@ -264,13 +264,13 @@ test('every comment Mr. PR posts is signed once', async () => {
     ),
   )
   await handleMessage({
-    kind: 'delta/review',
+    kind: 'mrpr/review',
     op: 'postComment',
     target: TARGET,
     payload: { body: '@ana Requesting changes: x' },
   })
   await handleMessage({
-    kind: 'delta/review',
+    kind: 'mrpr/review',
     op: 'replyToDiscussion',
     target: TARGET,
     payload: { discussionId: 'd', body: 'ok' },
@@ -282,7 +282,7 @@ test('getOverview returns the MR overview for the target', async () => {
   const gitlab = createFakeGitLab()
   gitlab.add(fakeMergeRequest(1, { project: 'p' }))
   const response = await handleMessage({
-    kind: 'delta/review',
+    kind: 'mrpr/review',
     op: 'getOverview',
     target: TARGET,
   })
@@ -297,7 +297,7 @@ test('listQueue adds merged MRs; an MR in both lists is one row, merged', async 
   // Merged between the two reads: the open list still has 9, the merged list has it too.
   gitlab.mergedOverride = [9, 10]
 
-  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+  const response = await handleMessage({ kind: 'mrpr/hub', op: 'listQueue' })
 
   const [host] = (response as { data: { mrs: { id: number; state: string }[]; error: string | null }[] }).data
   expect(host.error).toBeNull()
@@ -310,7 +310,7 @@ test('a failing merged query leaves the open MRs', async () => {
   gitlab.lists.reviewing.push(9)
   gitlab.failMerged = true
 
-  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+  const response = await handleMessage({ kind: 'mrpr/hub', op: 'listQueue' })
 
   const [host] = (response as { data: { mrs: { id: number }[]; error: string | null }[] }).data
   expect(host.error).toBeNull()
@@ -322,10 +322,10 @@ test('a merged query that fails after one that worked keeps the merged MRs it ha
   gitlab.add(fakeMergeRequest(9))
   gitlab.add(fakeMergeRequest(10, { state: 'merged' }))
   gitlab.lists.reviewing.push(9, 10)
-  await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+  await handleMessage({ kind: 'mrpr/hub', op: 'listQueue' })
   gitlab.failMerged = true
 
-  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+  const response = await handleMessage({ kind: 'mrpr/hub', op: 'listQueue' })
 
   const [host] = (response as { data: { mrs: { id: number }[] }[] }).data
   expect(host.mrs.map((mr) => mr.id)).toEqual([9, 10])
@@ -340,7 +340,7 @@ test('a slow merged query does not hold up the open MRs', async () => {
   MERGED_TIMEOUT.ms = 50
   try {
     const started = Date.now()
-    const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+    const response = await handleMessage({ kind: 'mrpr/hub', op: 'listQueue' })
     expect(Date.now() - started).toBeLessThan(1_500)
     const [host] = (response as { data: { mrs: { id: number }[]; error: string | null }[] }).data
     expect(host.error).toBeNull()

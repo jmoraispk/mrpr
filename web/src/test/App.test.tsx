@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 
 import { TransportProvider } from '../transport/context'
 import { createHttpTransport } from './httpTransport'
-import type { DeltaTransport } from '../transport/types'
+import type { MrprTransport } from '../transport/types'
 import { TestProviders } from './fixtures'
 import { server } from './server'
 
@@ -42,7 +42,7 @@ test('does not refetch review data on focus or reconnect', async () => {
         iid: 42,
         title: 'Improve parser errors',
         web_url:
-          'https://gitlab.example.com/platform/delta-review/-/merge_requests/42',
+          'https://gitlab.example.com/platform/mrpr/-/merge_requests/42',
         state: 'opened',
         source_branch: 'parser-errors',
         target_branch: 'main',
@@ -79,7 +79,7 @@ test('links to the merge request in GitLab', async () => {
     await screen.findByRole('link', { name: 'Open in GitLab' }),
   ).toHaveAttribute(
     'href',
-    'https://gitlab.example.com/platform/delta-review/-/merge_requests/42',
+    'https://gitlab.example.com/platform/mrpr/-/merge_requests/42',
   )
   expect(screen.getByRole('link', { name: 'Open in GitLab' })).toHaveAttribute(
     'target',
@@ -118,7 +118,7 @@ test('updates all review data and retains the active file after reordering', asy
         iid: 42,
         title: 'Improve parser errors',
         web_url:
-          'https://gitlab.example.com/platform/delta-review/-/merge_requests/42',
+          'https://gitlab.example.com/platform/mrpr/-/merge_requests/42',
         state: 'opened',
         source_branch: 'parser-errors',
         target_branch: 'main',
@@ -437,7 +437,7 @@ test('a note that is no longer on the diff opens the review with a notice', asyn
   expect(screen.getByText('Improve parser errors')).toBeVisible()
 })
 
-function transportWrapper(extra: Partial<DeltaTransport>) {
+function transportWrapper(extra: Partial<MrprTransport>) {
   return function Wrapper({ children }: { children: ReactNode }) {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },

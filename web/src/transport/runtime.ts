@@ -1,18 +1,18 @@
 
 import { ApiError } from '../api/client'
 import type {
-  DeltaConfig,
+  MrprConfig,
   DiffFile,
   Discussion,
   DiscussionNote,
   MergeRequest,
   PostingResult,
 } from '../api/types'
-import type { DeltaResponse, ReviewOp } from '../core/messages'
+import type { MrprResponse, ReviewOp } from '../core/messages'
 import { platform } from '../platform/platform'
 import type { MrOverview } from '../gitlab/mrOverview'
 import { lookKeyFor } from '../queue/model'
-import type { DeltaTransport, InlineCommentInput, ReviewTarget } from './types'
+import type { MrprTransport, InlineCommentInput, ReviewTarget } from './types'
 
 /** Chrome and Firefox phrase a torn-down worker differently. */
 const PORT_CLOSED = /message port closed|Receiving end does not exist/i
@@ -56,8 +56,8 @@ function unavailable(op: ReviewOp): ApiError {
   return new ApiError(
     503,
     RETRYABLE.has(op)
-      ? 'The Delta background service is not responding. Reload the page.'
-      : 'Delta lost contact with its background service. Your comment may or ' +
+      ? 'The Mr. PR background service is not responding. Reload the page.'
+      : 'Mr. PR lost contact with its background service. Your comment may or ' +
         'may not have been posted; reload to check before retrying.',
     'extension_unavailable',
   )
@@ -67,8 +67,8 @@ async function sendOnce(
   op: ReviewOp,
   target: ReviewTarget,
   payload?: unknown,
-): Promise<DeltaResponse> {
-  return platform().send({ kind: 'delta/review', op, target, payload })
+): Promise<MrprResponse> {
+  return platform().send({ kind: 'mrpr/review', op, target, payload })
 }
 
 async function send<T>(
@@ -76,7 +76,7 @@ async function send<T>(
   target: ReviewTarget,
   payload?: unknown,
 ): Promise<T> {
-  let response: DeltaResponse
+  let response: MrprResponse
   try {
     response = await sendOnce(op, target, payload)
   } catch (error) {
@@ -98,13 +98,13 @@ async function send<T>(
   return response.data as T
 }
 
-export function createRuntimeTransport(target: ReviewTarget): DeltaTransport {
+export function createRuntimeTransport(target: ReviewTarget): MrprTransport {
   const lookKey = lookKeyFor(target.hostId, target.project, target.iid)
   const looks = async () =>
     (await platform().store.get<LastLooks>(LAST_LOOK_KEY)) ?? {}
   return {
     targetKey: `${target.hostId}/${target.project}/${target.iid}`,
-    getConfig: () => send<DeltaConfig>('getConfig', target),
+    getConfig: () => send<MrprConfig>('getConfig', target),
     getMergeRequest: () => send<MergeRequest>('getMergeRequest', target),
     getDiffs: () => send<DiffFile[]>('getDiffs', target),
     getDiscussions: () => send<Discussion[]>('getDiscussions', target),

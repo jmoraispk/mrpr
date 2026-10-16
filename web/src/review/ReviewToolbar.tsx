@@ -1,6 +1,6 @@
 import type { DiffMode } from './diffWorkerClient'
 
-export const MODE_KEY = 'delta-diff-mode'
+export const MODE_KEY = 'mrpr-diff-mode'
 
 export interface ReviewToolbarProps {
   inlineCount: number
