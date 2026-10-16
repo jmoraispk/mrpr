@@ -1,5 +1,6 @@
 import type { QueueHost, QueueMr } from '../gitlab/queueFacts'
 import type { InboxItem } from '../inbox/types'
+import { isDone } from './state'
 import { attentionOf, type Attention, type Tag } from './tags'
 
 /** One MR in the queue: what it asks of you, and how urgently. */
@@ -38,7 +39,7 @@ export interface QueueInput {
   items: InboxItem[]
   /** Row key → when it was snoozed. */
   snoozed: Record<string, string>
-  /** Row key → the MR's updatedAt when it was ticked done. */
+  /** Row key → the ✓ as stored by useDone (see isDone). */
   done: Record<string, string>
   /** Row key → commits since your last look, for MRs whose head moved. */
   commitsSince: Record<string, number>
@@ -145,7 +146,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         score: blocking * 10 + ageHours / 6 + (quickWin ? 5 : 0) - (mr.draft ? 20 : 0),
         items,
         snoozed: key in input.snoozed,
-        done: input.done[key] === mr.updatedAt,
+        done: isDone(input.done[key], mr.updatedAt),
         involved: mr.roles.length > 0 || items.length > 0,
       })
     }
@@ -178,7 +179,7 @@ export function buildQueue(input: QueueInput): QueueRow[] {
         score: 0,
         items,
         snoozed: key in input.snoozed,
-        done: input.done[key] === first.createdAt,
+        done: isDone(input.done[key], first.createdAt),
         involved: true,
       })
     }

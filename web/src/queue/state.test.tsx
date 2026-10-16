@@ -11,10 +11,13 @@ beforeEach(() => {
   installPlatform(fake)
 })
 
-test('ticking done stores the MR version; moving it back removes it', async () => {
+test('ticking done stores the MR version and when you ticked; moving it back removes it', async () => {
   const { result } = renderHook(() => useDone())
   act(() => result.current[1]('h:1', '2026-10-11T10:00:00.000Z'))
-  await waitFor(() => expect(result.current[0]).toEqual({ 'h:1': '2026-10-11T10:00:00.000Z' }))
+  await waitFor(() => expect(Object.keys(result.current[0])).toEqual(['h:1']))
+  const [version, ticked] = result.current[0]['h:1'].split('|')
+  expect(version).toBe('2026-10-11T10:00:00.000Z')
+  expect(Number.isNaN(Date.parse(ticked))).toBe(false)
   act(() => result.current[1]('h:1', null))
   await waitFor(() => expect(result.current[0]).toEqual({}))
 })

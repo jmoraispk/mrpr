@@ -217,8 +217,12 @@ export function QueueApp() {
         setSearchFocus((count) => count + 1)
       },
       help: () => setHelpOpen((value) => !value),
-      // Like GitLab: you cannot approve your own MR.
-      approve: () => current && !(current.mr && isMine(current)) && actions.approve(current),
+      // Like GitLab: you cannot approve your own MR, nor a merged one.
+      approve: () =>
+        current &&
+        !(current.mr && isMine(current)) &&
+        current.mr?.state !== 'merged' &&
+        actions.approve(current),
       snooze: () => current && actions.snooze(current),
       done: () => current && actions.markDone(current),
       reply: () => ask('reply'),

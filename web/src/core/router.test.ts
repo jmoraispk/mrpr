@@ -8,7 +8,7 @@ import { server } from '../test/server'
 let fake = installTestPlatform()
 
 const { saveHost } = await import('./hosts')
-const { handleMessage, scrubToken } = await import('./router')
+const { forgetMergedMrs, handleMessage, MERGED_TIMEOUT, scrubToken } = await import('./router')
 
 // The msw server lifecycle (listen/resetHandlers/close) is owned by
 // src/test/setup.ts. Standing up a second setupServer() here would make every
@@ -18,6 +18,7 @@ const TARGET = { hostId: 'gitlab.example.com', project: 'p', iid: 1 }
 
 beforeEach(async () => {
   fake = installTestPlatform()
+  forgetMergedMrs()
   await saveHost(
     {
       id: 'gitlab.example.com',
@@ -314,4 +315,37 @@ test('a failing merged query leaves the open MRs', async () => {
   const [host] = (response as { data: { mrs: { id: number }[]; error: string | null }[] }).data
   expect(host.error).toBeNull()
   expect(host.mrs.map((mr) => mr.id)).toEqual([9])
+})
+
+test('a merged query that fails after one that worked keeps the merged MRs it had', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(9))
+  gitlab.add(fakeMergeRequest(10, { state: 'merged' }))
+  gitlab.lists.reviewing.push(9, 10)
+  await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+  gitlab.failMerged = true
+
+  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+
+  const [host] = (response as { data: { mrs: { id: number }[] }[] }).data
+  expect(host.mrs.map((mr) => mr.id)).toEqual([9, 10])
+})
+
+test('a slow merged query does not hold up the open MRs', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(9))
+  gitlab.lists.reviewing.push(9)
+  gitlab.mergedDelay = 2_000
+  const before = MERGED_TIMEOUT.ms
+  MERGED_TIMEOUT.ms = 50
+  try {
+    const started = Date.now()
+    const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+    expect(Date.now() - started).toBeLessThan(1_500)
+    const [host] = (response as { data: { mrs: { id: number }[]; error: string | null }[] }).data
+    expect(host.error).toBeNull()
+    expect(host.mrs.map((mr) => mr.id)).toEqual([9])
+  } finally {
+    MERGED_TIMEOUT.ms = before
+  }
 })

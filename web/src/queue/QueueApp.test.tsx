@@ -816,7 +816,8 @@ test('✓ marks an MR done: it leaves To do, waits in Done, and comes back when 
   await user.click(screen.getByRole('radio', { name: /^Done/ }))
   expect(await screen.findByRole('button', { name: 'Move back to To do Fix flaky test' })).toBeInTheDocument()
   await user.click(screen.getByRole('radio', { name: /^To do/ }))
-  hosts[0].mrs[1] = { ...hosts[0].mrs[1], updatedAt: '2026-10-13T00:00:00Z' }
+  // Someone comments after the tick.
+  hosts[0].mrs[1] = { ...hosts[0].mrs[1], updatedAt: new Date(Date.now() + 120_000).toISOString() }
   await user.click(screen.getByRole('button', { name: /^Refresh/ }))
   expect(await within(sidebar()!).findByText('Fix flaky test')).toBeInTheDocument()
 })
@@ -853,6 +854,16 @@ test('a on your own MR does nothing', async () => {
   renderApp()
   await screen.findAllByRole('article')
   await userEvent.setup().click(screen.getByRole('tab', { name: /^From me/ }))
+  fireEvent.keyDown(window, { key: 'a' })
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(transport.approve).not.toHaveBeenCalled()
+})
+
+test('a on a merged MR does nothing', async () => {
+  hosts[0].mrs[0] = { ...hosts[0].mrs[0], state: 'merged', mergedAt: '2026-10-11T09:00:00Z' }
+  renderApp()
+  await screen.findAllByRole('article')
+  expect(selectedText()).toContain('Retry budget')
   fireEvent.keyDown(window, { key: 'a' })
   await new Promise((resolve) => setTimeout(resolve, 20))
   expect(transport.approve).not.toHaveBeenCalled()

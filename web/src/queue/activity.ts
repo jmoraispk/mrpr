@@ -67,8 +67,9 @@ export function buildActivity(
   const all: ActivityItem[] = []
   for (const discussion of discussions) {
     const people = discussion.notes.filter((n) => !n.system)
-    // One person chosen: their threads only, and no events.
-    if (person && !people.some((n) => n.author?.username === person)) continue
+    // One person chosen: their threads only, and no events. A thread asked for
+    // by id (a reply, a link) stays.
+    if (person && !show?.has(discussion.id) && !people.some((n) => n.author?.username === person)) continue
     if (people.length === 0) {
       for (const n of discussion.notes) {
         all.push({

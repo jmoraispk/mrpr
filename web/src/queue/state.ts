@@ -49,13 +49,16 @@ function asMarks(stored: unknown): Record<string, string> {
   ) as Record<string, string>
 }
 
-/** Row key → the MR's updatedAt when ticked done; null moves it back to To do. */
+/**
+ * Row key → "the MR's updatedAt as you saw it|when you ticked"; null moves it
+ * back to To do. Read with `isDone`.
+ */
 export function useDone(): [Record<string, string>, (key: string, updatedAt: string | null) => void] {
   const [done, setDone] = useStored('done', NO_MARKS, asMarks)
   const update = useCallback(
     (key: string, updatedAt: string | null) => {
       const next = { ...done }
-      if (updatedAt) next[key] = updatedAt
+      if (updatedAt) next[key] = `${updatedAt}|${new Date().toISOString()}`
       else delete next[key]
       setDone(next)
     },
@@ -101,4 +104,20 @@ export function useLastLook(): Record<string, { headSha: string; at: string }> {
 /** One read of a stored value, for callers that must not follow later writes. */
 export async function readStored<T>(key: string): Promise<T | undefined> {
   return platform().store.get<T>(key)
+}
+
+/** Clocks differ a little between this browser and GitLab. */
+const SKEW_MS = 30_000
+
+/**
+ * Whether a stored ✓ still holds for an MR now at `updatedAt`: the same
+ * version, or one from before you ticked (your own action just before the
+ * tick, which the list had not caught up with). Anything later brings it back.
+ */
+export function isDone(stored: string | undefined, updatedAt: string): boolean {
+  if (!stored) return false
+  const [version, ticked] = stored.split('|')
+  if (version === updatedAt) return true
+  const at = Date.parse(ticked ?? '')
+  return Number.isFinite(at) && Date.parse(updatedAt) <= at + SKEW_MS
 }

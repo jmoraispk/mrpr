@@ -273,3 +273,11 @@ test('a merged MR asks nothing of you', () => {
   expect(row.tags).toEqual([])
   expect(row.attention).toBe('done')
 })
+
+test('ticked right after your own action, it stays done when the refetch brings that action', () => {
+  // Ticked at 10:05 from a list that still said 10:00; your approval at 10:04 moved the MR.
+  const done = { [rowKey(H, 1)]: '2026-10-11T10:00:00.000Z|2026-10-11T10:05:00.000Z' }
+  expect(run([mr(1, { updatedAt: '2026-10-11T10:04:00.000Z' })], { done })[0].done).toBe(true)
+  // A change after the tick still brings it back.
+  expect(run([mr(1, { updatedAt: '2026-10-11T10:07:00.000Z' })], { done })[0].done).toBe(false)
+})

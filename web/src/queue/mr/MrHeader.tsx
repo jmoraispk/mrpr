@@ -64,6 +64,8 @@ export function MrHeader({
   const authorName = overview?.author?.name ?? row?.mr?.author.name ?? null
   // Like GitLab: no Approve on your own MR. Unknown (no username yet) shows it.
   const isMine = Boolean(me) && author === me
+  // A merged MR takes no more reviews.
+  const merged = overview?.state === 'merged' || row?.mr?.state === 'merged'
   // The thread waiting on you, from the MR itself: opening it marks the inbox read.
   const waitingId =
     (overview ? waitingOnYou(overview.discussions, me) : null) ??
@@ -126,15 +128,17 @@ export function MrHeader({
       {row ? <TagList tags={row.tags} /> : null}
       {overview ? <DetailsStrip overview={overview} host={target.hostId} me={me} rebase={rebase} /> : null}
       <div className="mr-actions">
-        {isMine ? null : (
+        {isMine || merged ? null : (
           <button type="button" className="q-primary" onClick={onApprove}>
             Approve
           </button>
         )}
-        <button type="button" onClick={() => setMode('changes')} disabled={!author}>
-          Request changes
-        </button>
-        {canNudge ? (
+        {merged ? null : (
+          <button type="button" onClick={() => setMode('changes')} disabled={!author}>
+            Request changes
+          </button>
+        )}
+        {canNudge && !merged ? (
           <button type="button" onClick={() => setMode('nudge')}>
             Nudge
           </button>

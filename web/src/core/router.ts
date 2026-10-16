@@ -41,6 +41,15 @@ import { getHost, listHosts } from './hosts'
 import type { DeltaMessage, DeltaResponse } from './messages'
 import { scrubToken } from './scrub'
 
+/** How long the merged list may take before the queue goes on without it. */
+export const MERGED_TIMEOUT = { ms: 8_000 }
+// The last merged list each host answered, for when a read fails.
+const lastMerged = new Map<string, QueueMr[]>()
+/** Tests start from no merged list. */
+export function forgetMergedMrs(): void {
+  lastMerged.clear()
+}
+
 export { scrubToken }
 
 class RouterError extends Error {
@@ -180,8 +189,15 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
             const since = new Date(Date.now() - MERGED_DAYS * 24 * 3_600_000)
             const [open, merged] = await Promise.all([
               fetchQueueMrs(client),
-              // Merged MRs are extra: a server that cannot list them still lists the open ones.
-              fetchMergedMrs(client, since).catch(() => [] as QueueMr[]),
+              // Merged MRs are extra: a slow or failing read never holds up or
+              // empties the open ones; the last list read stands in for it.
+              fetchMergedMrs(client, since, AbortSignal.timeout(MERGED_TIMEOUT.ms)).then(
+                (mrs) => {
+                  lastMerged.set(host.id, mrs)
+                  return mrs
+                },
+                () => lastMerged.get(host.id) ?? [],
+              ),
             ])
             // An MR merged between the two reads is the merged one.
             const mergedIds = new Set(merged.map((mr) => mr.id))

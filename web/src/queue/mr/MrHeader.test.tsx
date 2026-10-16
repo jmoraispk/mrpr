@@ -327,3 +327,11 @@ test('Approve shows while who you are is unknown', () => {
   render(header(null, null, null, () => {}, ''))
   expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
 })
+
+test('a merged MR offers no Approve, Request changes or Nudge', () => {
+  show(row({ tags: [{ kind: 'waiting-on-others', days: 1 }] }), { ...OVERVIEW, state: 'merged' } as MrOverview)
+  expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Request changes' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Nudge' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Snooze' })).toBeInTheDocument()
+})

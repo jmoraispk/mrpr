@@ -208,3 +208,11 @@ test('choosing a person keeps only threads they wrote in, and no events', () => 
   expect(ids(a.items)).toEqual(['li', 'both'])
   expect(a.hidden).toEqual({ resolved: 0, bots: 0, commits: 0, other: 0 })
 })
+
+test('a thread asked for by id stays shown with a person chosen', () => {
+  const a = buildActivity(
+    [thread('li', [note('li', 'q', '2026-10-11T08:00:00Z')]), thread('ana', [note('ana', 'c', '2026-10-11T08:03:00Z')])],
+    { ...opts, person: 'li', show: new Set(['ana']) },
+  )
+  expect(ids(a.items)).toEqual(['li', 'ana'])
+})

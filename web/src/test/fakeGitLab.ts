@@ -5,7 +5,7 @@
  * every request by operation name, so a test can assert exactly what a poll
  * cost.
  */
-import { graphql, http, HttpResponse } from 'msw'
+import { delay, graphql, http, HttpResponse } from 'msw'
 
 import { server } from './server'
 
@@ -114,7 +114,7 @@ export function createFakeGitLab() {
   const failingRepos = new Set<string>()
   const mergedQueries: { since: string }[] = []
   /** The merged list's answer: these ids, as merged (an MR merged between two reads); and a failing one. */
-  const fake = { mergedOverride: null as number[] | null, failMerged: false }
+  const fake = { mergedOverride: null as number[] | null, failMerged: false, mergedDelay: 0 }
   const eventQueries: Record<string, string>[] = []
   const involvedQueries: string[] = []
   const watchedQueries: string[] = []
@@ -293,8 +293,9 @@ export function createFakeGitLab() {
         },
       })
     }),
-    gitlab.query('MergedFacts', ({ variables }) => {
+    gitlab.query('MergedFacts', async ({ variables }) => {
       calls.push('MergedFacts')
+      if (fake.mergedDelay) await delay(fake.mergedDelay)
       mergedQueries.push({ since: (variables as { since: string }).since })
       if (fake.failMerged) return HttpResponse.json({ errors: [{ message: 'unknown argument' }] }, { status: 500 })
       const merged = (ids: number[]) =>
@@ -418,6 +419,10 @@ export function createFakeGitLab() {
     },
     set failMerged(value: boolean) {
       fake.failMerged = value
+    },
+    /** Milliseconds before the merged list answers. */
+    set mergedDelay(ms: number) {
+      fake.mergedDelay = ms
     },
     add(mr: FakeMergeRequest) {
       mrs.set(mr.id, mr)

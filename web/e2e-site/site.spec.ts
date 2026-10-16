@@ -1004,3 +1004,16 @@ test('the Changes tab counts are green and red, and People narrows the threads',
   await panel.getByRole('button', { name: /from ANA$/ }).click()
   await expect(page.getByText(/^Showing threads with/)).toHaveCount(0)
 })
+
+test('on a touch screen every row shows its ✓, since there is no hover', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 1024, height: 800 } })
+  const page = await context.newPage()
+  try {
+    await fakeGitLab(page)
+    await signIn(page)
+    const other = page.getByRole('article').filter({ hasText: 'Tidy logging' })
+    await expect(other.getByRole('button', { name: 'Mark done Tidy logging' })).toHaveCSS('opacity', '1')
+  } finally {
+    await context.close()
+  }
+})

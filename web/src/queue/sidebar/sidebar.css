@@ -90,3 +90,5 @@
 .sb-done:hover, .sb-unsnooze:hover { background: var(--hl); color: var(--ink); }
 .sb-unsnooze { font-size: 12px; }
 .sb-row.is-done .sb-title-text, .sb-row.is-done .sb-meta { opacity: .65; }
+/* No hover on a touch screen: the ✓ is always there. */
+@media (hover: none) { .sb-done { opacity: 1; } }
