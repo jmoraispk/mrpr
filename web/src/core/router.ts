@@ -9,7 +9,14 @@ import {
 import { GitLabError } from '../gitlab/errors'
 import { listAuthored, listReviewRequested } from '../gitlab/mergeRequests'
 import { fetchMrOverview } from '../gitlab/mrOverview'
-import { fetchQueueMrs, fetchRepoMrs, type QueueHost, type QueueMr } from '../gitlab/queueFacts'
+import {
+  fetchMergedMrs,
+  fetchQueueMrs,
+  fetchRepoMrs,
+  MERGED_DAYS,
+  type QueueHost,
+  type QueueMr,
+} from '../gitlab/queueFacts'
 import {
   approve,
   commitsSince,
@@ -169,7 +176,16 @@ async function runHub(op: string, payload: unknown): Promise<unknown> {
         hosts.map(async (host): Promise<QueueHost> => {
           const base = { hostId: host.id, host: host.host, username: host.username }
           try {
-            const mrs = await fetchQueueMrs(await platform().clientFor(host))
+            const client = await platform().clientFor(host)
+            const since = new Date(Date.now() - MERGED_DAYS * 24 * 3_600_000)
+            const [open, merged] = await Promise.all([
+              fetchQueueMrs(client),
+              // Merged MRs are extra: a server that cannot list them still lists the open ones.
+              fetchMergedMrs(client, since).catch(() => [] as QueueMr[]),
+            ])
+            // An MR merged between the two reads is the merged one.
+            const mergedIds = new Set(merged.map((mr) => mr.id))
+            const mrs = [...open.filter((mr) => !mergedIds.has(mr.id)), ...merged]
             return { ...base, mrs, error: null }
           } catch (error) {
             return {

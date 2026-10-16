@@ -58,6 +58,8 @@ export function lookKeyFor(hostId: string, project: string, iid: number): string
 const isForMe = (item: InboxItem) => item.kind === 'reply' || item.kind === 'mention'
 
 function classify(mr: QueueMr, me: string, items: InboxItem[], commits: number, now: number) {
+  // Merged: nothing left to ask of anyone. It stays until you tick it.
+  if (mr.state === 'merged') return { tags: [] as Tag[], minutes: 0, blocking: 0, newCommits: 0 }
   const unread = items.filter((item) => !item.read)
   const forMe = unread.filter(isForMe)
   const comments = unread.filter((item) => item.kind === 'comment')

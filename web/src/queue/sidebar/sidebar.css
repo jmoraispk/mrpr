@@ -76,3 +76,5 @@
 .sb-snooze:hover, .sb-snooze:focus-visible { color: var(--ink); opacity: 1; }
 .sb-muted-label { margin-left: 4px; padding: 0 6px; border-radius: 99px; background: var(--soft); color: var(--muted); font: 500 11px var(--font-body); }
 .sb-foot .sb-view-toggle { padding: 0; border: 0; background: none; color: var(--ink-2); text-decoration: underline; }
+
+.sb-chip { padding: 0 6px; border-radius: 99px; background: var(--ok-bg); color: var(--ok-ink); font-size: 11px; }

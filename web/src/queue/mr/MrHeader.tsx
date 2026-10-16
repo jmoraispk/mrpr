@@ -102,6 +102,9 @@ export function MrHeader({
       <h2 className="mr-title">
         {title}
         {overview?.draft ? <span className="mr-draft">Draft</span> : null}
+        {overview?.state === 'merged' || row?.mr?.state === 'merged' ? (
+          <span className="mr-draft is-merged">Merged</span>
+        ) : null}
       </h2>
       <p className="mr-meta">
         {target.project} !{target.iid}

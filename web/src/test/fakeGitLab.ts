@@ -45,6 +45,7 @@ export interface FakeMergeRequest {
   title: string
   updatedAt: string
   state: 'opened' | 'merged' | 'closed'
+  mergedAt?: string
   discussions: FakeDiscussion[]
   /** What the queue's Facts query reports; defaults fill anything left out. */
   facts?: Partial<{
@@ -111,6 +112,9 @@ export function createFakeGitLab() {
   const repoQueries: { query: string; variables: Record<string, string> }[] = []
   /** Repositories whose All MRs request fails (as when one is gone or forbidden). */
   const failingRepos = new Set<string>()
+  const mergedQueries: { since: string }[] = []
+  /** The merged list's answer: these ids, as merged (an MR merged between two reads); and a failing one. */
+  const fake = { mergedOverride: null as number[] | null, failMerged: false }
   const eventQueries: Record<string, string>[] = []
   const involvedQueries: string[] = []
   const watchedQueries: string[] = []
@@ -172,6 +176,8 @@ export function createFakeGitLab() {
     const author = f.author ?? 'ana'
     return {
       ...mrFields(mr),
+      state: mr.state,
+      mergedAt: mr.mergedAt ?? null,
       createdAt: f.createdAt ?? mr.updatedAt,
       draft: f.draft ?? false,
       approved: (f.approvalsLeft ?? 1) === 0,
@@ -276,7 +282,8 @@ export function createFakeGitLab() {
     }),
     gitlab.query('Facts', () => {
       calls.push('Facts')
-      const known = (ids: number[]) => ids.filter((id) => mrs.has(id)).map(factsNode)
+      const known = (ids: number[]) =>
+        ids.filter((id) => mrs.get(id)?.state === 'opened').map(factsNode)
       return HttpResponse.json({
         data: {
           currentUser: {
@@ -284,6 +291,22 @@ export function createFakeGitLab() {
             reviewing: { nodes: known(lists.reviewing) },
           },
         },
+      })
+    }),
+    gitlab.query('MergedFacts', ({ variables }) => {
+      calls.push('MergedFacts')
+      mergedQueries.push({ since: (variables as { since: string }).since })
+      if (fake.failMerged) return HttpResponse.json({ errors: [{ message: 'unknown argument' }] }, { status: 500 })
+      const merged = (ids: number[]) =>
+        ids.filter((id) => mrs.get(id)?.state === 'merged').map(factsNode)
+      if (fake.mergedOverride) {
+        const nodes = fake.mergedOverride
+          .filter((id) => mrs.has(id))
+          .map((id) => ({ ...factsNode(id), state: 'merged' }))
+        return HttpResponse.json({ data: { currentUser: { authored: { nodes: [] }, reviewing: { nodes } } } })
+      }
+      return HttpResponse.json({
+        data: { currentUser: { authored: { nodes: merged(lists.authored) }, reviewing: { nodes: merged(lists.reviewing) } } },
       })
     }),
     gitlab.query('RepoMrs', ({ query, variables }) => {
@@ -383,6 +406,19 @@ export function createFakeGitLab() {
     watchedQueries,
     repoQueries,
     failingRepos,
+    mergedQueries,
+    get mergedOverride() {
+      return fake.mergedOverride
+    },
+    set mergedOverride(ids: number[] | null) {
+      fake.mergedOverride = ids
+    },
+    get failMerged() {
+      return fake.failMerged
+    },
+    set failMerged(value: boolean) {
+      fake.failMerged = value
+    },
     add(mr: FakeMergeRequest) {
       mrs.set(mr.id, mr)
       return mr

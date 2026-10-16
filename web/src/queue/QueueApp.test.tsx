@@ -54,6 +54,8 @@ function mr(id: number, over: Partial<QueueMr> = {}): QueueMr {
     labels: [],
     headSha: 'h',
     needsRebase: false,
+    state: 'opened',
+    mergedAt: null,
     ...over,
   }
 }

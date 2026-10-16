@@ -24,6 +24,7 @@
 .mr-head-controls { float: right; display: flex; gap: 6px; }
 .mr-head-controls a { padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink-2); font-size: 13px; text-decoration: none; }
 .mr-draft { margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--soft); color: var(--ink-2); font-size: 12px; font-weight: 500; vertical-align: middle; }
+.mr-draft.is-merged { background: var(--ok-bg); color: var(--ok-ink); }
 .mr-meta { margin: 4px 0 8px; color: var(--muted); font-size: 13px; }
 .mr-meta code { padding: 1px 5px; border-radius: 5px; background: var(--soft); font: 12px var(--font-mono); }
 .mr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

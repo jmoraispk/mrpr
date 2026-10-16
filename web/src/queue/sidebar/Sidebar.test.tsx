@@ -25,7 +25,7 @@ function mr(id: number, over: Partial<QueueMr> = {}): QueueMr {
     author: { username: 'ana', name: 'Ana', avatarUrl: null, bot: false },
     reviewers: [{ username: 'joao', name: 'Joao', state: 'UNREVIEWED' }],
     additions: 120, deletions: 10, files: 2, pipeline: 'SUCCESS', labels: [], headSha: 'h',
-    needsRebase: false, ...over,
+    needsRebase: false, state: 'opened', mergedAt: null, ...over,
   }
 }
 
@@ -418,4 +418,11 @@ test('the Show boxes: All MRs greys out the other two as ticked', async () => {
 test('the footer has no + Project', () => {
   show()
   expect(screen.queryByRole('button', { name: '+ Project' })).toBeNull()
+})
+
+test('a merged MR says so in its row', async () => {
+  await fake.store.set({ listFilters: { showDone: true } })
+  show(rowsOf([mr(1, { title: 'Shipped it', state: 'merged', mergedAt: '2026-10-11T09:00:00Z' })]))
+  await screen.findByText('Shipped it')
+  expect(within(rowNamed('Shipped it')).getByText('Merged')).toHaveClass('sb-chip')
 })

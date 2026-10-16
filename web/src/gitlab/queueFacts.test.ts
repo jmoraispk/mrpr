@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 
 import { API, createFakeGitLab, fakeMergeRequest } from '../test/fakeGitLab'
 import { GitLabClient } from './client'
-import { fetchQueueMrs, fetchRepoMrs } from './queueFacts'
+import { fetchMergedMrs, fetchQueueMrs, fetchRepoMrs } from './queueFacts'
 
 test('authored and review-requested MRs come back once each, with their facts', async () => {
   const gitlab = createFakeGitLab()
@@ -88,4 +88,27 @@ test('All MRs keeps the repositories that answered when one request fails', asyn
   const mrs = await fetchRepoMrs(new GitLabClient(API, 'secret'), ['g/a', 'g/b', 'g/c'])
 
   expect(mrs.map((mr) => mr.id)).toEqual([1, 2])
+})
+
+test('merged MRs from the last two weeks come with their state, roles and merge date', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(5, { state: 'merged', mergedAt: '2026-10-14T10:00:00Z' }))
+  gitlab.lists.authored.push(5)
+  const since = new Date('2026-10-01T00:00:00Z')
+
+  const [mr] = await fetchMergedMrs(new GitLabClient(API, 'secret'), since)
+
+  expect(mr).toMatchObject({ id: 5, state: 'merged', mergedAt: '2026-10-14T10:00:00Z', roles: ['author'] })
+  expect(gitlab.mergedQueries.at(-1)).toEqual({ since: since.toISOString() })
+})
+
+test('the open list leaves merged MRs to the merged list', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(5, { state: 'merged' }))
+  gitlab.add(fakeMergeRequest(6))
+  gitlab.lists.authored.push(5, 6)
+
+  const mrs = await fetchQueueMrs(new GitLabClient(API, 'secret'))
+
+  expect(mrs.map((mr) => [mr.id, mr.state, mr.mergedAt])).toEqual([[6, 'opened', null]])
 })

@@ -8,7 +8,7 @@ export type ReviewState =
   | 'UNAPPROVED'
   | 'REVIEW_STARTED'
 
-/** One open MR you authored or were asked to review, with what the queue ranks it by. */
+/** One MR you authored or were asked to review (open, or merged lately), with what the queue ranks it by. */
 export interface QueueMr {
   id: number
   iid: number
@@ -17,6 +17,9 @@ export interface QueueMr {
   webUrl: string
   createdAt: string
   updatedAt: string
+  state: 'opened' | 'merged'
+  /** When it merged; null while open. */
+  mergedAt: string | null
   roles: ('author' | 'reviewer')[]
   draft: boolean
   approved: boolean
@@ -42,7 +45,7 @@ export interface QueueHost {
   error: string | null
 }
 
-const FIELDS = `id iid title webUrl createdAt updatedAt project { fullPath } draft approved approvalsLeft
+const FIELDS = `id iid title webUrl createdAt updatedAt state mergedAt project { fullPath } draft approved approvalsLeft
   author { username name avatarUrl bot }
   reviewers { nodes { username name mergeRequestInteraction { reviewState } } }
   diffStatsSummary { additions deletions fileCount } headPipeline { status }
@@ -66,6 +69,8 @@ interface RawMr {
   webUrl: string
   createdAt: string
   updatedAt: string
+  state: string
+  mergedAt: string | null
   project: { fullPath: string }
   draft: boolean
   approved: boolean
@@ -105,6 +110,8 @@ function toQueueMr(raw: RawMr): QueueMr {
     webUrl: raw.webUrl,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
+    state: raw.state === 'merged' ? 'merged' : 'opened',
+    mergedAt: raw.mergedAt ?? null,
     roles: [],
     draft: raw.draft,
     approved: raw.approved,
@@ -133,15 +140,42 @@ export async function fetchQueueMrs(
   const data = await client.graphql<{
     currentUser: { authored: { nodes: RawMr[] }; reviewing: { nodes: RawMr[] } }
   }>(QUERY, {}, signal)
+  return withRoles(data.currentUser.authored.nodes, data.currentUser.reviewing.nodes)
+}
+
+/** One MR per id, with the roles of the lists it came in. */
+function withRoles(authored: RawMr[], reviewing: RawMr[]): QueueMr[] {
   const byId = new Map<number, QueueMr>()
   const add = (raw: RawMr, role: 'author' | 'reviewer') => {
     const mr = byId.get(numericId(raw.id)) ?? toQueueMr(raw)
     if (!mr.roles.includes(role)) mr.roles.push(role)
     byId.set(mr.id, mr)
   }
-  for (const raw of data.currentUser.authored.nodes) add(raw, 'author')
-  for (const raw of data.currentUser.reviewing.nodes) add(raw, 'reviewer')
+  for (const raw of authored) add(raw, 'author')
+  for (const raw of reviewing) add(raw, 'reviewer')
   return [...byId.values()]
+}
+
+/** How far back merged MRs stay in the queue (until you tick them). */
+export const MERGED_DAYS = 14
+
+const MERGED_QUERY = `query MergedFacts($since: Time) {
+  currentUser {
+    authored: authoredMergeRequests(state: merged, mergedAfter: $since, first: 50, sort: UPDATED_DESC) { nodes { ${FIELDS} } }
+    reviewing: reviewRequestedMergeRequests(state: merged, mergedAfter: $since, first: 50, sort: UPDATED_DESC) { nodes { ${FIELDS} } }
+  }
+}`
+
+/** MRs you authored or reviewed that merged since `since`: they stay listed until you tick them. */
+export async function fetchMergedMrs(
+  client: GitLabClient,
+  since: Date,
+  signal?: AbortSignal,
+): Promise<QueueMr[]> {
+  const data = await client.graphql<{
+    currentUser: { authored: { nodes: RawMr[] }; reviewing: { nodes: RawMr[] } }
+  }>(MERGED_QUERY, { since: since.toISOString() }, signal)
+  return withRoles(data.currentUser.authored.nodes, data.currentUser.reviewing.nodes)
 }
 
 const REPO_BATCH = 2

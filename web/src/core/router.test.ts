@@ -287,3 +287,31 @@ test('getOverview returns the MR overview for the target', async () => {
   })
   expect(response).toMatchObject({ ok: true, data: { iid: 1, title: 'MR 1' } })
 })
+
+test('listQueue adds merged MRs; an MR in both lists is one row, merged', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(9))
+  gitlab.add(fakeMergeRequest(10, { state: 'merged' }))
+  gitlab.lists.reviewing.push(9)
+  // Merged between the two reads: the open list still has 9, the merged list has it too.
+  gitlab.mergedOverride = [9, 10]
+
+  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+
+  const [host] = (response as { data: { mrs: { id: number; state: string }[]; error: string | null }[] }).data
+  expect(host.error).toBeNull()
+  expect(host.mrs.map((mr) => [mr.id, mr.state])).toEqual([[9, 'merged'], [10, 'merged']])
+})
+
+test('a failing merged query leaves the open MRs', async () => {
+  const gitlab = createFakeGitLab()
+  gitlab.add(fakeMergeRequest(9))
+  gitlab.lists.reviewing.push(9)
+  gitlab.failMerged = true
+
+  const response = await handleMessage({ kind: 'delta/hub', op: 'listQueue' })
+
+  const [host] = (response as { data: { mrs: { id: number }[]; error: string | null }[] }).data
+  expect(host.error).toBeNull()
+  expect(host.mrs.map((mr) => mr.id)).toEqual([9])
+})

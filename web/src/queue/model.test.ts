@@ -29,6 +29,8 @@ function mr(id: number, over: Partial<QueueMr> = {}): QueueMr {
     labels: [],
     headSha: 'h1',
     needsRebase: false,
+    state: 'opened',
+    mergedAt: null,
     ...over,
   }
 }
@@ -259,4 +261,10 @@ test('a row knows whether it involves you: a role, or a notification', () => {
   expect(rows.find((row) => row.iid === 1)?.involved).toBe(true)
   expect(rows.find((row) => row.iid === 2)?.involved).toBe(false)
   expect(rows.find((row) => row.iid === 9)?.involved).toBe(true)
+})
+
+test('a merged MR asks nothing of you', () => {
+  const [row] = run([mr(1, { state: 'merged', mergedAt: '2026-10-11T11:00:00.000Z' })])
+  expect(row.tags).toEqual([])
+  expect(row.attention).toBe('done')
 })

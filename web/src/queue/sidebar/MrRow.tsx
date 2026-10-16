@@ -85,6 +85,11 @@ export function MrRow({
           </>
         ) : null}
         {' · '}
+        {row.mr?.state === 'merged' ? (
+          <>
+            <span className="sb-chip">Merged</span>{' · '}
+          </>
+        ) : null}
         <time dateTime={row.updatedAt} title={new Date(row.updatedAt).toLocaleString()}>
           {shortTime(row.updatedAt)}
         </time>

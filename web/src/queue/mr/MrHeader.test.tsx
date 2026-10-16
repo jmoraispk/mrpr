@@ -288,3 +288,8 @@ test('the header has no Move to project and no Reply', () => {
   expect(screen.queryByRole('button', { name: 'Move to project' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Reply' })).toBeNull()
 })
+
+test('a merged MR says so beside its title', () => {
+  show(row(), { ...OVERVIEW, state: 'merged' } as MrOverview)
+  expect(screen.getByText('Merged')).toBeInTheDocument()
+})
