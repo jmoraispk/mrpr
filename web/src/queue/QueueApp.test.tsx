@@ -398,14 +398,14 @@ test('approving an MR that is not in the queue still works and says so', async (
   expect(await screen.findByRole('status')).toHaveTextContent('Approved An MR')
 })
 
-test('an MR that needs a rebase offers it in the details column', async () => {
+test('an MR that needs a rebase offers it in the details strip under the title', async () => {
   transport.getOverview.mockImplementation(async () => ({
     ...overview('Retry budget for webhooks'),
     shouldBeRebased: true,
   }))
   window.location.hash = '#/mr/gitlab.example.com/g%2Fsdk/1'
   renderApp()
-  const details = await screen.findByRole('complementary', { name: 'Details' })
+  const details = await screen.findByRole('list', { name: 'Details' })
   expect(within(details).getByText('Behind main')).toBeInTheDocument()
   expect(within(details).getByRole('button', { name: 'Rebase' })).toBeInTheDocument()
 })
@@ -847,4 +847,13 @@ test('Snooze in the header hides the MR until unsnoozed, even after it changes',
   await user.click(await screen.findByRole('button', { name: 'Unsnooze Fix flaky test' }))
   await user.click(screen.getByRole('button', { name: /^Active/ }))
   expect(await within(sidebar()!).findByText('Fix flaky test')).toBeInTheDocument()
+})
+
+test('a on your own MR does nothing', async () => {
+  renderApp()
+  await screen.findAllByRole('article')
+  await userEvent.setup().click(screen.getByRole('tab', { name: /^From me/ }))
+  fireEvent.keyDown(window, { key: 'a' })
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(transport.approve).not.toHaveBeenCalled()
 })

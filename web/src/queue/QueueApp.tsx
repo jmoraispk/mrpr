@@ -217,7 +217,8 @@ export function QueueApp() {
         setSearchFocus((count) => count + 1)
       },
       help: () => setHelpOpen((value) => !value),
-      approve: () => current && actions.approve(current),
+      // Like GitLab: you cannot approve your own MR.
+      approve: () => current && !(current.mr && isMine(current)) && actions.approve(current),
       snooze: () => current && actions.snooze(current),
       done: () => current && actions.markDone(current),
       reply: () => ask('reply'),
@@ -342,6 +343,7 @@ export function QueueApp() {
                   }}
                   request={headerRequest}
                   onRequestHandled={() => setHeaderRequest(null)}
+                  rebase={overview ? <RebaseControl overview={overview} target={target} /> : undefined}
                 />
               )
             }}
@@ -353,7 +355,6 @@ export function QueueApp() {
                 previous={previous}
                 replyTo={replyTo}
                 onReplied={() => setReplyTo(null)}
-                rebase={<RebaseControl overview={overview} target={route.target} />}
                 focusNoteId={route.noteId}
               />
             )}

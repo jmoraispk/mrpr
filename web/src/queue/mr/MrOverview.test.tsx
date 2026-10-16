@@ -207,20 +207,6 @@ test('Show them reveals hidden items for this view only', async () => {
   expect(screen.getByText(/LI: Typo/)).toBeInTheDocument()
 })
 
-test('the details column: reviewers, approvals, pipeline, labels, project, commits', () => {
-  show()
-  const rail = screen.getByRole('complementary', { name: 'Details' })
-  expect(within(rail).getByText('Li', { selector: '.mr-who span' })).toBeInTheDocument()
-  expect(within(rail).getByText('approved')).toBeInTheDocument()
-  expect(within(rail).getByText('1 of 2')).toBeInTheDocument()
-  expect(within(rail).getByRole('link', { name: 'passed' })).toHaveAttribute(
-    'href',
-    'https://gitlab.example.com/g/p/-/pipelines/1',
-  )
-  expect(within(rail).getByText('agents')).toBeInTheDocument()
-  expect(within(rail).getByText('7')).toBeInTheDocument()
-})
-
 test('reply reveals a thread hidden by the Filters and focuses its reply box', async () => {
   show({ replyTo: 'done' })
   await waitFor(() => {
@@ -371,11 +357,8 @@ test('Activity threads read like a chat: the opener on the left, everyone else o
   expect(within(thread).getByRole('textbox', { name: 'Reply' })).toBeInTheDocument()
 })
 
-test('the details column and Activity events use short times', () => {
+test('Activity events use short times', () => {
   show()
-  const rail = screen.getByRole('complementary', { name: 'Details' })
-  expect(rail.textContent).not.toMatch(/ago|just now/)
-  expect(within(rail).getByText(/^updated/).querySelector('time')).not.toBeNull()
   const events = [...document.querySelectorAll('.mr-event')]
   expect(events.length).toBeGreaterThan(0)
   for (const event of events) {

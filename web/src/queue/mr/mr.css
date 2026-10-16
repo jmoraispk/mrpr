@@ -138,3 +138,11 @@
 .mr-snippet-line.is-add { background: color-mix(in srgb, var(--plus) 12%, transparent); }
 .mr-snippet-line.is-del { background: color-mix(in srgb, var(--minus) 12%, transparent); }
 .mr-snippet-line.is-target { box-shadow: inset 3px 0 var(--accent); }
+
+/* The details strip under the title: reviewers, approvals, pipeline, commits. */
+.mr-strip { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0 0; padding: 0; list-style: none; color: var(--ink-2); font-size: 13px; }
+.mr-strip > li { display: inline-flex; align-items: center; gap: 6px; }
+.mr-strip-key { color: var(--muted); font: 600 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.mr-strip .mr-who { display: inline-flex; align-items: center; gap: 4px; }
+.mr-strip .mr-label { margin: 0; }
+.mr-strip .mr-rebase p { margin: 0; }

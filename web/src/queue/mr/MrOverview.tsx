@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import type { MrOverview } from '../../gitlab/mrOverview'
 import type { ReviewTarget } from '../../transport/types'
@@ -7,13 +7,12 @@ import { buildActivity } from '../activity'
 import { useActivityFilters } from '../activityFilters'
 import { lookKeyFor } from '../model'
 import { ActivityList } from './ActivityList'
-import { DetailsRail } from './DetailsRail'
 import { Markdown } from './Markdown'
 
 const LONG_LINES = 12
 const LONG_CHARS = 1200
 
-/** What the MR is about and what needs you: description, Activity, details. */
+/** What the MR is about and what needs you: description and Activity. */
 export function MrOverviewView({
   overview,
   target,
@@ -21,7 +20,6 @@ export function MrOverviewView({
   previous,
   replyTo,
   onReplied,
-  rebase,
   focusNoteId = null,
 }: {
   overview: MrOverview
@@ -30,7 +28,6 @@ export function MrOverviewView({
   previous: { headSha: string; at: string } | null
   replyTo: string | null
   onReplied: () => void
-  rebase?: ReactNode
   /** Open at this note's thread, as a link to a comment does. */
   focusNoteId?: number | null
 }) {
@@ -104,12 +101,6 @@ export function MrOverviewView({
           />
         </section>
       </div>
-      <DetailsRail
-        overview={overview}
-        host={target.hostId}
-        me={me}
-        rebase={rebase}
-      />
     </div>
   )
 }

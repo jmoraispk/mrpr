@@ -11,6 +11,7 @@ import type { QueueRow } from '../model'
 import { waitingOnYou } from '../activity'
 import { latestWaiting } from '../readState'
 import { QUEUE_QUERY_KEY } from '../useQueue'
+import { DetailsStrip } from './DetailsStrip'
 import { When } from './When'
 
 /** An action asked for from the keyboard, run once by the header. */
@@ -33,6 +34,7 @@ export function MrHeader({
   request,
   onRequestHandled,
   extraActions,
+  rebase,
   me,
 }: {
   target: ReviewTarget
@@ -47,8 +49,10 @@ export function MrHeader({
   onReply: (discussionId: string) => void
   request: HeaderRequest | null
   onRequestHandled: () => void
-  /** More actions after the standard ones (Rebase). */
+  /** More actions after the standard ones. */
   extraActions?: ReactNode
+  /** Rebase, shown in the details strip when GitLab says it is needed. */
+  rebase?: ReactNode
   /** Your username on this host, to find the thread waiting on you. */
   me: string
 }) {
@@ -58,6 +62,8 @@ export function MrHeader({
   const title = overview?.title ?? row?.title ?? `!${target.iid}`
   const author = overview?.author?.username ?? row?.mr?.author.username ?? null
   const authorName = overview?.author?.name ?? row?.mr?.author.name ?? null
+  // Like GitLab: no Approve on your own MR. Unknown (no username yet) shows it.
+  const isMine = Boolean(me) && author === me
   // The thread waiting on you, from the MR itself: opening it marks the inbox read.
   const waitingId =
     (overview ? waitingOnYou(overview.discussions, me) : null) ??
@@ -118,10 +124,13 @@ export function MrHeader({
         ) : null}
       </p>
       {row ? <TagList tags={row.tags} /> : null}
+      {overview ? <DetailsStrip overview={overview} host={target.hostId} me={me} rebase={rebase} /> : null}
       <div className="mr-actions">
-        <button type="button" className="q-primary" onClick={onApprove}>
-          Approve
-        </button>
+        {isMine ? null : (
+          <button type="button" className="q-primary" onClick={onApprove}>
+            Approve
+          </button>
+        )}
         <button type="button" onClick={() => setMode('changes')} disabled={!author}>
           Request changes
         </button>

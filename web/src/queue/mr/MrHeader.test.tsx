@@ -82,6 +82,11 @@ const OVERVIEW = {
   author: { username: 'ana', name: 'Ana Lima', avatarUrl: null, bot: false },
   reviewers: [{ username: 'john', name: 'John', avatarUrl: null, state: 'UNREVIEWED' }],
   approvalsLeft: 1,
+  approvalsRequired: 1,
+  approvedBy: [],
+  pipeline: null,
+  labels: [],
+  commitCount: 1,
   discussions: [],
 } as unknown as MrOverview
 
@@ -104,6 +109,7 @@ function header(
   overview: MrOverview | null = OVERVIEW,
   request: HeaderRequest | null = null,
   onRequestHandled = () => {},
+  me = 'joao',
 ) {
   return (
     <QueryClientProvider client={new QueryClient()}>
@@ -119,7 +125,7 @@ function header(
         onReply={onReply}
         request={request}
         onRequestHandled={onRequestHandled}
-        me="joao"
+        me={me}
       />
     </QueryClientProvider>
   )
@@ -293,4 +299,31 @@ test('the header has no Move to project and no Reply', () => {
 test('a merged MR says so beside its title', () => {
   show(row(), { ...OVERVIEW, state: 'merged' } as MrOverview)
   expect(screen.getByText('Merged')).toBeInTheDocument()
+})
+
+test('the header shows reviewers, approvals, pipeline and commits in one strip', () => {
+  show(row(), {
+    ...OVERVIEW,
+    reviewers: [{ username: 'li', name: 'Shaoran Li', avatarUrl: null, state: 'UNREVIEWED' }],
+    approvalsRequired: 1,
+    approvalsLeft: 1,
+    pipeline: { status: 'SUCCESS', path: null },
+    commitCount: 1,
+  } as MrOverview)
+  const strip = screen.getByRole('list', { name: 'Details' })
+  expect(strip).toHaveTextContent('Shaoran Li')
+  expect(strip).toHaveTextContent('to review')
+  expect(strip).toHaveTextContent(/Approvals\s*0 of 1/)
+  expect(strip).toHaveTextContent(/Pipeline\s*passed/)
+  expect(strip).toHaveTextContent('1 commit')
+})
+
+test('Approve is hidden on your own MR', () => {
+  render(header(row(), { ...OVERVIEW, author: { username: 'joao', name: 'Joao', avatarUrl: null, bot: false } } as MrOverview))
+  expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+})
+
+test('Approve shows while who you are is unknown', () => {
+  render(header(null, null, null, () => {}, ''))
+  expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
 })
