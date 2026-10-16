@@ -194,3 +194,17 @@ test('the thread waiting on you: the newest open one that involves you and is no
   expect(waitingOnYou(discussions, 'joao')).toBe('new')
   expect(waitingOnYou([], 'joao')).toBeNull()
 })
+
+test('choosing a person keeps only threads they wrote in, and no events', () => {
+  const a = buildActivity(
+    [
+      thread('li', [note('li', 'q', '2026-10-11T08:00:00Z')]),
+      thread('both', [note('ana', 'a', '2026-10-11T08:01:00Z'), note('li', 'b', '2026-10-11T08:02:00Z')]),
+      thread('ana', [note('ana', 'c', '2026-10-11T08:03:00Z')]),
+      sys('commit', '2026-10-11T09:00:00Z'),
+    ],
+    { ...opts, person: 'li' },
+  )
+  expect(ids(a.items)).toEqual(['li', 'both'])
+  expect(a.hidden).toEqual({ resolved: 0, bots: 0, commits: 0, other: 0 })
+})

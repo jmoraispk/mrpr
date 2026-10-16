@@ -450,7 +450,7 @@ test('one click opens the MR beside the queue: description, the thread that matt
   )
   await expect(panel.getByText('Should the budget reset on success?')).toBeVisible()
   await expect(panel.getByText('Typo')).toHaveCount(0)
-  await expect(panel.getByText(/1 hidden by your Filters/)).toBeVisible()
+  await expect(panel.getByText(/1 hidden by the Show options/)).toBeVisible()
   const thread = panel.locator('[data-discussion-id="d5"]')
   // The reply box is idle until clicked, then a rich editor.
   await thread.getByRole('textbox', { name: 'Reply' }).click()

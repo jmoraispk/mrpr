@@ -196,7 +196,7 @@ test('activity: default filters, the new divider, your thread outlined, and what
   expect(within(activity).getByText(/ANA added 2 commits/)).toBeInTheDocument()
   expect(within(activity).getByText(/mentions you/)).toBeInTheDocument()
   expect(
-    within(activity).getByText(/1 hidden by your Filters: 1 resolved thread/),
+    within(activity).getByText(/1 hidden by the Show options: 1 resolved thread/),
   ).toBeInTheDocument()
 })
 
@@ -207,7 +207,7 @@ test('Show them reveals hidden items for this view only', async () => {
   expect(screen.getByText(/LI: Typo/)).toBeInTheDocument()
 })
 
-test('reply reveals a thread hidden by the Filters and focuses its reply box', async () => {
+test('reply reveals a thread hidden by the Show options and focuses its reply box', async () => {
   show({ replyTo: 'done' })
   await waitFor(() => {
     const box = document.querySelector<HTMLElement>('[data-discussion-id="done"] .rich-reply-input')
@@ -299,7 +299,7 @@ test('a thread revealed for a reply stays shown, open and focused after the requ
   // Settle any re-render from clearing the request.
   await new Promise((resolve) => setTimeout(resolve, 20))
   expect(document.querySelector('[data-discussion-id="done"] .rich-reply-input')).toHaveFocus()
-  expect(screen.queryByText(/1 hidden by your Filters/)).toBeNull()
+  expect(screen.queryByText(/1 hidden by the Show options/)).toBeNull()
 })
 
 test('a reply posted in Overview survives the page re-rendering', async () => {
@@ -496,4 +496,53 @@ test('asking to reply again focuses a reply box that is already open', async () 
   expect(input).not.toHaveFocus()
   await userEvent.setup().click(screen.getByRole('button', { name: 'ask' }))
   await waitFor(() => expect(input).toHaveFocus())
+})
+
+test('the Activity panel shows stats, people and the Show options; a person narrows the threads', async () => {
+  const user = userEvent.setup()
+  show()
+  const panel = screen.getByRole('complementary', { name: 'Activity panel' })
+  expect(panel).toHaveTextContent(/3 comments · 2 unresolved · 2 people/)
+  for (const name of ['Unresolved threads', 'Resolved threads', 'New commits', 'Bot comments']) {
+    expect(within(panel).getByRole('checkbox', { name })).toBeInTheDocument()
+  }
+  await user.click(within(panel).getByRole('button', { name: '1 comment from ANA' }))
+  expect(screen.getByText(/^Showing threads with ANA/)).toBeInTheDocument()
+  expect(document.querySelector('[data-discussion-id="open"]')).toBeNull()
+  expect(document.querySelector('[data-discussion-id="mine"]')).not.toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Show everyone' }))
+  expect(screen.queryByText(/^Showing threads with/)).toBeNull()
+  expect(document.querySelector('[data-discussion-id="open"]')).not.toBeNull()
+})
+
+test('the Show options change this MR, and Apply to all MRs makes them the default', async () => {
+  const user = userEvent.setup()
+  show()
+  const panel = screen.getByRole('complementary', { name: 'Activity panel' })
+  expect(within(panel).queryByRole('button', { name: 'Apply to all MRs' })).toBeNull()
+  await user.click(within(panel).getByRole('checkbox', { name: 'Bot comments' }))
+  await user.click(await within(panel).findByRole('button', { name: 'Apply to all MRs' }))
+  await waitFor(async () =>
+    expect(await platform().store.get('activityFilters')).toMatchObject({ defaults: { bots: true }, perMr: {} }),
+  )
+})
+
+test('the people filter resets on another MR', async () => {
+  const user = userEvent.setup()
+  const view = show()
+  await user.click(
+    within(screen.getByRole('complementary', { name: 'Activity panel' })).getByRole('button', {
+      name: '1 comment from ANA',
+    }),
+  )
+  expect(screen.getByText(/^Showing threads with ANA/)).toBeInTheDocument()
+  view.rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <TransportProvider transport={transport}>
+        <MrOverviewView overview={overview()} target={{ ...T, iid: 2 }} me="joao" previous={null}
+          replyTo={null} onReplied={() => {}} />
+      </TransportProvider>
+    </QueryClientProvider>,
+  )
+  expect(screen.queryByText(/^Showing threads with/)).toBeNull()
 })

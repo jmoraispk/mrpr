@@ -52,6 +52,7 @@ export function buildActivity(
     filters,
     reveal = false,
     show,
+    person = null,
   }: {
     me: string
     since: string | null
@@ -59,11 +60,15 @@ export function buildActivity(
     reveal?: boolean
     /** Threads to show whatever the filters say: one you are replying in, or a link went to. */
     show?: ReadonlySet<string>
+    /** Only threads this username wrote in (events aside); null or absent for everyone. */
+    person?: string | null
   },
 ): Activity {
   const all: ActivityItem[] = []
   for (const discussion of discussions) {
     const people = discussion.notes.filter((n) => !n.system)
+    // One person chosen: their threads only, and no events.
+    if (person && !people.some((n) => n.author?.username === person)) continue
     if (people.length === 0) {
       for (const n of discussion.notes) {
         all.push({

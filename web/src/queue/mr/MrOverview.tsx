@@ -5,8 +5,10 @@ import type { MrOverview } from '../../gitlab/mrOverview'
 import type { ReviewTarget } from '../../transport/types'
 import { buildActivity } from '../activity'
 import { useActivityFilters } from '../activityFilters'
+import { activityStats } from '../activityPeople'
 import { lookKeyFor } from '../model'
 import { ActivityList } from './ActivityList'
+import { ActivityPanel } from './ActivityPanel'
 import { Markdown } from './Markdown'
 
 const LONG_LINES = 12
@@ -38,7 +40,13 @@ export function MrOverviewView({
   useEffect(() => {
     void queryClient.refetchQueries({ queryKey: ['overview', overviewKey], stale: true })
   }, [queryClient, overviewKey])
-  const settings = useActivityFilters(lookKeyFor(target.hostId, target.project, target.iid))
+  const lookKey = lookKeyFor(target.hostId, target.project, target.iid)
+  const settings = useActivityFilters(lookKey)
+  // Whose threads Activity shows; everyone's by default, and again on another MR.
+  const [person, setPerson] = useState<string | null>(null)
+  useEffect(() => setPerson(null), [overviewKey])
+  const stats = useMemo(() => activityStats(overview.discussions), [overview.discussions])
+  const personName = stats.people.find((p) => p.username === person)?.name ?? null
   const [reveal, setReveal] = useState(false)
   const [descriptionOpen, setDescriptionOpen] = useState(false)
   // Threads kept on screen whatever the filters say: the one a link pointed
@@ -63,8 +71,9 @@ export function MrOverviewView({
         filters: settings.filters,
         reveal,
         show: keptNow,
+        person: personName ? person : null,
       }),
-    [overview.discussions, me, since, settings.filters, reveal, keptNow],
+    [overview.discussions, me, since, settings.filters, reveal, keptNow, person, personName],
   )
   const description = overview.description
   const long = description.split('\n').length > LONG_LINES || description.length > LONG_CHARS
@@ -90,6 +99,14 @@ export function MrOverviewView({
           <div className="mr-activity-head">
             <h3>Activity</h3>
           </div>
+          {personName ? (
+            <p className="mr-person-filter">
+              Showing threads with {personName} ·{' '}
+              <button type="button" onClick={() => setPerson(null)}>
+                Show everyone
+              </button>
+            </p>
+          ) : null}
           <ActivityList
             activity={activity}
             target={target}
@@ -101,6 +118,7 @@ export function MrOverviewView({
           />
         </section>
       </div>
+      <ActivityPanel stats={stats} lookKey={lookKey} person={person} onPerson={setPerson} />
     </div>
   )
 }

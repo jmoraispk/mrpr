@@ -146,3 +146,15 @@
 .mr-strip .mr-who { display: inline-flex; align-items: center; gap: 4px; }
 .mr-strip .mr-label { margin: 0; }
 .mr-strip .mr-rebase p { margin: 0; }
+
+/* The Activity panel beside the threads. */
+.mr-stats { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.mr-person { display: flex; align-items: center; gap: 8px; width: 100%; padding: 3px 4px; border: 0; border-radius: 6px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.mr-person:hover, .mr-person[aria-pressed='true'] { background: var(--hl); }
+.mr-initial { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--soft); font-size: 11px; font-weight: 600; }
+.mr-person-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mr-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.mr-show { display: flex; gap: 6px; align-items: flex-start; margin: 3px 0; }
+.mr-apply { margin-top: 6px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+.mr-person-filter { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.mr-person-filter button { border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
