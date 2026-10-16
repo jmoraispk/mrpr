@@ -8,7 +8,8 @@
     "dev:site": "vite --config vite.site.config.ts",
     "build:site": "tsc -b && vite build --config vite.site.config.ts",
     "preview:site": "vite preview --config vite.site.config.ts",
-    "test:site": "playwright test --config playwright.site.config.ts",
+    "test:site": "playwright test --config playwright.site.config.ts --grep-invert @benchmark",
+    "benchmark:browser": "playwright test --config playwright.site.config.ts --grep @benchmark",
     "lint": "oxlint",
     "feedback": "node scripts/feedback.mjs",
     "test": "vitest"

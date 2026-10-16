@@ -440,6 +440,10 @@ test('d shows only what changed since last review', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Description' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/#\/$/)
+  // Back at the queue on screen, not just in the address: the panel reads your
+  // last look as it opens, so a d that arrives before the queue is drawn would
+  // reopen the same panel and keep the look it opened with.
+  await expect(page.getByRole('region', { name: 'Retry budget for webhooks' })).toHaveCount(0)
 
   // New commits arrive.
   gitlab.state.reviewHead = 'head-2'
