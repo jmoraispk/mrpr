@@ -13,7 +13,7 @@ export interface DiscussionRange {
   label: string
 }
 
-const DISCUSSION_RANGE_CLASS = 'delta-discussion-range'
+const DISCUSSION_RANGE_CLASS = 'mrpr-discussion-range'
 
 function discussionPosition(discussion: Discussion) {
   return discussion.notes.find((note) => note.position)?.position ?? null

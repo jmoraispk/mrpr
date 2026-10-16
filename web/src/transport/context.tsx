@@ -1,14 +1,14 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
-import type { DeltaTransport } from './types'
+import type { MrprTransport } from './types'
 
-const TransportContext = createContext<DeltaTransport | null>(null)
+const TransportContext = createContext<MrprTransport | null>(null)
 
 export function TransportProvider({
   transport,
   children,
 }: {
-  transport: DeltaTransport
+  transport: MrprTransport
   children: ReactNode
 }) {
   return (
@@ -18,7 +18,7 @@ export function TransportProvider({
   )
 }
 
-export function useTransport(): DeltaTransport {
+export function useTransport(): MrprTransport {
   const transport = useContext(TransportContext)
   if (!transport) {
     throw new Error('useTransport requires a TransportProvider ancestor')

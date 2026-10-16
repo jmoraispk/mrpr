@@ -1,13 +1,13 @@
 import { ApiError } from '../api/client'
 import type {
-  DeltaConfig,
+  MrprConfig,
   DiffFile,
   Discussion,
   DiscussionNote,
   MergeRequest,
   PostingResult,
 } from '../api/types'
-import type { DeltaTransport } from '../transport/types'
+import type { MrprTransport } from '../transport/types'
 
 /**
  * A transport backed by the `/api/*` handlers in `./server`.
@@ -39,10 +39,10 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function createHttpTransport(): DeltaTransport {
+export function createHttpTransport(): MrprTransport {
   return {
     targetKey: 'test',
-    getConfig: () => api<DeltaConfig>('/api/config'),
+    getConfig: () => api<MrprConfig>('/api/config'),
     getMergeRequest: (signal) => api<MergeRequest>('/api/mr', { signal }),
     getDiffs: (signal) => api<DiffFile[]>('/api/diffs', { signal }),
     getDiscussions: (signal) =>

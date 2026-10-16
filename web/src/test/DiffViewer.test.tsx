@@ -132,11 +132,11 @@ test('toggles and persists split view', async () => {
     'aria-pressed',
     'true',
   )
-  expect(localStorage.getItem('delta-diff-mode')).toBe('split')
+  expect(localStorage.getItem('mrpr-diff-mode')).toBe('split')
 })
 
 test('restores the persisted split view', () => {
-  localStorage.setItem('delta-diff-mode', 'split')
+  localStorage.setItem('mrpr-diff-mode', 'split')
 
   render(<DiffViewer file={FILE} />, { wrapper: TestProviders })
 

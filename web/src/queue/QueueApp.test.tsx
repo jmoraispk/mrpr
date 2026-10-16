@@ -121,7 +121,7 @@ beforeEach(() => {
   fake = createFakePlatform({
     send: async (message) => {
       fake.sent.push(message)
-      if (message.kind !== 'delta/hub') return { ok: true, data: null }
+      if (message.kind !== 'mrpr/hub') return { ok: true, data: null }
       // A fresh copy, as a real hub sends: tests change `hosts` in place.
       if (message.op === 'listQueue') return { ok: true, data: structuredClone(hosts) }
       if (message.op === 'listRepoMrs') {
@@ -242,7 +242,7 @@ test('opening a review lands on the waiting thread and reads what was folded int
   fireEvent.keyDown(window, { key: 'Enter' })
   await waitFor(() =>
     expect(fake.sent).toContainEqual({
-      kind: 'delta/hub',
+      kind: 'mrpr/hub',
       op: 'markRead',
       payload: { ids: [`${H}:55`] },
     }),
@@ -255,7 +255,7 @@ test('opening the queue catches up a stale poll', async () => {
   renderApp()
   await screen.findAllByRole('article')
   expect(fake.sent).toContainEqual({
-    kind: 'delta/hub',
+    kind: 'mrpr/hub',
     op: 'pollNow',
     payload: { maxAgeMs: 60_000 },
   })
@@ -681,7 +681,7 @@ test('↻ polls GitLab and reads the MRs again now', async () => {
   renderApp()
   await screen.findAllByRole('article')
   await user.click(screen.getByRole('button', { name: /^Refresh/ }))
-  expect(fake.sent).toContainEqual({ kind: 'delta/hub', op: 'pollNow', payload: { maxAgeMs: 0 } })
+  expect(fake.sent).toContainEqual({ kind: 'mrpr/hub', op: 'pollNow', payload: { maxAgeMs: 0 } })
   await waitFor(() =>
     expect(fake.sent.filter((message: { op?: string }) => message.op === 'listQueue').length).toBeGreaterThan(1),
   )

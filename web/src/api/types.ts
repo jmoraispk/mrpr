@@ -1,4 +1,4 @@
-export interface DeltaConfig {
+export interface MrprConfig {
   host: string
   project: string
   mr_iid: number

@@ -61,7 +61,7 @@ export default defineConfig(() => {
   return {
     root: `${webDir}site`,
     envDir: webDir,
-    base: process.env.DELTA_SITE_BASE ?? '/',
+    base: process.env.MRPR_SITE_BASE ?? '/',
     plugins: [react(), contentSecurityPolicy()],
     build: {
       outDir: `${webDir}dist-site`,

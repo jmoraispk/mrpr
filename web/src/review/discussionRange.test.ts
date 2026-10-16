@@ -307,9 +307,9 @@ test('highlights contiguous unified diff rows and cleans up', () => {
       label: 'Lines +12–+14',
     },
   ])
-  expect(root.querySelectorAll('.delta-discussion-range')).toHaveLength(3)
+  expect(root.querySelectorAll('.mrpr-discussion-range')).toHaveLength(3)
   cleanup()
-  expect(root.querySelectorAll('.delta-discussion-range')).toHaveLength(0)
+  expect(root.querySelectorAll('.mrpr-discussion-range')).toHaveLength(0)
 })
 
 test('keeps discussion highlights while drag selection is active', () => {
@@ -317,7 +317,7 @@ test('keeps discussion highlights while drag selection is active', () => {
   if (!root) throw new Error('fixture root is missing')
 
   root.querySelectorAll('.diff-line').forEach((row, index) => {
-    if (index === 1) row.classList.add('delta-drag-selected')
+    if (index === 1) row.classList.add('mrpr-drag-selected')
   })
 
   const cleanup = highlightDiscussionRanges(root, [
@@ -330,11 +330,11 @@ test('keeps discussion highlights while drag selection is active', () => {
     },
   ])
 
-  expect(root.querySelectorAll('.delta-discussion-range')).toHaveLength(3)
-  expect(root.querySelectorAll('.delta-drag-selected')).toHaveLength(1)
+  expect(root.querySelectorAll('.mrpr-discussion-range')).toHaveLength(3)
+  expect(root.querySelectorAll('.mrpr-drag-selected')).toHaveLength(1)
   cleanup()
-  expect(root.querySelectorAll('.delta-discussion-range')).toHaveLength(0)
-  expect(root.querySelectorAll('.delta-drag-selected')).toHaveLength(1)
+  expect(root.querySelectorAll('.mrpr-discussion-range')).toHaveLength(0)
+  expect(root.querySelectorAll('.mrpr-drag-selected')).toHaveLength(1)
 })
 
 test('highlights split diff rows on one side', () => {
@@ -366,7 +366,7 @@ test('highlights split diff rows on one side', () => {
     },
   ])
 
-  expect(root.querySelectorAll('.delta-discussion-range')).toHaveLength(3)
+  expect(root.querySelectorAll('.mrpr-discussion-range')).toHaveLength(3)
   cleanup()
-  expect(root.querySelectorAll('.delta-discussion-range')).toHaveLength(0)
+  expect(root.querySelectorAll('.mrpr-discussion-range')).toHaveLength(0)
 })

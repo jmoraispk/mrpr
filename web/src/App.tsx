@@ -227,7 +227,7 @@ export function App({
   if (isPending || !config.data || !mergeRequest.data || !diffs.data) {
     return (
       <main className="state-screen" aria-live="polite">
-        <div className="delta-loader" aria-hidden="true" />
+        <div className="mrpr-loader" aria-hidden="true" />
         <p>Loading merge request…</p>
       </main>
     )
