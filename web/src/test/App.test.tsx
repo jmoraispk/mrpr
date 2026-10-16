@@ -31,7 +31,8 @@ test('renders merge request identity and files', async () => {
   expect(
     screen.getByLabelText('Total changes: 1 addition, 1 deletion'),
   ).toBeVisible()
-})
+  // Room for the 5 s wait above: the first render loads the chunk cold.
+}, 10_000)
 
 test('does not refetch review data on focus or reconnect', async () => {
   const calls = { mr: 0, diffs: 0, discussions: 0 }
