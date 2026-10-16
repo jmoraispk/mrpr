@@ -64,13 +64,20 @@ export function MrPanel({
   const prior = previous.data ?? null
   const sinceAvailable = Boolean(prior && headSha && prior.headSha !== headSha)
   const commits = row?.newCommits ?? 0
-  const tabs: { id: ReviewTab; label: string }[] = [
+  const tabs: { id: ReviewTab; label: ReactNode }[] = [
     { id: 'overview', label: 'Overview' },
     {
       id: 'changes',
-      label: overview.data
-        ? `Changes · ${plural(overview.data.files, 'file')} · +${overview.data.additions} −${overview.data.deletions}`
-        : 'Changes',
+      // The counts in the diff's green and red.
+      label: overview.data ? (
+        <>
+          Changes · {plural(overview.data.files, 'file')} ·{' '}
+          <span className="q-plus">+{overview.data.additions}</span>{' '}
+          <span className="q-minus">−{overview.data.deletions}</span>
+        </>
+      ) : (
+        'Changes'
+      ),
     },
   ]
   if (sinceAvailable || tab === 'since') {

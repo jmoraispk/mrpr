@@ -66,6 +66,9 @@ test('tabs are links to their own addresses; Changes counts the diff', async () 
     'href',
     '#/mr/h/g%2Fp/1/changes',
   )
+  const changes = screen.getByRole('link', { name: 'Changes · 2 files · +3 −1' })
+  expect(changes.querySelector('.q-plus')).toHaveTextContent('+3')
+  expect(changes.querySelector('.q-minus')).toHaveTextContent('−1')
 })
 
 test('Since last review appears only when the head moved since your last look', async () => {

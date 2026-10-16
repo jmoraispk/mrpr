@@ -924,3 +924,10 @@ test('keys typed while the editor downloads stay in the box, never approve or sn
   expect(gitlab.approvals).toEqual([])
   await expect(row).toBeVisible()
 })
+
+test('the landing page and the app use the Mr. PR mark as their icon', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg')
+  const icon = await page.request.get('/favicon.svg')
+  expect(await icon.text()).toContain('#C2410C')
+})
