@@ -76,6 +76,7 @@ export default defineConfig(() => {
           landing: `${webDir}site/index.html`,
           app: `${webDir}site/app/index.html`,
           privacy: `${webDir}site/privacy/index.html`,
+          thanks: `${webDir}site/thanks/index.html`,
         },
       },
     },
