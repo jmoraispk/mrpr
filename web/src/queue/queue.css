@@ -187,4 +187,3 @@
 .q-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .q-modal-actions button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
 .q-modal-actions .q-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
-.q-feedback { position: fixed; right: 16px; bottom: 16px; z-index: 20; padding: 8px 14px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--ink); font: 500 14px var(--font-body); box-shadow: 0 6px 20px -10px rgba(18, 22, 31, 0.4); cursor: pointer; }

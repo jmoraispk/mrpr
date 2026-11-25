@@ -5,7 +5,13 @@ import type { Server } from './server'
 /** Setups pasted in this browser: host → Application ID. */
 export const CUSTOM_HOSTS_KEY = 'customHosts'
 const CLIENT_ID = /^[0-9a-f]{64}$/
-const REGISTRY = `${import.meta.env.BASE_URL}api/registry/`
+/**
+ * The directory of self-managed servers: host → OAuth Application ID, curated
+ * by the operator and shipped with the site. An Application ID is public by
+ * design under PKCE, so the file leaks no secret, only which servers use
+ * Mr. PR. Adding a server is a commit; see docs/site-setup.md.
+ */
+const REGISTRY = `${import.meta.env.BASE_URL}registry.json`
 
 export async function loadCustomHosts(store: KeyValueStore): Promise<SiteHost[]> {
   const stored = (await store.get<Record<string, string>>(CUSTOM_HOSTS_KEY)) ?? {}
@@ -33,8 +39,8 @@ export type DirectoryAnswer =
 const LOOKUP_TIMEOUT_MS = 5_000
 
 /**
- * What the directory knows about `host`. `unknown` is its own answer (404);
- * anything else that is not a valid id, including no answer in time, is
+ * What the directory knows about `host`. A server the file does not list is
+ * `unknown`; a file that will not load, or an entry that is not a valid id, is
  * `unavailable`, so the setup view can say it could not check.
  */
 export async function lookupDirectory(
@@ -42,30 +48,17 @@ export async function lookupDirectory(
   timeoutMs = LOOKUP_TIMEOUT_MS,
 ): Promise<DirectoryAnswer> {
   try {
-    const response = await fetch(`${REGISTRY}?host=${encodeURIComponent(host)}`, {
-      signal: AbortSignal.timeout(timeoutMs),
-    })
-    if (response.status === 404) return { status: 'unknown' }
+    const response = await fetch(REGISTRY, { signal: AbortSignal.timeout(timeoutMs) })
     if (!response.ok) return { status: 'unavailable' }
-    const { clientId } = (await response.json()) as { clientId?: unknown }
+    const directory = (await response.json()) as Record<string, unknown>
+    if (typeof directory !== 'object' || directory === null) return { status: 'unavailable' }
+    const clientId = directory[host.toLowerCase()]
+    if (clientId === undefined) return { status: 'unknown' }
     return typeof clientId === 'string' && CLIENT_ID.test(clientId)
       ? { status: 'found', clientId }
       : { status: 'unavailable' }
   } catch {
     return { status: 'unavailable' }
-  }
-}
-
-/** Share a working id with the next person from this server. Never throws. */
-export async function publishToDirectory(host: string, clientId: string): Promise<void> {
-  try {
-    await fetch(REGISTRY, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ host, clientId }),
-    })
-  } catch {
-    // Sign-in already worked; the directory is a convenience for others.
   }
 }
 

@@ -51,7 +51,7 @@ export function useQueueKeys(handlers: QueueKeyHandlers, enabled = true): void {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!latest.current.enabled || belongsToTarget(event)) return
-      // A site dialog (feedback, welcome, posting rights) has the keyboard.
+      // A site dialog (welcome, posting rights) has the keyboard.
       if (document.querySelector('dialog.q-modal[open]')) return
       const h = latest.current.handlers
       // The one shortcut with a modifier.

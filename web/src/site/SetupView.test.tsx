@@ -29,17 +29,15 @@ test('an application id is 64 hex characters, and the Secret is refused', () => 
   expect(validateApplicationId('abc')).toMatchObject({ ok: false })
 })
 
-test('the setup congratulates the first person and shows three steps', () => {
+test('the setup names the server, points at a colleague, and shows three steps', () => {
   render(<SetupView server={SERVER} onBack={() => {}} />)
 
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-    "Congratulations, you're the first person in your organization to use Mr. PR!",
+    'Set up Mr. PR for gitlab.other.org',
   )
-  expect(
-    screen.getByText(
-      'To keep Mr. PR 100% private, add it as an application on your own GitLab server. Three steps, under a minute.',
-    ),
-  ).toBeInTheDocument()
+  // Nothing is published back, so a colleague sees this page too: it must not
+  // tell everyone they are the first.
+  expect(screen.getByText(/ask them for it and paste it in/)).toBeInTheDocument()
   expect(screen.getAllByRole('listitem')).toHaveLength(3)
   expect(screen.getAllByRole('img')).toHaveLength(3)
   expect(screen.getByRole('link', { name: /Open gitlab\.other\.org applications/ })).toHaveAttribute(
@@ -71,7 +69,7 @@ test('the Secret is refused', async () => {
   expect(signIn).not.toHaveBeenCalled()
 })
 
-test('a pasted id is remembered, then sign-in starts and will publish', async () => {
+test('a pasted id is remembered, then sign-in starts', async () => {
   const user = userEvent.setup()
   render(<SetupView server={SERVER} onBack={() => {}} />)
 
@@ -83,12 +81,10 @@ test('a pasted id is remembered, then sign-in starts and will publish', async ()
     { host: 'gitlab.other.org', clientId: ID },
     expect.any(String),
     'api',
-    undefined,
-    { publish: {} },
   )
 })
 
-test('setting up again fixes this browser only, and publishes nothing', async () => {
+test('setting up again fixes this browser only', async () => {
   const user = userEvent.setup()
   render(<SetupView server={SERVER} replacing={'b'.repeat(64)} onBack={() => {}} />)
 
@@ -100,16 +96,10 @@ test('setting up again fixes this browser only, and publishes nothing', async ()
     { host: 'gitlab.other.org', clientId: ID },
     expect.any(String),
     'api',
-    undefined,
-    {},
   )
-})
-
-test('when the directory could not be checked, it does not claim they are first', () => {
-  render(<SetupView server={SERVER} directoryDown onBack={() => {}} />)
-
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Set up Mr. PR for gitlab.other.org')
-  expect(screen.getByText(/couldn't check whether someone at your organization/)).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+    'The saved setup for gitlab.other.org no longer works',
+  )
 })
 
 test('a copy the browser refuses says so', async () => {

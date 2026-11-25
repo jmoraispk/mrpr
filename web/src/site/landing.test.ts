@@ -34,10 +34,18 @@ test('no read-only promise, no promise of token sign-in, and the full API access
   expect(html).toMatch(/Sign in with your GitLab account\./)
 })
 
-test('the GitHub waitlist has its field, its button and a status line', () => {
-  expect(page.getElementById('waitlist-email')?.getAttribute('type')).toBe('email')
-  expect(page.getElementById('waitlist-join')?.textContent).toMatch(/Join waitlist/)
-  expect(page.getElementById('waitlist-status')?.getAttribute('aria-live')).toBe('polite')
+test('the page asks for nothing and posts nowhere', () => {
+  // Static, with no backend left to take a submission.
+  expect(page.querySelectorAll('input, textarea, form')).toHaveLength(0)
+  expect(html).not.toMatch(/waitlist/i)
+  expect(html).not.toMatch(/\/api\/(waitlist|feedback|users|registry)/)
+})
+
+test('the repository is linked from the hero and the closing band', () => {
+  const repo = [...page.querySelectorAll('a')]
+    .filter((a) => a.getAttribute('href') === 'https://github.com/jmoraispk/mrpr')
+    .map((a) => a.textContent)
+  expect(repo).toEqual(['Read the source', 'Read the source'])
 })
 
 test('no link on the page goes nowhere', () => {
@@ -54,8 +62,12 @@ test('the privacy page says what the server keeps, and runs no script', () => {
   const doc = new DOMParser().parseFromString(privacy, 'text/html')
   expect(doc.querySelectorAll('script')).toHaveLength(0)
   expect(doc.title).toMatch(/^Privacy · Mr\. PR/)
-  for (const fact of [/never reaches our servers/, /waitlist/i, /Feedback/, /numeric user ID/, /IP address is kept for up to two hours/]) {
+  for (const fact of [/never reaches our servers/, /no database and no backend/, /sign-in application ID/]) {
     expect(privacy).toMatch(fact)
+  }
+  // Everything the old backend kept is gone, so the page must not still claim it.
+  for (const gone of [/waitlist/i, /Feedback/, /numeric user ID/, /IP address/]) {
+    expect(privacy).not.toMatch(gone)
   }
 })
 

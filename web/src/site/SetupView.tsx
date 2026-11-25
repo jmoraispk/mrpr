@@ -35,14 +35,11 @@ const tutorial = (step: number) => `${import.meta.env.BASE_URL}tutorial/step-${s
 export function SetupView({
   server,
   replacing,
-  directoryDown = false,
   onBack,
 }: {
   server: Server
   /** The directory's broken id, when this setup replaces it. */
   replacing?: string
-  /** The directory could not be asked, so this may not be the first setup. */
-  directoryDown?: boolean
   onBack: () => void
 }) {
   const [value, setValue] = useState('')
@@ -59,15 +56,7 @@ export function SetupView({
     setError(null)
     const site = { host: server.host, clientId: result.clientId }
     await rememberHost(platform().store, site)
-    // A fresh setup is shared once it works. Setting up again only fixes this
-    // browser: the directory entry is never replaced through the API.
-    await signIn(
-      site,
-      window.location.hash || '#/',
-      siteConfig().scopes,
-      undefined,
-      replacing ? {} : { publish: {} },
-    )
+    await signIn(site, window.location.hash || '#/', siteConfig().scopes)
   }
 
   return (
@@ -76,22 +65,14 @@ export function SetupView({
         <h1>
           {replacing
             ? `The saved setup for ${server.host} no longer works`
-            : directoryDown
-              ? `Set up Mr. PR for ${server.host}`
-              : "Congratulations, you're the first person in your organization to use Mr. PR!"}
+            : `Set up Mr. PR for ${server.host}`}
         </h1>
-        {directoryDown ? (
-          <p>
-            We couldn't check whether someone at your organization already set
-            up Mr. PR. If a colleague did, ask them for the Application ID and
-            paste it in step 3; otherwise, three steps, under a minute.
-          </p>
-        ) : (
-          <p>
-            To keep Mr. PR 100% private, add it as an application on your own
-            GitLab server. Three steps, under a minute.
-          </p>
-        )}
+        <p>
+          Mr. PR has no Application ID for this server yet. If a colleague at
+          your organization already set one up, ask them for it and paste it in
+          step 3; otherwise, three steps, under a minute. To keep Mr. PR 100%
+          private, it runs as an application on your own GitLab server.
+        </p>
       </header>
       <ol className="setup-steps">
         <li className="setup-step">

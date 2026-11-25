@@ -1,41 +1,46 @@
 # Hosting Mr. PR
 
-The site is the landing page at `/`, the app at `/app/`, and one small
-function, `/api/registry`. Each visitor signs in with GitLab and their browser
-talks to GitLab directly; the host never sees a token or a merge request.
+The site is the landing page at `/` and the app at `/app/`. It is static:
+no functions, no database, nothing to run. Each visitor signs in with GitLab
+and their browser talks to GitLab directly; the host never sees a token or a
+merge request.
 
 ## How visitors sign in
 
 A visitor pastes a link to any merge request. Mr. PR reads the GitLab server
-from it and looks for that server's Application ID: first the servers built
-into this deployment, then the ones this browser has set up, then the shared
-directory (`/api/registry`).
+from it and looks for that server's Application ID: first the server built
+into this deployment, then the ones this browser has set up, then the
+directory, `web/site/public/registry.json`, served at `/registry.json`.
 
 - **Known server:** straight to GitLab's Authorize screen.
-- **Unknown server:** the visitor is the first from their organisation. A
-  three-step, illustrated setup has them register Mr. PR on their own GitLab
-  and paste the Application ID. Once a sign-in with that ID works, it goes into
-  the directory, so the next person from that server signs in with one click.
+- **Unknown server:** a three-step, illustrated setup has the visitor register
+  Mr. PR on their own GitLab and paste the Application ID. It is saved in that
+  browser and sign-in goes ahead.
 
 The directory stores only `server address → Application ID`, both public by
-design. No tokens, users or merge requests.
+design. No tokens, users or merge requests. It is a file in the repository,
+not a service:
+
+```json
+{ "gitlab.acme.dev": "0123…" }
+```
+
+Adding a server is a commit and a deploy. That is deliberate: the directory
+used to accept writes from anyone, which meant a stranger could register a
+wrong ID for a company's server first and break sign-in for everyone there
+until the operator repaired it by hand.
 
 Trust model:
 
-- **The first ID published for a server is kept.** Nobody can replace it
-  through the API; the stored ID is public, so knowing it proves nothing.
-- **On a company's own GitLab, that means trusting the first colleague's
-  registration.** It lives in their personal account, so if they leave, the app
-  goes with them. A group- or instance-level application is sturdier; repair
-  the entry in the Upstash console when needed.
+- **On a company's own GitLab, an entry is one colleague's registration.** It
+  lives in their personal account, so if they leave, the app goes with them. A
+  group- or instance-level application is sturdier. Ask for one before adding
+  an entry that many people will depend on.
 - **"Sign-in not working? Set it up again"** fixes things for that one browser
   only, without touching the directory.
 - **Shared public servers** (gitlab.com, salsa.debian.org, gitlab.gnome.org and
-  similar) can never be claimed through the directory, since anyone can
-  register an app there. Their IDs come only from this deployment's build
-  configuration.
-- The directory only accepts `application/json` posts, so other websites cannot
-  write to it through their visitors' browsers.
+  similar) belong in the build configuration, not the directory: anyone can
+  register an app there, so an entry proves nothing.
 
 The tutorial images in `web/site/public/tutorial/` are rendered from the raw
 screenshots in `docs/examples/` by `node web/scripts/annotate-tutorial.mjs`,
@@ -90,15 +95,17 @@ In the Vercel project: Settings → Environment Variables:
 Then Deployments → Redeploy. Vite reads these at build time, so a redeploy is
 needed after changing them.
 
-## 4. Connect the shared directory (Upstash Redis)
+## 4. Add a server to the directory
 
-Vercel project → Storage → Create Database → **Upstash for Redis** (the free
-plan is plenty) → connect it to this project. That sets `KV_REST_API_URL` and
-`KV_REST_API_TOKEN`; `web/api/registry.ts` also accepts
-`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`. Redeploy.
+Someone registers Mr. PR on their GitLab (the three-step setup shows how) and
+sends you the Application ID. Put it in `web/site/public/registry.json`:
 
-Without it, everything still works: the directory answers "unknown", so every
-newcomer from an unknown server sees the setup.
+```json
+{ "gitlab.acme.dev": "<64 hex characters>" }
+```
+
+Commit and deploy. Until then everyone from that server does the setup
+themselves, which works; the directory only saves them the trip.
 
 ## 5. Connect mrpr.dev
 
@@ -216,20 +223,11 @@ The MR opens on the right, beside the sidebar. `f` makes it full screen
   renamed).
 - **Since last review:** only what changed since you last looked.
 
-## Feedback, waitlist and first visits
+## Hearing from people
 
-Three more functions share the Upstash database with `/api/registry`:
-
-- `/api/waitlist/`: GitHub waitlist emails (the set `waitlist:github`), from the
-  landing page.
-- `/api/feedback/`: the app's Feedback button. It stores only the message, an
-  optional email, the app version and the browser (the list `feedback`).
-- `/api/users/`: the first time each user signed in. It stores the GitLab
-  server, the numeric user ID and the date (`user:<host>:<id>`), written once.
-
-Read the newest feedback with `npm run feedback` (or `npm run feedback -- 50`)
-from `web/`, after `vercel env pull .env.local`. Each is limited per IP address: feedback 60 an hour, waitlist 30, first visits 30. The privacy page at
-`/privacy/` lists all of this for visitors.
+There is no in-app Feedback button and no waitlist form: both needed a server
+to post to, and the site has none. Issues on the repository are the channel.
+The privacy page at `/privacy/` says so, and says that nothing is collected.
 
 ## Security notes
 

@@ -24,15 +24,11 @@ to your GitLab server. Every merge request, diff, discussion and approval is
 read from and written to the GitLab API by your own browser, under your own
 account, so Mr. PR sees exactly what you can see and nothing more.
 
-A few small serverless functions back the site, and none of them touch your
-code or your tokens:
-
-| Endpoint | What it holds |
-| --- | --- |
-| `/api/registry` | Which public OAuth Application ID to use for a given GitLab server. Under PKCE an Application ID is public by design, so this is not a secret. |
-| `/api/waitlist` | Email addresses left for the GitHub waitlist. |
-| `/api/feedback` | Feedback sent from the in-app form. |
-| `/api/users` | The date an account first signed in, for a trial later. Nothing depends on it yet. |
+Nothing backs the site. There is no server, no database and no account: it is
+static files and your browser. The one thing it ships besides code is
+`web/site/public/registry.json`, which maps a GitLab server to the public OAuth
+Application ID to sign in with. Under PKCE an Application ID is public by
+design, so this is not a secret, and it names no people.
 
 Because the browser is the only thing that reaches GitLab, a self-managed
 instance behind your company VPN works as long as your browser can reach it.

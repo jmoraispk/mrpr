@@ -609,32 +609,23 @@ test('the landing page leads to the app', async ({ page }) => {
 const OTHER = 'https://gitlab.other.org'
 const PASTED_ID = 'ab'.repeat(32)
 
-/** The shared directory, which vite preview does not serve. */
-async function fakeRegistry(page: Page, known: Record<string, string> = {}) {
-  const posts: unknown[] = []
-  await page.route('**/api/registry**', async (route) => {
-    const request = route.request()
-    if (request.method() === 'POST') {
-      posts.push(request.postDataJSON())
-      return route.fulfill({ json: { clientId: PASTED_ID } })
-    }
-    const host = new URL(request.url()).searchParams.get('host') ?? ''
-    return known[host]
-      ? route.fulfill({ json: { clientId: known[host] } })
-      : route.fulfill({ status: 404, json: { error: 'unknown' } })
-  })
-  return { posts }
-}
+/** The directory the operator curates, in place of the shipped empty one. */
+const fakeRegistry = (page: Page, known: Record<string, string>) =>
+  page.route('**/registry.json', (route) => route.fulfill({ json: known }))
 
-test('the first person from a new server sets it up, and it is shared', async ({ page }) => {
+test('a server the directory does not list gets the setup, and nothing is published', async ({ page }) => {
   const { authorizeRequests } = await fakeGitLab(page, { origin: OTHER })
-  const { posts } = await fakeRegistry(page)
+  const posts: string[] = []
+  // The site ships registry.json, so this reads the real, empty file.
+  page.on('request', (request) => {
+    if (request.method() !== 'GET') posts.push(`${request.method()} ${request.url()}`)
+  })
   await page.goto('/app/')
 
   await page.getByLabel('Paste a link to any merge request').fill(OTHER + '/g/p/-/merge_requests/1')
   await page.getByRole('button', { name: 'Continue' }).click()
 
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Congratulations')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Set up Mr. PR for gitlab.other.org')
   const widths = await page.locator('.setup-step img').evaluateAll((images) =>
     images.map((image) => (image as HTMLImageElement).naturalWidth),
   )
@@ -646,12 +637,13 @@ test('the first person from a new server sets it up, and it is shared', async ({
 
   await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
   expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
-  await expect.poll(() => posts).toEqual([{ host: 'gitlab.other.org', clientId: PASTED_ID }])
+  // Everything posted went to GitLab itself; the site has nothing to post to.
+  expect(posts.filter((entry) => !entry.includes('gitlab.other.org'))).toEqual([])
 })
 
-test('the next person from that server goes straight to GitLab', async ({ page }) => {
+test('a server the directory lists goes straight to GitLab', async ({ page }) => {
   const { authorizeRequests } = await fakeGitLab(page, { origin: OTHER })
-  const { posts } = await fakeRegistry(page, { 'gitlab.other.org': PASTED_ID })
+  await fakeRegistry(page, { 'gitlab.other.org': PASTED_ID })
   await page.goto('/app/')
 
   await page.getByLabel('Paste a link to any merge request').fill(OTHER + '/g/p/-/merge_requests/1')
@@ -659,8 +651,7 @@ test('the next person from that server goes straight to GitLab', async ({ page }
 
   await expect(page.getByRole('complementary', { name: 'Merge requests' })).toBeVisible()
   expect(authorizeRequests.map((request) => request.client_id)).toEqual([PASTED_ID])
-  await expect(page.getByText('Congratulations')).toHaveCount(0)
-  expect(posts).toEqual([])
+  await expect(page.getByText('Set up Mr. PR for')).toHaveCount(0)
 })
 
 test('the landing page theme toggle works under its security policy', async ({ page }) => {
@@ -707,21 +698,6 @@ test('a session granted read-only asks for posting rights on the first approval,
   expect(gitlab.authorizeRequests.map((request) => request.scope)).toEqual(['api', 'api'])
 })
 
-test('Feedback sends what you typed and says thanks', async ({ page }) => {
-  await fakeGitLab(page)
-  const bodies: unknown[] = []
-  await page.route('**/api/feedback/**', async (route) => {
-    bodies.push(route.request().postDataJSON())
-    await route.fulfill({ json: { ok: true } })
-  })
-  await signIn(page)
-  await page.getByRole('button', { name: 'Feedback' }).click()
-  await page.getByRole('textbox', { name: "What's rough or missing?" }).fill('Love the tags')
-  await page.getByRole('button', { name: 'Send' }).click()
-  await expect(page.getByText('Thanks. We read every message.')).toBeVisible()
-  expect(bodies).toEqual([{ message: 'Love the tags', version: expect.any(String), browser: expect.any(String) }])
-})
-
 test('the welcome shows on the first sign-in only', async ({ page }) => {
   await fakeGitLab(page)
   await page.goto('/app/')
@@ -733,26 +709,19 @@ test('the welcome shows on the first sign-in only', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Welcome' })).toHaveCount(0)
 })
 
-test('the landing page waitlist says thanks, or says it couldn’t', async ({ page }) => {
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort())
-  let answer = 200
-  const bodies: unknown[] = []
-  await page.route('**/api/waitlist/**', async (route) => {
-    bodies.push(route.request().postDataJSON())
-    await route.fulfill({ status: answer, json: answer === 200 ? { ok: true } : { error: 'down' } })
+test('the landing page sends nothing anywhere', async ({ page }) => {
+  // Nothing on the page submits any more: the waitlist went with its function.
+  const sent: string[] = []
+  page.on('request', (request) => {
+    if (request.method() !== 'GET') sent.push(`${request.method()} ${request.url()}`)
   })
   await page.goto('/')
-  const field = page.getByLabel('Email for the GitHub waitlist')
-  const join = page.getByRole('button', { name: 'Join waitlist' })
-  await field.fill('ana@example.com')
-  await join.click()
-  await expect(page.locator('#waitlist-status')).toHaveText("Thanks, you're on the list.")
-  expect(bodies).toEqual([{ email: 'ana@example.com' }])
-
-  answer = 500
-  await join.click()
-  await expect(page.locator('#waitlist-status')).toHaveText("Couldn't add you. Try again in a moment.")
-  await expect(join).toBeEnabled()
+  await expect(page.getByRole('link', { name: 'Read the source' }).first()).toHaveAttribute(
+    'href',
+    'https://github.com/jmoraispk/mrpr',
+  )
+  expect(await page.locator('input, textarea, form').count()).toBe(0)
+  expect(sent).toEqual([])
 })
 
 test('Changes uses the app’s light colours, with the file count on one line', async ({ page }) => {
@@ -771,7 +740,7 @@ test('Changes uses the app’s light colours, with the file count on one line', 
   expect(Math.abs(filesBox!.y - summaryBox!.y)).toBeLessThan(12)
 })
 
-test('an open MR fills the window: the page never scrolls, and Feedback floats in the corner', async ({ page }) => {
+test('an open MR fills the window: the page never scrolls', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await fakeGitLab(page)
   await signIn(page)
@@ -790,9 +759,6 @@ test('an open MR fills the window: the page never scrolls, and Feedback floats i
   }))
   expect(scroll.top).toBe(0)
   expect(scroll.height).toBeLessThanOrEqual(800)
-  const box = (await page.getByRole('button', { name: 'Feedback' }).boundingBox())!
-  expect(box.x + box.width).toBeGreaterThan(1280 - 40)
-  expect(box.y + box.height).toBeGreaterThan(800 - 40)
 })
 
 test('Activity threads lay out as a chat: the opener left, replies right, each a bubble', async ({ page }) => {

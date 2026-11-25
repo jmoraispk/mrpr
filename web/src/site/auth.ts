@@ -5,7 +5,6 @@ import { updateInbox } from '../inbox/store'
 import { withLock } from '../platform/locks'
 import { platform } from '../platform/platform'
 import type { SiteConfig, SiteHost } from './config'
-import { publishToDirectory } from './servers'
 
 /** Per-host OAuth tokens, in the platform store (localStorage on the site). */
 export const AUTH_KEY = 'auth'
@@ -37,8 +36,6 @@ interface Pending {
   scope?: string
   /** Running in a window opened for posting rights: it closes itself when done. */
   popup?: true
-  /** Set when the id was pasted in setup: share it once sign-in works. */
-  publish?: Record<string, never>
 }
 
 export type AuthFailure =
@@ -126,14 +123,12 @@ export async function signIn(
   returnTo: string,
   scopes = 'api',
   navigate: (url: string) => void = (url) => window.location.assign(url),
-  options: { publish?: Record<string, never> } = {},
 ): Promise<void> {
   // A server that refused `read_api` once is asked for `api` from then on.
   const scope = scopes === 'api' || (await fullScopeHosts()).includes(site.host) ? 'api' : scopes
   const pending: Pending = {
     host: site.host,
     clientId: site.clientId,
-    publish: options.publish,
     state: randomString(),
     verifier: randomString(),
     returnTo,
@@ -270,7 +265,7 @@ export async function completeSignIn(
   if (url.searchParams.get('error') === 'invalid_scope' && asked !== 'api' && site) {
     // This server's application allows only `api`: remember it and ask for that.
     await rememberFullScope(site.host)
-    await signIn(site, pending.returnTo, 'api', navigate, { publish: pending.publish })
+    await signIn(site, pending.returnTo, 'api', navigate)
     return { returnTo: pending.returnTo, restarted: true }
   }
   if (url.searchParams.has('error')) {
@@ -316,9 +311,6 @@ export async function completeSignIn(
     userId: user.id,
     username: user.username,
   })
-  if (pending.publish) {
-    void publishToDirectory(site.host, site.clientId)
-  }
   return pending.popup ? { returnTo: pending.returnTo, popup: true } : { returnTo: pending.returnTo }
 }
 

@@ -10,24 +10,15 @@ import { rememberFullScope, signIn, unfinishedReadOnlySignIn } from './auth'
 import { siteConfig, type SiteConfig, type SiteHost } from './config'
 import { EXAMPLE_MR_URL, parseServer, type Server } from './server'
 import { rememberHost, resolveServer, adoptSite } from './servers'
-import { FeedbackButton } from './FeedbackButton'
-import { recordFirstSeen } from './firstSeen'
 import { SetupView } from './SetupView'
 import { WelcomeDialog } from './WelcomeDialog'
 import { WriteAccessGate } from './WriteAccessGate'
 
-function SignedIn({ config, hosts }: { config: SiteConfig; hosts: HostConfig[] }) {
+function SignedIn({ config }: { config: SiteConfig }) {
   useEffect(() => startPageSchedule({ poll: lockedPoll }), [])
-  const users = hosts.map((host) => `${host.host}:${host.userId}`).join(',')
-  useEffect(() => {
-    void recordFirstSeen(hosts)
-    // Once per set of signed-in users, not per render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users])
   return (
     <>
       <QueueApp />
-      <FeedbackButton />
       <WelcomeDialog />
       <WriteAccessGate config={config} />
     </>
@@ -47,7 +38,7 @@ function Mark() {
   )
 }
 
-type View = 'signin' | { setup: Server; replacing?: string; directoryDown?: boolean }
+type View = 'signin' | { setup: Server; replacing?: string }
 
 const returnTo = () => window.location.hash || '#/'
 
@@ -89,9 +80,7 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
     try {
       const resolved = await resolveServer(parsed.server, config)
       if (resolved.site) await go(resolved.site, resolved.source !== 'config')
-      else {
-        setView({ setup: parsed.server, directoryDown: resolved.reason === 'unavailable' })
-      }
+      else setView({ setup: parsed.server })
     } finally {
       setBusy(false)
     }
@@ -102,7 +91,6 @@ function SignIn({ config, notice }: { config: SiteConfig; notice: string | null 
       <SetupView
         server={view.setup}
         replacing={view.replacing}
-        directoryDown={view.directoryDown}
         onBack={() => setView('signin')}
       />
     )
@@ -213,5 +201,5 @@ export function SiteApp({ config, notice }: { config: SiteConfig; notice: string
 
   if (hosts.isLoading) return <p>Loading…</p>
   if (!hosts.data?.length) return <SignIn config={config} notice={notice} />
-  return <SignedIn config={config} hosts={hosts.data} />
+  return <SignedIn config={config} />
 }
