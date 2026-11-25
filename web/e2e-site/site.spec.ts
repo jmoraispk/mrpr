@@ -740,7 +740,7 @@ test('Changes uses the app’s light colours, with the file count on one line', 
   expect(Math.abs(filesBox!.y - summaryBox!.y)).toBeLessThan(12)
 })
 
-test('an open MR fills the window: the page never scrolls', async ({ page }) => {
+test('an open MR fills the window: the page never scrolls, and Feedback floats in the corner', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await fakeGitLab(page)
   await signIn(page)
@@ -759,6 +759,15 @@ test('an open MR fills the window: the page never scrolls', async ({ page }) => 
   }))
   expect(scroll.top).toBe(0)
   expect(scroll.height).toBeLessThanOrEqual(800)
+  // Feedback is a link to the issue tracker now; nothing posts from the app.
+  const feedback = page.getByRole('link', { name: 'Feedback' })
+  await expect(feedback).toHaveAttribute(
+    'href',
+    'https://github.com/jmoraispk/mrpr/issues/new?template=feedback.yml',
+  )
+  const box = (await feedback.boundingBox())!
+  expect(box.x + box.width).toBeGreaterThan(1280 - 40)
+  expect(box.y + box.height).toBeGreaterThan(800 - 40)
 })
 
 test('Activity threads lay out as a chat: the opener left, replies right, each a bubble', async ({ page }) => {

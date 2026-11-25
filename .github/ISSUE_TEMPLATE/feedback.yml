@@ -1,0 +1,41 @@
+name: Feedback or a problem
+description: Something is rough, missing, or broken in Mr. PR.
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Mr. PR runs entirely in your browser, so nothing is reported
+        automatically and nobody sees your merge requests. Everything below is
+        what you choose to type.
+
+        **Please do not paste anything from a private repository** — no code,
+        no merge request titles, no screenshots of work. A description of what
+        happened is enough.
+  - type: textarea
+    id: what
+    attributes:
+      label: What's rough, missing or broken?
+      placeholder: What you were doing, and what Mr. PR did instead.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+      description: Skip this if it's a suggestion rather than a bug.
+  - type: dropdown
+    id: server
+    attributes:
+      label: Which GitLab?
+      options:
+        - gitlab.com
+        - A self-managed GitLab
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: Firefox 146, Chrome 150, Safari 19…

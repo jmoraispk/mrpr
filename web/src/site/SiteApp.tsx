@@ -14,11 +14,20 @@ import { SetupView } from './SetupView'
 import { WelcomeDialog } from './WelcomeDialog'
 import { WriteAccessGate } from './WriteAccessGate'
 
+/**
+ * Feedback goes to the issue tracker: Mr. PR has no server to post it to, and
+ * the template asks people to keep private repositories out of it.
+ */
+const FEEDBACK_URL = 'https://github.com/jmoraispk/mrpr/issues/new?template=feedback.yml'
+
 function SignedIn({ config }: { config: SiteConfig }) {
   useEffect(() => startPageSchedule({ poll: lockedPoll }), [])
   return (
     <>
       <QueueApp />
+      <a className="q-feedback q-tokens" href={FEEDBACK_URL} target="_blank" rel="noreferrer">
+        Feedback
+      </a>
       <WelcomeDialog />
       <WriteAccessGate config={config} />
     </>

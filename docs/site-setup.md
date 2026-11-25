@@ -225,9 +225,11 @@ The MR opens on the right, beside the sidebar. `f` makes it full screen
 
 ## Hearing from people
 
-There is no in-app Feedback button and no waitlist form: both needed a server
-to post to, and the site has none. Issues on the repository are the channel.
-The privacy page at `/privacy/` says so, and says that nothing is collected.
+There is no waitlist form, and feedback is not posted anywhere: both needed a
+server, and the site has none. The Feedback link in the app corner opens a new
+issue from `.github/ISSUE_TEMPLATE/feedback.yml`, which asks people to keep
+private repositories out of it. The privacy page at `/privacy/` says that
+nothing is collected.
 
 ## Security notes
 
